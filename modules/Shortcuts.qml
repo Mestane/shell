@@ -74,7 +74,18 @@ Scope {
         }
     }
 
-    // qmllint disable unresolved-type
+    CustomShortcut {  
+         name: "caffeine"  
+         description: "Toggle caffeine mode"  
+         onPressed: IdleInhibitor.enabled = !IdleInhibitor.enabled  
+    }
+
+    CustomShortcut { 
+        name: "dnd"  
+        description: "Toggle do not disturb mode"  
+        onPressed: Notifs.dnd = !Notifs.dnd
+    }
+
     CustomShortcut {
         // qmllint enable unresolved-type
         name: "launcherInterrupt"

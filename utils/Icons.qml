@@ -226,6 +226,8 @@ Singleton {
             return "checklist";
         if (name === "sysmon")
             return "monitor_heart";
+        if (name === "magic_DP-2" || "magic_DP-3")
+            return "playing_cards";
         return name[0].toUpperCase();
     }
 
