@@ -181,7 +181,19 @@ Item {
 
             anchors.fill: parent
 
-            source: Players.active?.trackArtUrl ?? "" // qmllint disable incompatible-type
+            source: {
+                const p = Players.active;
+                if (!p) {
+                    return ""; // qmllint disable incompatible-type
+                }
+                if (p.trackArtUrl) {
+                    return p.trackArtUrl;
+                }
+
+                const id = (p.metadata["xesam:url"] || "").match(/[?&]v=([\w-]{11})/)?.[1];
+                return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
+            }
+
             asynchronous: true
             fillMode: Image.PreserveAspectCrop
             sourceSize.width: width
