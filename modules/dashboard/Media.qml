@@ -24,6 +24,7 @@ Item {
     property bool lyricMenuOpen: false
     property bool lyricsShowing: LyricsService.lyricsVisible && LyricsService.model.count != 0
     property bool lyricsShowingDebounced: false
+    readonly property bool playerSelectorExpanded: playerSelector.expanded
 
     property real playerProgress: {
         const active = Players.active;

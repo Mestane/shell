@@ -11,6 +11,7 @@ Item {
     required property var props
     required property DrawerVisibilities visibilities
     required property BarPopouts.Wrapper popouts
+    readonly property bool menuOpen: record.menuOpen
 
     implicitWidth: layout.implicitWidth
     implicitHeight: layout.implicitHeight
@@ -24,6 +25,8 @@ Item {
         IdleInhibit {}
 
         Record {
+            id: record
+
             props: root.props
             visibilities: root.visibilities
             z: 1

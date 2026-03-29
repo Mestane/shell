@@ -29,6 +29,7 @@ Item {
     }
 
     readonly property real nonAnimHeight: state === "visible" ? ((content.item as Content)?.nonAnimHeight ?? 0) : 0
+    readonly property bool menuOpen: (content.item as Content)?.menuOpen ?? false
 
     visible: height > 0
     implicitHeight: 0

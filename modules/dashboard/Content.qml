@@ -21,6 +21,15 @@ Item {
         }
         return false;
     }
+    readonly property bool menuOpen: {
+        repeater.count;
+        for (let i = 0; i < repeater.count; i++) {
+            const loader = repeater.itemAt(i) as Loader;
+            if (loader?.sourceComponent === mediaComponent)
+                return (loader?.item as MediaWrapper)?.menuOpen ?? false;
+        }
+        return false;
+    }
     required property DashboardState dashState
     required property FileDialog facePicker
 

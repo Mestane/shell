@@ -12,6 +12,7 @@ StyledRect {
 
     required property var props
     required property DrawerVisibilities visibilities
+    readonly property bool menuOpen: splitButton.expanded
 
     Layout.fillWidth: true
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
@@ -73,6 +74,8 @@ StyledRect {
             }
 
             SplitButton {
+                id: splitButton
+
                 disabled: Recorder.running
                 active: menuItems.find(m => root.props.recordingMode === m.icon + m.text) ?? menuItems[0]
                 menu.onItemSelected: item => root.props.recordingMode = item.icon + item.text
