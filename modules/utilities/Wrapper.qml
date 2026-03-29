@@ -21,6 +21,7 @@ Item {
         reloadableId: "utilities"
     }
     readonly property bool shouldBeActive: visibilities.sidebar || (visibilities.utilities && Config.utilities.enabled && !(visibilities.session && Config.session.enabled))
+    readonly property bool menuOpen: (content.item as Content)?.menuOpen ?? false
 
     visible: height > 0
     implicitHeight: 0
