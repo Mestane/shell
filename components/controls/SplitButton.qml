@@ -145,16 +145,20 @@ Row {
         Menu {
             id: menu
 
-            property point menuPos: {
-                void (implicitWidth);
-                void (implicitHeight);
+            property point menuPos: Qt.point(0, 0)
+
+            function updateMenuPos() {
                 const p = expandBtn.mapToItem(parent, 0, expandBtn.height);
-                return root.menuOnTop ? Qt.point(p.x, p.y - expandBtn.height - implicitHeight - Appearance.spacing.small) : Qt.point(p.x, p.y + Appearance.spacing.small);
+                menuPos = root.menuOnTop ? Qt.point(p.x, p.y - expandBtn.height - implicitHeight - Appearance.spacing.small) : Qt.point(p.x, p.y + Appearance.spacing.small);
             }
 
             parent: root.Window.contentItem
             x: menuPos.x + expandBtn.width - implicitWidth
             y: menuPos.y
+
+            onImplicitHeightChanged: updateMenuPos()
+            onImplicitWidthChanged: updateMenuPos()
+            Component.onCompleted: updateMenuPos()
         }
     }
 }
