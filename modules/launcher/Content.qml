@@ -91,6 +91,8 @@ Item {
                     } else if (text.startsWith(Config.launcher.actionPrefix)) {
                         if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
                             currentItem.onClicked();
+                      else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
+                            currentItem.onClicked();
                         else
                             currentItem.modelData.onClicked(list.currentList);
                     } else {
@@ -99,6 +101,19 @@ Item {
                     }
                 }
             }
+
+// } else if (text.startsWith(Config.launcher.actionPrefix)) {
+//     if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
+//         currentItem.onClicked();
+//     else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
+//         currentItem.onClicked();
+//     else
+//         currentItem.modelData.onClicked(list.currentList);
+// }
+
+
+
+
 
             Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
             Keys.onDownPressed: list.currentList?.incrementCurrentIndex()

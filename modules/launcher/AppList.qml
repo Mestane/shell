@@ -18,28 +18,46 @@ StyledListView {
 
     model: ScriptModel {
         id: model
-
         onValuesChanged: root.currentIndex = 0
     }
 
     spacing: Appearance.spacing.small
     orientation: Qt.Vertical
-    implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+    // implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+
+    // implicitHeight: state === "web" || state === "calc"
+    // ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
+    // : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+    //
+    //
+    //
+    // implicitHeight: (state === "web" || state === "calc")
+    // ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
+    // : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+
+    implicitHeight: state === "calc"
+        ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
+        : state === "web"
+        ? Config.launcher.sizes.itemHeight
+            + (WebSearch.history.length > 0 ? Config.launcher.sizes.itemHeight * 0.6 : 0)
+            + (WebSearch.showHistory && WebSearch.getFilteredHistory("").length > 0
+                ? WebSearch.getFilteredHistory("").length * Config.launcher.sizes.itemHeight * 0.8 + Appearance.spacing.small
+                : 0)
+        : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+
 
     preferredHighlightBegin: 0
     preferredHighlightEnd: height
     highlightRangeMode: ListView.ApplyRange
-
     highlightFollowsCurrentItem: false
+
     highlight: StyledRect {
         radius: Appearance.rounding.normal
         color: Colours.palette.m3onSurface
         opacity: 0.08
-
         y: root.currentItem?.y ?? 0
         implicitWidth: root.width
         implicitHeight: root.currentItem?.implicitHeight ?? 0
-
         Behavior on y {
             Anim {
                 duration: Appearance.anim.durations.expressiveDefaultSpatial
@@ -56,9 +74,14 @@ StyledListView {
                 if (text.startsWith(`${prefix}${action} `))
                     return action;
 
+            if (text.startsWith(`${prefix}search `))
+                return "settings";
+
+            if (text.startsWith(`${prefix}web `))
+                return "web";
+
             return "actions";
         }
-
         return "apps";
     }
 
@@ -70,7 +93,6 @@ StyledListView {
     states: [
         State {
             name: "apps"
-
             PropertyChanges {
                 model.values: Apps.search(search.text)
                 root.delegate: appItem
@@ -78,7 +100,6 @@ StyledListView {
         },
         State {
             name: "actions"
-
             PropertyChanges {
                 model.values: Actions.query(search.text)
                 root.delegate: actionItem
@@ -86,7 +107,6 @@ StyledListView {
         },
         State {
             name: "calc"
-
             PropertyChanges {
                 model.values: [0]
                 root.delegate: calcItem
@@ -94,7 +114,6 @@ StyledListView {
         },
         State {
             name: "scheme"
-
             PropertyChanges {
                 model.values: Schemes.query(search.text)
                 root.delegate: schemeItem
@@ -102,10 +121,23 @@ StyledListView {
         },
         State {
             name: "variant"
-
             PropertyChanges {
                 model.values: M3Variants.query(search.text)
                 root.delegate: variantItem
+            }
+        },
+        State {
+            name: "settings"
+            PropertyChanges {
+                model.values: SettingsSearch.query(search.text)
+                root.delegate: settingsItem
+            }
+        },
+        State {
+            name: "web"
+            PropertyChanges {
+                model.values: [0]
+                root.delegate: webSearchItem
             }
         }
     ]
@@ -113,145 +145,46 @@ StyledListView {
     transitions: Transition {
         SequentialAnimation {
             ParallelAnimation {
-                Anim {
-                    target: root
-                    property: "opacity"
-                    from: 1
-                    to: 0
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
-                }
-                Anim {
-                    target: root
-                    property: "scale"
-                    from: 1
-                    to: 0.9
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
-                }
+                Anim { target: root; property: "opacity"; from: 1; to: 0; duration: Appearance.anim.durations.small; easing.bezierCurve: Appearance.anim.curves.standardAccel }
+                Anim { target: root; property: "scale"; from: 1; to: 0.9; duration: Appearance.anim.durations.small; easing.bezierCurve: Appearance.anim.curves.standardAccel }
             }
-            PropertyAction {
-                targets: [model, root]
-                properties: "values,delegate"
-            }
+            PropertyAction { targets: [model, root]; properties: "values,delegate" }
             ParallelAnimation {
-                Anim {
-                    target: root
-                    property: "opacity"
-                    from: 0
-                    to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
-                }
-                Anim {
-                    target: root
-                    property: "scale"
-                    from: 0.9
-                    to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
-                }
+                Anim { target: root; property: "opacity"; from: 0; to: 1; duration: Appearance.anim.durations.small; easing.bezierCurve: Appearance.anim.curves.standardDecel }
+                Anim { target: root; property: "scale"; from: 0.9; to: 1; duration: Appearance.anim.durations.small; easing.bezierCurve: Appearance.anim.curves.standardDecel }
             }
-            PropertyAction {
-                targets: [root.add, root.remove]
-                property: "enabled"
-                value: true
-            }
+            PropertyAction { targets: [root.add, root.remove]; property: "enabled"; value: true }
         }
     }
 
-    StyledScrollBar.vertical: StyledScrollBar {
-        flickable: root
-    }
+    StyledScrollBar.vertical: StyledScrollBar { flickable: root }
 
     add: Transition {
         enabled: !root.state
-
-        Anim {
-            properties: "opacity,scale"
-            from: 0
-            to: 1
-        }
+        Anim { properties: "opacity,scale"; from: 0; to: 1 }
     }
-
     remove: Transition {
         enabled: !root.state
-
-        Anim {
-            properties: "opacity,scale"
-            from: 1
-            to: 0
-        }
+        Anim { properties: "opacity,scale"; from: 1; to: 0 }
     }
-
     move: Transition {
-        Anim {
-            property: "y"
-        }
-        Anim {
-            properties: "opacity,scale"
-            to: 1
-        }
+        Anim { property: "y" }
+        Anim { properties: "opacity,scale"; to: 1 }
     }
-
     addDisplaced: Transition {
-        Anim {
-            property: "y"
-            duration: Appearance.anim.durations.small
-        }
-        Anim {
-            properties: "opacity,scale"
-            to: 1
-        }
+        Anim { property: "y"; duration: Appearance.anim.durations.small }
+        Anim { properties: "opacity,scale"; to: 1 }
     }
-
     displaced: Transition {
-        Anim {
-            property: "y"
-        }
-        Anim {
-            properties: "opacity,scale"
-            to: 1
-        }
+        Anim { property: "y" }
+        Anim { properties: "opacity,scale"; to: 1 }
     }
 
-    Component {
-        id: appItem
-
-        AppItem {
-            visibilities: root.visibilities
-        }
-    }
-
-    Component {
-        id: actionItem
-
-        ActionItem {
-            list: root
-        }
-    }
-
-    Component {
-        id: calcItem
-
-        CalcItem {
-            list: root
-        }
-    }
-
-    Component {
-        id: schemeItem
-
-        SchemeItem {
-            list: root
-        }
-    }
-
-    Component {
-        id: variantItem
-
-        VariantItem {
-            list: root
-        }
-    }
+    Component { id: appItem; AppItem { visibilities: root.visibilities } }
+    Component { id: actionItem; ActionItem { list: root } }
+    Component { id: calcItem; CalcItem { list: root } }
+    Component { id: schemeItem; SchemeItem { list: root } }
+    Component { id: variantItem; VariantItem { list: root } }
+    Component { id: settingsItem; SettingsItem { list: root } }
+    Component { id: webSearchItem; WebSearchItem { list: root } }
 }
