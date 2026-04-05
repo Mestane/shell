@@ -260,7 +260,11 @@ Singleton {
                 variants: launcher.useFuzzy.variants,
                 wallpapers: launcher.useFuzzy.wallpapers
             },
-            actions: launcher.actions
+            actions: launcher.actions,
+            webSearch: {
+                searchEnabled: launcher.webSearch.searchEnabled,
+                engines: launcher.webSearch.engines
+            }
         };
     }
 

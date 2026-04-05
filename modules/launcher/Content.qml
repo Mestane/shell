@@ -178,6 +178,7 @@ Item {
                 function onLauncherChanged(): void {
                     if (!root.visibilities.launcher)
                         search.text = "";
+                        WebSearch.clearResults();
                 }
 
                 function onSessionChanged(): void {

@@ -155,6 +155,7 @@ JsonObject {
     }
 
     component WebSearch: JsonObject {
+        property bool searchEnabled: true
         property list<var> engines: [
             { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1" },
             { name: "Google",     url: "https://www.google.com/search?q=%1" },

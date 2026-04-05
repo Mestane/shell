@@ -27,11 +27,13 @@ StyledListView {
     implicitHeight: {
         if (state === "calc" || state === "timer")
             return currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight;
-            if (state === "web")
-                return Config.launcher.sizes.itemHeight
-                    + (WebSearch.searchResults.length > 0 
-                        ? WebSearch.searchResults.length * 90 + Appearance.spacing.small 
-                        : 0);
+        if (state === "web") {
+            const results = WebSearch.searchResults.length;
+            const hasPages = WebSearch.totalResults > 5;
+            return Config.launcher.sizes.itemHeight
+                + (results > 0 ? results * (Config.launcher.sizes.itemHeight * 1.5) + Appearance.spacing.small : 0)
+                + (hasPages ? 36 + Appearance.spacing.small : 0);
+        }
         return (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing;
     }
 
