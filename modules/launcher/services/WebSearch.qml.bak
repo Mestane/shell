@@ -9,8 +9,15 @@ import qs.utils
 Singleton {
     id: root
 
-    readonly property list<var> engines: Config.launcher.webSearch.engines
+    readonly property list<var> engines: [
+        { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1" },
+        { name: "Google",     url: "https://www.google.com/search?q=%1" },
+        { name: "Brave",      url: "https://search.brave.com/search?q=%1" },
+        { name: "YouTube",    url: "https://www.youtube.com/results?search_query=%1" },
+        { name: "GitHub",     url: "https://github.com/search?q=%1" },
+    ]
 
+    // property int currentEngineIndex: 0
     property int currentEngineIndex: 0
 
     onCurrentEngineIndexChanged: {
@@ -19,7 +26,6 @@ Singleton {
         ];
         saveProc.running = true;
     }
-
     readonly property var currentEngine: engines[currentEngineIndex]
 
     readonly property var browserCommands: ({
@@ -63,16 +69,9 @@ Singleton {
         return type === "private" ? cmds.private : cmds.new;
     }
 
-    // function isUrl(text: string): bool {
-    //     return /^(https?:\/\/)/.test(text) ||
-    //            /^www\./.test(text) ||
-    //            /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
-    // }
-    //
     function isUrl(text: string): bool {
         return /^(https?:\/\/)/.test(text) ||
                /^www\./.test(text) ||
-               /^localhost(:\d+)?(\/.*)?$/.test(text) ||
                /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
     }
 
@@ -109,37 +108,12 @@ Singleton {
         Quickshell.execDetached([...getBrowserCmd("private"), fullUrl]);
     }
 
-    // Suggestions
-    property list<string> suggestions: []
-    property string _lastSuggestionQuery: ""
-
-    function fetchSuggestions(query: string): void {
-        if (!query.trim() || query === _lastSuggestionQuery) return;
-        _lastSuggestionQuery = query;
-        suggestProc.command = ["bash", "-c",
-            `curl -s 'https://duckduckgo.com/ac/?q=${encodeURIComponent(query)}&type=list'`
-        ];
-        suggestProc.running = true;
+    function nextEngine(): void {
+        currentEngineIndex = (currentEngineIndex + 1) % engines.length;
     }
 
-    function clearSuggestions(): void {
-        suggestions = [];
-        _lastSuggestionQuery = "";
-    }
-
-    Process {
-        id: suggestProc
-        command: []
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    root.suggestions = data[1] ?? [];
-                } catch(e) {
-                    root.suggestions = [];
-                }
-            }
-        }
+    function prevEngine(): void {
+        currentEngineIndex = (currentEngineIndex - 1 + engines.length) % engines.length;
     }
 
     FileView {
@@ -152,13 +126,7 @@ Singleton {
         }
         onLoadFailed: {}
     }
+    
+    Component.onCompleted: engineReader.reload()
 
-
-    function nextEngine(): void {
-        currentEngineIndex = (currentEngineIndex + 1) % engines.length;
-    }
-
-    function prevEngine(): void {
-        currentEngineIndex = (currentEngineIndex - 1 + engines.length) % engines.length;
-    }
 }

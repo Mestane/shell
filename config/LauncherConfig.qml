@@ -7,15 +7,24 @@ JsonObject {
     property int maxWallpapers: 9 // Warning: even numbers look bad
     property string specialPrefix: "@"
     property string actionPrefix: ">"
-    property bool enableDangerousActions: false // Allow actions that can cause losing data, like shutdown, reboot and logout
+    property bool enableDangerousActions: false
     property int dragThreshold: 50
     property bool vimKeybinds: false
     property list<string> favouriteApps: []
     property list<string> hiddenApps: []
     property UseFuzzy useFuzzy: UseFuzzy {}
     property Sizes sizes: Sizes {}
+    property WebSearch webSearch: WebSearch {}
 
     property list<var> actions: [
+        {
+            name: "Web Search",
+            icon: "travel_explore",
+            description: "Search the web",
+            command: ["autocomplete", "web"],
+            enabled: true,
+            dangerous: false
+        },
         {
             name: "Calculator",
             icon: "calculate",
@@ -143,5 +152,15 @@ JsonObject {
         property int itemHeight: 57
         property int wallpaperWidth: 280
         property int wallpaperHeight: 200
+    }
+
+    component WebSearch: JsonObject {
+        property list<var> engines: [
+            { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1" },
+            { name: "Google",     url: "https://www.google.com/search?q=%1" },
+            { name: "Brave",      url: "https://search.brave.com/search?q=%1" },
+            { name: "YouTube",    url: "https://www.youtube.com/results?search_query=%1" },
+            { name: "GitHub",     url: "https://github.com/search?q=%1" },
+        ]
     }
 }
