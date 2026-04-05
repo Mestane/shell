@@ -199,7 +199,8 @@ Singleton {
                 showWifi: bar.status.showWifi,
                 showBluetooth: bar.status.showBluetooth,
                 showBattery: bar.status.showBattery,
-                showLockStatus: bar.status.showLockStatus
+                showLockStatus: bar.status.showLockStatus,
+                showTimer: bar.status.showTimer
             },
             clock: {
                 background: bar.clock.background,
