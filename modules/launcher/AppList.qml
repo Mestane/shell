@@ -23,27 +23,7 @@ StyledListView {
 
     spacing: Appearance.spacing.small
     orientation: Qt.Vertical
-    // implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
-
-    // implicitHeight: state === "web" || state === "calc"
-    // ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
-    // : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
-    //
-    //
-    //
-    // implicitHeight: (state === "web" || state === "calc")
-    // ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
-    // : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
-
-    implicitHeight: state === "calc"
-        ? currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight
-        : state === "web"
-        ? Config.launcher.sizes.itemHeight
-            + (WebSearch.history.length > 0 ? Config.launcher.sizes.itemHeight * 0.6 : 0)
-            + (WebSearch.showHistory && WebSearch.getFilteredHistory("").length > 0
-                ? WebSearch.getFilteredHistory("").length * Config.launcher.sizes.itemHeight * 0.8 + Appearance.spacing.small
-                : 0)
-        : (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+    implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
 
 
     preferredHighlightBegin: 0
@@ -127,13 +107,6 @@ StyledListView {
             }
         },
         State {
-            name: "settings"
-            PropertyChanges {
-                model.values: SettingsSearch.query(search.text)
-                root.delegate: settingsItem
-            }
-        },
-        State {
             name: "web"
             PropertyChanges {
                 model.values: [0]
@@ -185,6 +158,5 @@ StyledListView {
     Component { id: calcItem; CalcItem { list: root } }
     Component { id: schemeItem; SchemeItem { list: root } }
     Component { id: variantItem; VariantItem { list: root } }
-    Component { id: settingsItem; SettingsItem { list: root } }
     Component { id: webSearchItem; WebSearchItem { list: root } }
 }

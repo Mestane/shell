@@ -9,8 +9,6 @@ import qs.utils
 Singleton {
     id: root
 
-    property bool showHistory: true
-
     readonly property list<var> engines: [
         { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1" },
         { name: "Google",     url: "https://www.google.com/search?q=%1" },
@@ -22,21 +20,40 @@ Singleton {
     property int currentEngineIndex: 0
     readonly property var currentEngine: engines[currentEngineIndex]
 
-    property list<string> history: []
-    readonly property int maxHistory: 20
-    readonly property string historyPath: `${Paths.state}/websearch_history.json`
+    readonly property var browserCommands: ({
+        "firefox":              { new: ["firefox", "--new-window"],          private: ["firefox", "--private-window"] },
+        "firefox-esr":          { new: ["firefox-esr", "--new-window"],      private: ["firefox-esr", "--private-window"] },
+        "chromium":             { new: ["chromium", "--new-window"],         private: ["chromium", "--incognito"] },
+        "chromium-browser":     { new: ["chromium-browser", "--new-window"], private: ["chromium-browser", "--incognito"] },
+        "google-chrome":        { new: ["google-chrome", "--new-window"],    private: ["google-chrome", "--incognito"] },
+        "google-chrome-stable": { new: ["google-chrome-stable", "--new-window"], private: ["google-chrome-stable", "--incognito"] },
+        "brave-browser":        { new: ["brave-browser", "--new-window"],    private: ["brave-browser", "--incognito"] },
+        "microsoft-edge":       { new: ["microsoft-edge", "--new-window"],   private: ["microsoft-edge", "--inprivate"] },
+        "opera":                { new: ["opera", "--new-window"],            private: ["opera", "--private"] },
+        "vivaldi":              { new: ["vivaldi", "--new-window"],          private: ["vivaldi", "--incognito"] },
+        "waterfox":             { new: ["waterfox", "--new-window"],         private: ["waterfox", "--private-window"] },
+        "librewolf":            { new: ["librewolf", "--new-window"],        private: ["librewolf", "--private-window"] },
+    })
 
-    function search(query: string): void {
-        if (!query.trim()) return;
-        const url = currentEngine.url.replace("%1", encodeURIComponent(query));
-        Quickshell.execDetached(["xdg-open", url]);
-        addToHistory(query);
+    property string detectedBrowser: "firefox"
+
+    Process {
+        id: browserDetect
+        command: ["xdg-settings", "get", "default-web-browser"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const b = text.trim().replace(".desktop", "");
+                if (root.browserCommands[b])
+                    root.detectedBrowser = b;
+            }
+        }
     }
 
-    function openUrl(url: string): void {
-        const fullUrl = url.startsWith("http") ? url : "https://" + url;
-        Quickshell.execDetached(["xdg-open", fullUrl]);
-        addToHistory(url);
+    function getBrowserCmd(type: string): list<string> {
+        const cmds = browserCommands[detectedBrowser];
+        if (!cmds) return ["xdg-open"];
+        return type === "private" ? cmds.private : cmds.new;
     }
 
     function isUrl(text: string): bool {
@@ -45,20 +62,37 @@ Singleton {
                /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
     }
 
-    function addToHistory(query: string): void {
-        const h = history.filter(item => item !== query);
-        history = [query, ...h].slice(0, maxHistory);
-        saveHistory();
+    function search(query: string): void {
+        if (!query.trim()) return;
+        const url = currentEngine.url.replace("%1", encodeURIComponent(query));
+        Quickshell.execDetached(["xdg-open", url]);
     }
 
-    function getFilteredHistory(query: string): list<string> {
-        if (!query) return history.slice(0, 5);
-        return history.filter(h => h.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+    function openUrl(url: string): void {
+        const fullUrl = url.startsWith("http") ? url : "https://" + url;
+        Quickshell.execDetached(["xdg-open", fullUrl]);
     }
 
-    function removeFromHistory(query: string): void {
-        history = history.filter(h => h !== query);
-        saveHistory();
+    function searchInNewWindow(query: string): void {
+        if (!query.trim()) return;
+        const url = currentEngine.url.replace("%1", encodeURIComponent(query));
+        Quickshell.execDetached([...getBrowserCmd("new"), url]);
+    }
+
+    function searchInPrivateWindow(query: string): void {
+        if (!query.trim()) return;
+        const url = currentEngine.url.replace("%1", encodeURIComponent(query));
+        Quickshell.execDetached([...getBrowserCmd("private"), url]);
+    }
+
+    function openUrlInNewWindow(url: string): void {
+        const fullUrl = url.startsWith("http") ? url : "https://" + url;
+        Quickshell.execDetached([...getBrowserCmd("new"), fullUrl]);
+    }
+
+    function openUrlInPrivateWindow(url: string): void {
+        const fullUrl = url.startsWith("http") ? url : "https://" + url;
+        Quickshell.execDetached([...getBrowserCmd("private"), fullUrl]);
     }
 
     function nextEngine(): void {
@@ -68,31 +102,4 @@ Singleton {
     function prevEngine(): void {
         currentEngineIndex = (currentEngineIndex - 1 + engines.length) % engines.length;
     }
-
-    function saveHistory(): void {
-        saveProc.command = ["bash", "-c",
-            `mkdir -p '${Paths.state}' && printf '%s' '${JSON.stringify(root.history).replace(/'/g, "'\\''")}' > '${root.historyPath}'`
-        ];
-        saveProc.running = true;
-    }
-
-    Process {
-        id: saveProc
-        command: []
-    }
-
-    FileView {
-        id: historyReader
-        path: root.historyPath
-        onLoaded: {
-            try {
-                root.history = JSON.parse(historyReader.text()) ?? [];
-            } catch(e) {
-                root.history = [];
-            }
-        }
-        onLoadFailed: root.history = []
-    }
-
-    Component.onCompleted: historyReader.reload()
 }

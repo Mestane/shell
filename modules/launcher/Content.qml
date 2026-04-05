@@ -80,6 +80,8 @@ Item {
 
             placeholderText: qsTr("Type \"%1\" for commands").arg(Config.launcher.actionPrefix)
 
+            readonly property bool isWebSearch: text.startsWith(`${Config.launcher.actionPrefix}web `)
+
             onAccepted: {
                 const currentItem = list.currentList?.currentItem;
                 if (currentItem) {
@@ -91,7 +93,7 @@ Item {
                     } else if (text.startsWith(Config.launcher.actionPrefix)) {
                         if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
                             currentItem.onClicked();
-                      else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
+                        else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
                             currentItem.onClicked();
                         else
                             currentItem.modelData.onClicked(list.currentList);
@@ -102,25 +104,52 @@ Item {
                 }
             }
 
-// } else if (text.startsWith(Config.launcher.actionPrefix)) {
-//     if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
-//         currentItem.onClicked();
-//     else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
-//         currentItem.onClicked();
-//     else
-//         currentItem.modelData.onClicked(list.currentList);
-// }
-
-
-
-
-
             Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
             Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
 
             Keys.onEscapePressed: root.visibilities.launcher = false
 
             Keys.onPressed: event => {
+                // Web search shortcuts
+                if (isWebSearch) {
+                    // Tab → next engine
+                    if (event.key === Qt.Key_Tab && !(event.modifiers & Qt.ShiftModifier)) {
+                        WebSearch.nextEngine();
+                        event.accepted = true;
+                        return;
+                    }
+                    // Shift+Tab → prev engine
+                    if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
+                        WebSearch.prevEngine();
+                        event.accepted = true;
+                        return;
+                    }
+
+                    // Ctrl+Shift+Enter → private window
+                    if (event.key === Qt.Key_Return && (event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier)) {
+                        const q = text.slice(`${Config.launcher.actionPrefix}web `.length);
+                        if (q.length > 0) {
+                            if (WebSearch.isUrl(q)) WebSearch.openUrlInPrivateWindow(q);
+                            else WebSearch.searchInPrivateWindow(q);
+                            root.visibilities.launcher = false;
+                        }
+                        event.accepted = true;
+                        return;
+                    }
+
+                    // Ctrl+Enter → new window
+                    if (event.key === Qt.Key_Return && (event.modifiers & Qt.ControlModifier)) {
+                        const q = text.slice(`${Config.launcher.actionPrefix}web `.length);
+                        if (q.length > 0) {
+                            if (WebSearch.isUrl(q)) WebSearch.openUrlInNewWindow(q);
+                            else WebSearch.searchInNewWindow(q);
+                            root.visibilities.launcher = false;
+                        }
+                        event.accepted = true;
+                        return;
+                    }
+                }
+
                 if (!Config.launcher.vimKeybinds)
                     return;
 
