@@ -23,7 +23,19 @@ StyledListView {
 
     spacing: Appearance.spacing.small
     orientation: Qt.Vertical
-    implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+    // implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+
+    implicitHeight: {
+        if (state === "calc" || state === "timer")
+            return currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight;
+            if (state === "web")
+                return Config.launcher.sizes.itemHeight
+                    + (WebSearch.instantAnswer.length > 0 ? Config.launcher.sizes.itemHeight * 0.85 + Appearance.spacing.small : 0)
+                    + (WebSearch.instantAbstract.length > 0 ? 120 + Appearance.spacing.small : 0)
+                    + (WebSearch.searchResults.length > 0 ? WebSearch.searchResults.length * 90 + Appearance.spacing.small : 0);
+        return (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing;
+    }
+
 
     preferredHighlightBegin: 0
     preferredHighlightEnd: height

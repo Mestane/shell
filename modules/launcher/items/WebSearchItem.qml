@@ -15,178 +15,399 @@ Item {
 
     readonly property string query: list.search.text.slice(`${Config.launcher.actionPrefix}web `.length)
     readonly property bool isUrl: WebSearch.isUrl(query)
+    readonly property bool hasInstantAnswer: WebSearch.instantAnswer.length > 0
+    readonly property bool hasAbstract: WebSearch.instantAbstract.length > 0
+
+    Timer {
+        id: searchTimer
+        interval: 600
+        onTriggered: {
+            if (root.query.length > 2) {
+                WebSearch.fetchInstant(root.query);
+                WebSearch.fetchResults(root.query);
+            } else {
+                WebSearch.clearInstant();
+                WebSearch.clearResults();
+            }
+        }
+    }
+
+    onQueryChanged: {
+        if (query.length > 2) searchTimer.restart();
+        else {
+            WebSearch.clearInstant();
+            WebSearch.clearResults();
+        }
+    }
 
     function onClicked(): void {
         if (query.length === 0) return;
-        if (isUrl)
-            WebSearch.openUrl(query);
-        else
-            WebSearch.search(query);
+        if (isUrl) WebSearch.openUrl(query);
+        else WebSearch.search(query);
         list.visibilities.launcher = false;
     }
 
-    implicitHeight: Config.launcher.sizes.itemHeight
+    implicitHeight: mainItem.implicitHeight
+        + (instantAnswerItem.visible ? instantAnswerItem.implicitHeight + Appearance.spacing.small : 0)
+        + (abstractItem.visible ? abstractItem.implicitHeight + Appearance.spacing.small : 0)
+        + (resultsList.visible ? resultsList.implicitHeight + Appearance.spacing.small : 0)
     anchors.left: parent?.left
     anchors.right: parent?.right
 
-    StateLayer {
-        function onClicked(): void {
-            if (root.isUrl)
-                WebSearch.openUrl(root.query);
-            else
-                WebSearch.search(root.query);
-            root.list.visibilities.launcher = false;
-        }
-        radius: Appearance.rounding.normal
-    }
-
-    RowLayout {
+    // Main search item
+    Item {
+        id: mainItem
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: Appearance.padding.larger
-        spacing: Appearance.spacing.normal
+        implicitHeight: Config.launcher.sizes.itemHeight
 
-        MaterialIcon {
-            text: root.isUrl ? "link" : "search"
-            font.pointSize: Appearance.font.size.extraLarge
-            color: Colours.palette.m3primary
-            Layout.alignment: Qt.AlignVCenter
+        StateLayer {
+            function onClicked(): void {
+                if (root.isUrl) WebSearch.openUrl(root.query);
+                else WebSearch.search(root.query);
+                root.list.visibilities.launcher = false;
+            }
+            radius: Appearance.rounding.normal
         }
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 2
+        RowLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: Appearance.padding.larger
+            spacing: Appearance.spacing.normal
 
-            StyledText {
-                text: root.query.length > 0
-                    ? (root.isUrl ? qsTr("Open URL") : qsTr("Search for \"%1\"").arg(root.query))
-                    : qsTr("Type to search the web")
-                font.pointSize: Appearance.font.size.normal
-                elide: Text.ElideRight
+            MaterialIcon {
+                text: root.isUrl ? "link" : "search"
+                font.pointSize: Appearance.font.size.extraLarge
+                color: Colours.palette.m3primary
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ColumnLayout {
                 Layout.fillWidth: true
-            }
-
-            StyledText {
-                text: root.isUrl ? root.query : WebSearch.currentEngine.name
-                color: Colours.palette.m3outline
-                font.pointSize: Appearance.font.size.small
-                elide: Text.ElideRight
-                Layout.fillWidth: true
-            }
-        }
-
-        // New / Private window buttons
-        Row {
-            spacing: Appearance.spacing.smaller
-            Layout.alignment: Qt.AlignVCenter
-            visible: root.query.length > 0
-
-            StyledRect {
-                implicitWidth: implicitHeight
-                implicitHeight: newWinIcon.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
-
-                StateLayer {
-                    function onClicked(): void {
-                        if (root.isUrl) WebSearch.openUrlInNewWindow(root.query);
-                        else WebSearch.searchInNewWindow(root.query);
-                        root.list.visibilities.launcher = false;
-                    }
-                    radius: parent.radius
-                }
-
-                MaterialIcon {
-                    id: newWinIcon
-                    anchors.centerIn: parent
-                    text: "open_in_new"
-                    font.pointSize: Appearance.font.size.normal
-                    color: Colours.palette.m3onSurfaceVariant
-                }
-            }
-
-            StyledRect {
-                implicitWidth: implicitHeight
-                implicitHeight: privateWinIcon.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
-
-                StateLayer {
-                    function onClicked(): void {
-                        if (root.isUrl) WebSearch.openUrlInPrivateWindow(root.query);
-                        else WebSearch.searchInPrivateWindow(root.query);
-                        root.list.visibilities.launcher = false;
-                    }
-                    radius: parent.radius
-                }
-
-                MaterialIcon {
-                    id: privateWinIcon
-                    anchors.centerIn: parent
-                    text: "privacy_tip"
-                    font.pointSize: Appearance.font.size.normal
-                    color: Colours.palette.m3onSurfaceVariant
-                }
-            }
-        }
-
-        // Engine switcher
-        Row {
-            spacing: Appearance.spacing.smaller
-            Layout.alignment: Qt.AlignVCenter
-            visible: !root.isUrl
-
-            StyledRect {
-                implicitWidth: implicitHeight
-                implicitHeight: prevIcon.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
-
-                StateLayer {
-                    function onClicked(): void { WebSearch.prevEngine(); }
-                    radius: parent.radius
-                }
-
-                MaterialIcon {
-                    id: prevIcon
-                    anchors.centerIn: parent
-                    text: "chevron_left"
-                    font.pointSize: Appearance.font.size.normal
-                }
-            }
-
-            StyledRect {
-                implicitHeight: engineLabel.implicitHeight + Appearance.padding.small * 2
-                implicitWidth: engineLabel.implicitWidth + Appearance.padding.normal * 2
-                radius: Appearance.rounding.small
-                color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                spacing: 2
 
                 StyledText {
-                    id: engineLabel
-                    anchors.centerIn: parent
-                    text: WebSearch.currentEngine.name
+                    text: root.query.length > 0
+                        ? (root.isUrl ? qsTr("Open URL") : qsTr("Search for \"%1\"").arg(root.query))
+                        : qsTr("Type to search the web")
+                    font.pointSize: Appearance.font.size.normal
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+
+                StyledText {
+                    text: root.isUrl ? root.query : WebSearch.currentEngine.name
+                    color: Colours.palette.m3outline
                     font.pointSize: Appearance.font.size.small
-                    color: Colours.palette.m3primary
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
             }
 
-            StyledRect {
-                implicitWidth: implicitHeight
-                implicitHeight: nextIcon.implicitHeight + Appearance.padding.small * 2
-                radius: Appearance.rounding.small
-                color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+            // New / Private window buttons
+            Row {
+                spacing: Appearance.spacing.smaller
+                Layout.alignment: Qt.AlignVCenter
+                visible: root.query.length > 0
 
-                StateLayer {
-                    function onClicked(): void { WebSearch.nextEngine(); }
-                    radius: parent.radius
+                StyledRect {
+                    implicitWidth: implicitHeight
+                    implicitHeight: newWinIcon.implicitHeight + Appearance.padding.small * 2
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    StateLayer {
+                        function onClicked(): void {
+                            if (root.isUrl) WebSearch.openUrlInNewWindow(root.query);
+                            else WebSearch.searchInNewWindow(root.query);
+                            root.list.visibilities.launcher = false;
+                        }
+                        radius: parent.radius
+                    }
+                    MaterialIcon {
+                        id: newWinIcon
+                        anchors.centerIn: parent
+                        text: "open_in_new"
+                        font.pointSize: Appearance.font.size.normal
+                        color: Colours.palette.m3onSurfaceVariant
+                    }
                 }
 
+                StyledRect {
+                    implicitWidth: implicitHeight
+                    implicitHeight: privateWinIcon.implicitHeight + Appearance.padding.small * 2
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    StateLayer {
+                        function onClicked(): void {
+                            if (root.isUrl) WebSearch.openUrlInPrivateWindow(root.query);
+                            else WebSearch.searchInPrivateWindow(root.query);
+                            root.list.visibilities.launcher = false;
+                        }
+                        radius: parent.radius
+                    }
+                    MaterialIcon {
+                        id: privateWinIcon
+                        anchors.centerIn: parent
+                        text: "privacy_tip"
+                        font.pointSize: Appearance.font.size.normal
+                        color: Colours.palette.m3onSurfaceVariant
+                    }
+                }
+            }
+
+            // Engine switcher
+            Row {
+                spacing: Appearance.spacing.smaller
+                Layout.alignment: Qt.AlignVCenter
+                visible: !root.isUrl
+
+                StyledRect {
+                    implicitWidth: implicitHeight
+                    implicitHeight: prevIcon.implicitHeight + Appearance.padding.small * 2
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    StateLayer {
+                        function onClicked(): void { WebSearch.prevEngine(); }
+                        radius: parent.radius
+                    }
+                    MaterialIcon {
+                        id: prevIcon
+                        anchors.centerIn: parent
+                        text: "chevron_left"
+                        font.pointSize: Appearance.font.size.normal
+                    }
+                }
+
+                StyledRect {
+                    implicitHeight: engineLabel.implicitHeight + Appearance.padding.small * 2
+                    implicitWidth: engineLabel.implicitWidth + Appearance.padding.normal * 2
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    StyledText {
+                        id: engineLabel
+                        anchors.centerIn: parent
+                        text: WebSearch.currentEngine.name
+                        font.pointSize: Appearance.font.size.small
+                        color: Colours.palette.m3primary
+                    }
+                }
+
+                StyledRect {
+                    implicitWidth: implicitHeight
+                    implicitHeight: nextIcon.implicitHeight + Appearance.padding.small * 2
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    StateLayer {
+                        function onClicked(): void { WebSearch.nextEngine(); }
+                        radius: parent.radius
+                    }
+                    MaterialIcon {
+                        id: nextIcon
+                        anchors.centerIn: parent
+                        text: "chevron_right"
+                        font.pointSize: Appearance.font.size.normal
+                    }
+                }
+            }
+        }
+    }
+
+    // Instant answer (calculator, conversions etc.)
+    Item {
+        id: instantAnswerItem
+        anchors.top: mainItem.bottom
+        anchors.topMargin: Appearance.spacing.small
+        anchors.left: parent.left
+        anchors.right: parent.right
+        implicitHeight: Config.launcher.sizes.itemHeight * 0.85
+        visible: root.hasInstantAnswer
+
+        StyledRect {
+            anchors.fill: parent
+            radius: Appearance.rounding.normal
+            color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
+
+            RowLayout {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: Appearance.padding.larger
+                spacing: Appearance.spacing.normal
+
                 MaterialIcon {
-                    id: nextIcon
-                    anchors.centerIn: parent
-                    text: "chevron_right"
+                    text: "bolt"
+                    font.pointSize: Appearance.font.size.large
+                    color: Colours.palette.m3tertiary
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                StyledText {
+                    text: WebSearch.instantAnswer
                     font.pointSize: Appearance.font.size.normal
+                    color: Colours.palette.m3onSurface
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+            }
+        }
+    }
+
+    // Abstract (Wikipedia summary)
+    Item {
+        id: abstractItem
+        anchors.top: instantAnswerItem.visible
+            ? instantAnswerItem.bottom
+            : mainItem.bottom
+        anchors.topMargin: Appearance.spacing.small
+        anchors.left: parent.left
+        anchors.right: parent.right
+        implicitHeight: abstractContent.implicitHeight + Appearance.padding.normal * 2
+        visible: root.hasAbstract && !root.isUrl
+
+        StateLayer {
+            function onClicked(): void {
+                Quickshell.execDetached(["xdg-open", WebSearch.instantAbstractUrl]);
+                root.list.visibilities.launcher = false;
+            }
+            radius: Appearance.rounding.normal
+        }
+
+        StyledRect {
+            anchors.fill: parent
+            radius: Appearance.rounding.normal
+            color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
+
+            ColumnLayout {
+                id: abstractContent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: Appearance.padding.larger
+                spacing: Appearance.spacing.smaller
+
+                RowLayout {
+                    spacing: Appearance.spacing.small
+
+                    MaterialIcon {
+                        text: "auto_stories"
+                        font.pointSize: Appearance.font.size.normal
+                        color: Colours.palette.m3secondary
+                    }
+
+                    StyledText {
+                        text: WebSearch.instantAbstractSource
+                        font.pointSize: Appearance.font.size.small
+                        color: Colours.palette.m3secondary
+                        font.weight: 500
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    MaterialIcon {
+                        text: "open_in_new"
+                        font.pointSize: Appearance.font.size.small
+                        color: Colours.palette.m3outline
+                    }
+                }
+
+                StyledText {
+                    text: WebSearch.instantAbstract
+                    font.pointSize: Appearance.font.size.small
+                    color: Colours.palette.m3onSurfaceVariant
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+            }
+        }
+    }
+
+    // Search results from SearXNG
+    Column {
+        id: resultsList
+        anchors.top: abstractItem.visible
+            ? abstractItem.bottom
+            : (instantAnswerItem.visible ? instantAnswerItem.bottom : mainItem.bottom)
+        anchors.topMargin: Appearance.spacing.small
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: Appearance.spacing.smaller / 2
+        visible: WebSearch.searchResults.length > 0 && !root.isUrl
+
+        Repeater {
+            model: WebSearch.searchResults
+
+            Item {
+                id: resultItem
+                required property var modelData
+                required property int index
+
+                anchors.left: parent?.left
+                anchors.right: parent?.right
+                implicitHeight: resultContent.implicitHeight + Appearance.padding.normal * 2
+
+                StateLayer {
+                    function onClicked(): void {
+                        Quickshell.execDetached(["xdg-open", resultItem.modelData.url]);
+                        root.list.visibilities.launcher = false;
+                    }
+                    radius: Appearance.rounding.normal
+                }
+
+                StyledRect {
+                    anchors.fill: parent
+                    radius: Appearance.rounding.normal
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
+
+                    ColumnLayout {
+                        id: resultContent
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.margins: Appearance.padding.larger
+                        spacing: 2
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Appearance.spacing.small
+
+                            StyledText {
+                                text: resultItem.modelData.title ?? ""
+                                font.pointSize: Appearance.font.size.normal
+                                font.weight: 500
+                                color: Colours.palette.m3primary
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            StyledText {
+                                text: resultItem.modelData.engines?.[0] ?? ""
+                                font.pointSize: Appearance.font.size.small
+                                color: Colours.palette.m3outline
+                            }
+                        }
+
+                        StyledText {
+                            text: resultItem.modelData.url ?? ""
+                            font.pointSize: Appearance.font.size.small
+                            color: Colours.palette.m3tertiary
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        StyledText {
+                            text: resultItem.modelData.content ?? ""
+                            font.pointSize: Appearance.font.size.small
+                            color: Colours.palette.m3onSurfaceVariant
+                            wrapMode: Text.WordWrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
                 }
             }
         }

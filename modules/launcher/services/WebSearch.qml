@@ -12,14 +12,6 @@ Singleton {
     readonly property list<var> engines: Config.launcher.webSearch.engines
 
     property int currentEngineIndex: 0
-
-    onCurrentEngineIndexChanged: {
-        saveProc.command = ["bash", "-c",
-            `mkdir -p '${Paths.state}' && printf '%s' '${currentEngineIndex}' > '${Paths.state}/websearch_engine.txt'`
-        ];
-        saveProc.running = true;
-    }
-
     readonly property var currentEngine: engines[currentEngineIndex]
 
     readonly property var browserCommands: ({
@@ -52,27 +44,15 @@ Singleton {
         }
     }
 
-    Process {
-        id: saveProc
-        command: []
-    }
-
     function getBrowserCmd(type: string): list<string> {
         const cmds = browserCommands[detectedBrowser];
         if (!cmds) return ["xdg-open"];
         return type === "private" ? cmds.private : cmds.new;
     }
 
-    // function isUrl(text: string): bool {
-    //     return /^(https?:\/\/)/.test(text) ||
-    //            /^www\./.test(text) ||
-    //            /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
-    // }
-    //
     function isUrl(text: string): bool {
         return /^(https?:\/\/)/.test(text) ||
                /^www\./.test(text) ||
-               /^localhost(:\d+)?(\/.*)?$/.test(text) ||
                /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
     }
 
@@ -142,17 +122,82 @@ Singleton {
         }
     }
 
-    FileView {
-        id: engineReader
-        path: `${Paths.state}/websearch_engine.txt`
-        onLoaded: {
-            const idx = parseInt(engineReader.text());
-            if (!isNaN(idx) && idx >= 0 && idx < root.engines.length)
-                root.currentEngineIndex = idx;
-        }
-        onLoadFailed: {}
+    // SearXNG
+    readonly property string searxngUrl: "http://localhost:8080"
+    property list<var> searchResults: []
+    property string _lastSearchQuery: ""
+
+    function fetchResults(query: string): void {
+        if (!query.trim() || query === _lastSearchQuery) return;
+        _lastSearchQuery = query;
+        searchResults = [];
+        searxProc.command = ["bash", "-c",
+            `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
+        ];
+        searxProc.running = true;
     }
 
+    function clearResults(): void {
+        searchResults = [];
+        _lastSearchQuery = "";
+    }
+
+    Process {
+        id: searxProc
+        command: []
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const data = JSON.parse(text);
+                    root.searchResults = (data.results ?? []).slice(0, 5);
+                } catch(e) {
+                    root.searchResults = [];
+                }
+            }
+        }
+    }
+
+    // Instant answers
+    property string instantAnswer: ""
+    property string instantAbstract: ""
+    property string instantAbstractUrl: ""
+    property string instantAbstractSource: ""
+    property string _lastInstantQuery: ""
+
+    function fetchInstant(query: string): void {
+        if (!query.trim() || query === _lastInstantQuery) return;
+        _lastInstantQuery = query;
+        instantProc.command = ["bash", "-c",
+            `curl -s 'https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1'`
+        ];
+        instantProc.running = true;
+    }
+
+    function clearInstant(): void {
+        instantAnswer = "";
+        instantAbstract = "";
+        instantAbstractUrl = "";
+        instantAbstractSource = "";
+        _lastInstantQuery = "";
+    }
+
+    Process {
+        id: instantProc
+        command: []
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const data = JSON.parse(text);
+                    root.instantAnswer = data.Answer ?? "";
+                    root.instantAbstract = data.AbstractText ?? "";
+                    root.instantAbstractUrl = data.AbstractURL ?? "";
+                    root.instantAbstractSource = data.AbstractSource ?? "";
+                } catch(e) {
+                    root.clearInstant();
+                }
+            }
+        }
+    }
 
     function nextEngine(): void {
         currentEngineIndex = (currentEngineIndex + 1) % engines.length;
