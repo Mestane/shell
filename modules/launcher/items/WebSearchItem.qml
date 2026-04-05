@@ -15,29 +15,21 @@ Item {
 
     readonly property string query: list.search.text.slice(`${Config.launcher.actionPrefix}web `.length)
     readonly property bool isUrl: WebSearch.isUrl(query)
-    readonly property bool hasInstantAnswer: WebSearch.instantAnswer.length > 0
-    readonly property bool hasAbstract: WebSearch.instantAbstract.length > 0
 
     Timer {
         id: searchTimer
         interval: 600
         onTriggered: {
-            if (root.query.length > 2) {
-                WebSearch.fetchInstant(root.query);
+            if (root.query.length > 2)
                 WebSearch.fetchResults(root.query);
-            } else {
-                WebSearch.clearInstant();
+            else
                 WebSearch.clearResults();
-            }
         }
     }
 
     onQueryChanged: {
         if (query.length > 2) searchTimer.restart();
-        else {
-            WebSearch.clearInstant();
-            WebSearch.clearResults();
-        }
+        else WebSearch.clearResults();
     }
 
     function onClicked(): void {
@@ -48,8 +40,6 @@ Item {
     }
 
     implicitHeight: mainItem.implicitHeight
-        + (instantAnswerItem.visible ? instantAnswerItem.implicitHeight + Appearance.spacing.small : 0)
-        + (abstractItem.visible ? abstractItem.implicitHeight + Appearance.spacing.small : 0)
         + (resultsList.visible ? resultsList.implicitHeight + Appearance.spacing.small : 0)
     anchors.left: parent?.left
     anchors.right: parent?.right
@@ -214,123 +204,10 @@ Item {
         }
     }
 
-    // Instant answer (calculator, conversions etc.)
-    Item {
-        id: instantAnswerItem
-        anchors.top: mainItem.bottom
-        anchors.topMargin: Appearance.spacing.small
-        anchors.left: parent.left
-        anchors.right: parent.right
-        implicitHeight: Config.launcher.sizes.itemHeight * 0.85
-        visible: root.hasInstantAnswer
-
-        StyledRect {
-            anchors.fill: parent
-            radius: Appearance.rounding.normal
-            color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
-
-            RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Appearance.padding.larger
-                spacing: Appearance.spacing.normal
-
-                MaterialIcon {
-                    text: "bolt"
-                    font.pointSize: Appearance.font.size.large
-                    color: Colours.palette.m3tertiary
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                StyledText {
-                    text: WebSearch.instantAnswer
-                    font.pointSize: Appearance.font.size.normal
-                    color: Colours.palette.m3onSurface
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
-        }
-    }
-
-    // Abstract (Wikipedia summary)
-    Item {
-        id: abstractItem
-        anchors.top: instantAnswerItem.visible
-            ? instantAnswerItem.bottom
-            : mainItem.bottom
-        anchors.topMargin: Appearance.spacing.small
-        anchors.left: parent.left
-        anchors.right: parent.right
-        implicitHeight: abstractContent.implicitHeight + Appearance.padding.normal * 2
-        visible: root.hasAbstract && !root.isUrl
-
-        StateLayer {
-            function onClicked(): void {
-                Quickshell.execDetached(["xdg-open", WebSearch.instantAbstractUrl]);
-                root.list.visibilities.launcher = false;
-            }
-            radius: Appearance.rounding.normal
-        }
-
-        StyledRect {
-            anchors.fill: parent
-            radius: Appearance.rounding.normal
-            color: Colours.layer(Colours.palette.m3surfaceContainer, 1)
-
-            ColumnLayout {
-                id: abstractContent
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Appearance.padding.larger
-                spacing: Appearance.spacing.smaller
-
-                RowLayout {
-                    spacing: Appearance.spacing.small
-
-                    MaterialIcon {
-                        text: "auto_stories"
-                        font.pointSize: Appearance.font.size.normal
-                        color: Colours.palette.m3secondary
-                    }
-
-                    StyledText {
-                        text: WebSearch.instantAbstractSource
-                        font.pointSize: Appearance.font.size.small
-                        color: Colours.palette.m3secondary
-                        font.weight: 500
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    MaterialIcon {
-                        text: "open_in_new"
-                        font.pointSize: Appearance.font.size.small
-                        color: Colours.palette.m3outline
-                    }
-                }
-
-                StyledText {
-                    text: WebSearch.instantAbstract
-                    font.pointSize: Appearance.font.size.small
-                    color: Colours.palette.m3onSurfaceVariant
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 3
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-            }
-        }
-    }
-
     // Search results from SearXNG
     Column {
         id: resultsList
-        anchors.top: abstractItem.visible
-            ? abstractItem.bottom
-            : (instantAnswerItem.visible ? instantAnswerItem.bottom : mainItem.bottom)
+        anchors.top: mainItem.bottom
         anchors.topMargin: Appearance.spacing.small
         anchors.left: parent.left
         anchors.right: parent.right
