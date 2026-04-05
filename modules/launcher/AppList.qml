@@ -25,7 +25,6 @@ StyledListView {
     orientation: Qt.Vertical
     implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
 
-
     preferredHighlightBegin: 0
     preferredHighlightEnd: height
     highlightRangeMode: ListView.ApplyRange
@@ -59,6 +58,9 @@ StyledListView {
 
             if (text.startsWith(`${prefix}web `))
                 return "web";
+
+            if (text.startsWith(`${prefix}timer `))
+                return "timer";
 
             return "actions";
         }
@@ -106,11 +108,25 @@ StyledListView {
                 root.delegate: variantItem
             }
         },
+        // State {
+        //     name: "settings"
+        //     PropertyChanges {
+        //         model.values: SettingsSearch.query(search.text)
+        //         root.delegate: settingsItem
+        //     }
+        // },
         State {
             name: "web"
             PropertyChanges {
                 model.values: [0]
                 root.delegate: webSearchItem
+            }
+        },
+        State {
+            name: "timer"
+            PropertyChanges {
+                model.values: [0]
+                root.delegate: timerItem
             }
         }
     ]
@@ -158,5 +174,8 @@ StyledListView {
     Component { id: calcItem; CalcItem { list: root } }
     Component { id: schemeItem; SchemeItem { list: root } }
     Component { id: variantItem; VariantItem { list: root } }
+    // Component { id: settingsItem; SettingsItem { list: root } }
     Component { id: webSearchItem; WebSearchItem { list: root } }
+    Component { id: timerItem; TimerItem { list: root } }
 }
+

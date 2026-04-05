@@ -47,58 +47,35 @@ StyledRect {
 
                     MaterialIcon {
                         id: capslockIcon
-
                         anchors.centerIn: parent
-
                         scale: Hypr.capsLock ? 1 : 0.5
                         opacity: Hypr.capsLock ? 1 : 0
-
                         text: "keyboard_capslock_badge"
                         color: root.colour
-
-                        Behavior on opacity {
-                            Anim {}
-                        }
-
-                        Behavior on scale {
-                            Anim {}
-                        }
+                        Behavior on opacity { Anim {} }
+                        Behavior on scale { Anim {} }
                     }
 
-                    Behavior on implicitHeight {
-                        Anim {}
-                    }
+                    Behavior on implicitHeight { Anim {} }
                 }
 
                 Item {
                     Layout.topMargin: Hypr.capsLock && Hypr.numLock ? iconColumn.spacing : 0
-
                     implicitWidth: numlockIcon.implicitWidth
                     implicitHeight: Hypr.numLock ? numlockIcon.implicitHeight : 0
 
                     MaterialIcon {
                         id: numlockIcon
-
                         anchors.centerIn: parent
-
                         scale: Hypr.numLock ? 1 : 0.5
                         opacity: Hypr.numLock ? 1 : 0
-
                         text: "looks_one"
                         color: root.colour
-
-                        Behavior on opacity {
-                            Anim {}
-                        }
-
-                        Behavior on scale {
-                            Anim {}
-                        }
+                        Behavior on opacity { Anim {} }
+                        Behavior on scale { Anim {} }
                     }
 
-                    Behavior on implicitHeight {
-                        Anim {}
-                    }
+                    Behavior on implicitHeight { Anim {} }
                 }
             }
         }
@@ -107,7 +84,6 @@ StyledRect {
         WrappedLoader {
             name: "audio"
             active: Config.bar.status.showAudio
-
             sourceComponent: MaterialIcon {
                 animate: true
                 text: Icons.getVolumeIcon(Audio.volume, Audio.muted)
@@ -119,7 +95,6 @@ StyledRect {
         WrappedLoader {
             name: "audio"
             active: Config.bar.status.showMicrophone
-
             sourceComponent: MaterialIcon {
                 animate: true
                 text: Icons.getMicVolumeIcon(Audio.sourceVolume, Audio.sourceMuted)
@@ -131,7 +106,6 @@ StyledRect {
         WrappedLoader {
             name: "kblayout"
             active: Config.bar.status.showKbLayout
-
             sourceComponent: StyledText {
                 animate: true
                 text: Hypr.kbLayout
@@ -144,7 +118,6 @@ StyledRect {
         WrappedLoader {
             name: "network"
             active: Config.bar.status.showNetwork && (!Nmcli.activeEthernet || Config.bar.status.showWifi)
-
             sourceComponent: MaterialIcon {
                 animate: true
                 text: Nmcli.active ? Icons.getNetworkIcon(Nmcli.active.strength ?? 0) : "wifi_off"
@@ -156,7 +129,6 @@ StyledRect {
         WrappedLoader {
             name: "ethernet"
             active: Config.bar.status.showNetwork && Nmcli.activeEthernet
-
             sourceComponent: MaterialIcon {
                 animate: true
                 text: "cable"
@@ -167,74 +139,55 @@ StyledRect {
         // Bluetooth section
         WrappedLoader {
             Layout.preferredHeight: implicitHeight
-
             name: "bluetooth"
             active: Config.bar.status.showBluetooth
 
             sourceComponent: ColumnLayout {
                 spacing: Appearance.spacing.smaller / 2
 
-                // Bluetooth icon
                 MaterialIcon {
                     animate: true
                     text: {
-                        if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
+                        if (!Bluetooth.defaultAdapter?.enabled)
                             return "bluetooth_disabled";
-                        if (Bluetooth.devices.values.some(d => d.connected)) // qmllint disable unresolved-type
+                        if (Bluetooth.devices.values.some(d => d.connected))
                             return "bluetooth_connected";
                         return "bluetooth";
                     }
                     color: root.colour
                 }
 
-                // Connected bluetooth devices
                 Repeater {
                     model: ScriptModel {
-                        values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected) // qmllint disable unresolved-type
+                        values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected)
                     }
 
                     MaterialIcon {
                         id: device
-
                         required property BluetoothDevice modelData
-
                         animate: true
                         text: Icons.getBluetoothIcon(modelData?.icon)
                         color: root.colour
                         fill: 1
 
                         SequentialAnimation on opacity {
-                            running: device.modelData?.state !== BluetoothDeviceState.Connected // qmllint disable unresolved-type
+                            running: device.modelData?.state !== BluetoothDeviceState.Connected
                             alwaysRunToEnd: true
                             loops: Animation.Infinite
-
-                            Anim {
-                                from: 1
-                                to: 0
-                                duration: Appearance.anim.durations.large
-                                easing.bezierCurve: Appearance.anim.curves.standardAccel
-                            }
-                            Anim {
-                                from: 0
-                                to: 1
-                                duration: Appearance.anim.durations.large
-                                easing.bezierCurve: Appearance.anim.curves.standardDecel
-                            }
+                            Anim { from: 1; to: 0; duration: Appearance.anim.durations.large; easing.bezierCurve: Appearance.anim.curves.standardAccel }
+                            Anim { from: 0; to: 1; duration: Appearance.anim.durations.large; easing.bezierCurve: Appearance.anim.curves.standardDecel }
                         }
                     }
                 }
             }
 
-            Behavior on Layout.preferredHeight {
-                Anim {}
-            }
+            Behavior on Layout.preferredHeight { Anim {} }
         }
 
         // Battery icon
         WrappedLoader {
             name: "battery"
             active: Config.bar.status.showBattery
-
             sourceComponent: MaterialIcon {
                 animate: true
                 text: {
@@ -245,7 +198,6 @@ StyledRect {
                             return "rocket_launch";
                         return "balance";
                     }
-
                     const perc = UPower.displayDevice.percentage;
                     const charging = [UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state);
                     if (perc === 1)
@@ -259,11 +211,45 @@ StyledRect {
                 fill: 1
             }
         }
+
+        WrappedLoader {
+            name: "timer"
+            active: Config.bar.status.showTimer
+        
+            sourceComponent: MaterialIcon {
+            id: timerIcon
+            text: "timer"
+            color: PomodoroTimer.running
+                ? (PomodoroTimer.paused ? Colours.palette.m3outline : Colours.palette.m3primary)
+                : root.colour
+            animate: true
+        
+            onVisibleChanged: if (visible) opacity = 1
+        
+            Connections {
+                target: PomodoroTimer
+                function onRunningChanged(): void {
+                    if (!PomodoroTimer.running) timerIcon.opacity = 1;
+                }
+                function onPausedChanged(): void {
+                    if (PomodoroTimer.paused) timerIcon.opacity = 1;
+                }
+            }
+        
+            SequentialAnimation on opacity {
+                running: PomodoroTimer.running && !PomodoroTimer.paused
+                loops: Animation.Infinite
+                Anim { from: 1; to: 0.3; duration: 800; easing.bezierCurve: Appearance.anim.curves.standard }
+                Anim { from: 0.3; to: 1; duration: 800; easing.bezierCurve: Appearance.anim.curves.standard }
+            }
+        }
+        }
+
+
     }
 
     component WrappedLoader: Loader {
         required property string name
-
         asynchronous: true
         Layout.alignment: Qt.AlignHCenter
         visible: active

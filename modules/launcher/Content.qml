@@ -95,6 +95,8 @@ Item {
                             currentItem.onClicked();
                         else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
                             currentItem.onClicked();
+                        else if (text.startsWith(`${Config.launcher.actionPrefix}timer `))
+                            currentItem.onClicked();
                         else
                             currentItem.modelData.onClicked(list.currentList);
                     } else {

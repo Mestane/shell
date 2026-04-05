@@ -97,7 +97,8 @@ Item {
     }
 
     Binding {
-        when: root.hasCurrent && root.currentName === "wirelesspassword"
+        // when: root.hasCurrent && root.currentName === "wirelesspassword"
+        when: root.hasCurrent && (root.currentName === "wirelesspassword" || root.currentName === "timer")
 
         target: QsWindow.window
         property: "WlrLayershell.keyboardFocus"

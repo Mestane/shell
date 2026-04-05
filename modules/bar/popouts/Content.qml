@@ -62,16 +62,13 @@ Item {
             }
 
             Connections {
-                function onCurrentNameChanged() {
-                    // Update network immediately when password popout becomes active
+                function onCurrentNameChanged(): void {
                     if (root.popouts.currentName === "wirelesspassword") {
-                        // Set network immediately if available
                         if ((networkPopout.item as Network)?.passwordNetwork) {
                             if (passwordPopout.item) {
                                 (passwordPopout.item as WirelessPassword).network = (networkPopout.item as Network).passwordNetwork;
                             }
                         }
-                        // Also try after a short delay in case networkPopout.item wasn't ready
                         Qt.callLater(() => {
                             if (passwordPopout.item && (networkPopout.item as Network)?.passwordNetwork) {
                                 (passwordPopout.item as WirelessPassword).network = (networkPopout.item as Network).passwordNetwork;
@@ -79,13 +76,11 @@ Item {
                         }, 100);
                     }
                 }
-
                 target: root.popouts
             }
 
             Connections {
-                function onItemChanged() {
-                    // When network popout loads, update password popout if it's active
+                function onItemChanged(): void {
                     if (root.popouts.currentName === "wirelesspassword" && passwordPopout.item) {
                         Qt.callLater(() => {
                             if ((networkPopout.item as Network)?.passwordNetwork) {
@@ -94,7 +89,6 @@ Item {
                         });
                     }
                 }
-
                 target: networkPopout
             }
         }
@@ -128,6 +122,11 @@ Item {
             sourceComponent: LockStatus {}
         }
 
+        Popout {
+            name: "timer"
+            sourceComponent: TimerPopout {}
+        }
+
         Repeater {
             model: ScriptModel {
                 values: SystemTray.items.values.filter(i => !Config.bar.tray.hiddenIcons.includes(i.id))
@@ -149,7 +148,6 @@ Item {
                             trayMenu.sourceComponent = trayMenuComp;
                         }
                     }
-
                     target: root.popouts
                 }
 

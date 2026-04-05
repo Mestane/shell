@@ -1,5 +1,4 @@
 import Quickshell.Io
-
 JsonObject {
     property bool persistent: true
     property bool showOnHover: true
@@ -13,86 +12,50 @@ JsonObject {
     property Clock clock: Clock {}
     property Sizes sizes: Sizes {}
     property list<string> excludedScreens: []
-
     property list<var> entries: [
-        {
-            id: "logo",
-            enabled: true
-        },
-        {
-            id: "workspaces",
-            enabled: true
-        },
-        {
-            id: "spacer",
-            enabled: true
-        },
-        {
-            id: "activeWindow",
-            enabled: true
-        },
-        {
-            id: "spacer",
-            enabled: true
-        },
-        {
-            id: "tray",
-            enabled: true
-        },
-        {
-            id: "clock",
-            enabled: true
-        },
-        {
-            id: "statusIcons",
-            enabled: true
-        },
-        {
-            id: "power",
-            enabled: true
-        }
+        { id: "logo", enabled: true },
+        { id: "workspaces", enabled: true },
+        { id: "spacer", enabled: true },
+        { id: "activeWindow", enabled: true },
+        { id: "spacer", enabled: true },
+        { id: "tray", enabled: true },
+        { id: "clock", enabled: true },
+        { id: "statusIcons", enabled: true },
+        { id: "power", enabled: true }
     ]
-
     component ScrollActions: JsonObject {
         property bool workspaces: true
         property bool volume: true
         property bool brightness: true
     }
-
     component Popouts: JsonObject {
         property bool activeWindow: true
         property bool tray: true
         property bool statusIcons: true
     }
-
     component Workspaces: JsonObject {
         property int shown: 5
         property bool activeIndicator: true
         property bool occupiedBg: false
         property bool showWindows: true
         property bool showWindowsOnSpecialWorkspaces: showWindows
-        property int maxWindowIcons: 0 // 0 = unlimited
+        property int maxWindowIcons: 0
         property bool activeTrail: false
         property bool perMonitorWorkspaces: true
-        property string label: "  " // if empty, will show workspace name's first letter
+        property string label: "  "
         property string occupiedLabel: "󰮯"
         property string activeLabel: "󰮯"
-        property string capitalisation: "preserve" // upper, lower, or preserve - relevant only if label is empty
+        property string capitalisation: "preserve"
         property list<var> specialWorkspaceIcons: []
         property list<var> windowIcons: [
-            {
-                regex: "steam(_app_(default|[0-9]+))?",
-                icon: "sports_esports"
-            }
+            { regex: "steam(_app_(default|[0-9]+))?", icon: "sports_esports" }
         ]
     }
-
     component ActiveWindow: JsonObject {
         property bool compact: false
         property bool inverted: false
         property bool showOnHover: true
     }
-
     component Tray: JsonObject {
         property bool background: false
         property bool recolour: false
@@ -100,7 +63,6 @@ JsonObject {
         property list<var> iconSubs: []
         property list<string> hiddenIcons: []
     }
-
     component Status: JsonObject {
         property bool showAudio: false
         property bool showMicrophone: false
@@ -110,14 +72,13 @@ JsonObject {
         property bool showBluetooth: true
         property bool showBattery: true
         property bool showLockStatus: true
+        property bool showTimer: true
     }
-
     component Clock: JsonObject {
         property bool background: false
         property bool showDate: false
         property bool showIcon: true
     }
-
     component Sizes: JsonObject {
         property int innerWidth: 40
         property int windowPreviewSize: 400
