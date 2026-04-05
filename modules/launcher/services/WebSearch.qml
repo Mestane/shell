@@ -107,20 +107,52 @@ Singleton {
     property int currentPage: 0
     property string _lastSearchQuery: ""
 
+    // function fetchResults(query: string, page: int): void {
+    //     if (!query.trim()) return;
+    //     currentPage = page ?? 0;
+    //     // Yeni query ise fetch et, aynıysa sadece sayfa değiştir
+    //     if (query !== _lastSearchQuery) {
+    //         _lastSearchQuery = query;
+    //         allSearchResults = [];
+    //         searchResults = [];
+    //         searxProc.command = ["bash", "-c",
+    //             `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
+    //         ];
+    //         searxProc.running = true;
+    //     } else {
+    //         // Sadece sayfa değiştir
+    //         searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
+    //     }
+    // }
+    //
+    //
     function fetchResults(query: string, page: int): void {
         if (!query.trim()) return;
         currentPage = page ?? 0;
-        // Yeni query ise fetch et, aynıysa sadece sayfa değiştir
+    
         if (query !== _lastSearchQuery) {
             _lastSearchQuery = query;
             allSearchResults = [];
             searchResults = [];
-            searxProc.command = ["bash", "-c",
-                `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
-            ];
-            searxProc.running = true;
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", `${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json`);
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        root.allSearchResults = data.results ?? [];
+                        root.totalResults = root.allSearchResults.length;
+                        root.searchResults = root.allSearchResults.slice(0, 5);
+                    } catch(e) {
+                        root.allSearchResults = [];
+                        root.searchResults = [];
+                        root.totalResults = 0;
+                    }
+                }
+            };
+            xhr.send();
         } else {
-            // Sadece sayfa değiştir
             searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
         }
     }
