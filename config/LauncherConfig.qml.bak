@@ -4,7 +4,7 @@ JsonObject {
     property bool enabled: true
     property bool showOnHover: false
     property int maxShown: 7
-    property int maxWallpapers: 9
+    property int maxWallpapers: 9 // Warning: even numbers look bad
     property string specialPrefix: "@"
     property string actionPrefix: ">"
     property bool enableDangerousActions: false
@@ -157,13 +157,13 @@ JsonObject {
     component WebSearch: JsonObject {
         property bool searchEnabled: true
         property list<var> engines: [
-            { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1", searxEngine: "", type: "web" },
-            { name: "Google", url: "https://www.google.com/search?q=%1", searxEngine: "google", type: "web" },
-            { name: "Bing", url: "https://www.bing.com/search?q=%1", searxEngine: "bing", type: "web" },
-            { name: "Brave", url: "https://search.brave.com/search?q=%1", searxEngine: "brave", type: "web" },
-            { name: "YouTube", url: "https://www.youtube.com/results?search_query=%1", searxEngine: "youtube", type: "video" },
-            { name: "Images", url: "https://www.google.com/search?tbm=isch&q=%1",  searxEngine: "", type: "images" },
-            { name: "GitHub", url: "https://github.com/search?q=%1", searxEngine: "github", type: "web" },
+            { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1", searxEngine: "" },
+            { name: "Google",     url: "https://www.google.com/search?q=%1", searxEngine: "google" },
+            { name: "Brave",      url: "https://search.brave.com/search?q=%1", searxEngine: "brave" },
+            { name: "YouTube",    url: "https://www.youtube.com/results?search_query=%1", searxEngine: "youtube", type = "video"},
+            { name: "Google Images", url: "https://www.google.com/search?tbm=isch&q=%1", searxEngine: "", type: "images" },
+            { name: "GitHub",     url: "https://github.com/search?q=%1", searxEngine: "github" },
         ]
     }
 }
+

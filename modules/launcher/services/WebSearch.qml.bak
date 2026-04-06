@@ -11,6 +11,7 @@ Singleton {
 
     readonly property list<var> engines: Config.launcher.webSearch.engines
     property bool searchEnabled: Config.launcher.webSearch.searchEnabled
+    property list<var> allSearchResults: []
 
     property int currentEngineIndex: 0
     readonly property var currentEngine: engines[currentEngineIndex]
@@ -54,6 +55,7 @@ Singleton {
     function isUrl(text: string): bool {
         return /^(https?:\/\/)/.test(text) ||
                /^www\./.test(text) ||
+               /^localhost(:\d+)?(\/.*)?$/.test(text) ||
                /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
     }
 
@@ -90,134 +92,6 @@ Singleton {
         Quickshell.execDetached([...getBrowserCmd("private"), fullUrl]);
     }
 
-    // Suggestions
-    property list<string> suggestions: []
-    property string _lastSuggestionQuery: ""
-
-    function fetchSuggestions(query: string): void {
-        if (!query.trim() || query === _lastSuggestionQuery) return;
-        _lastSuggestionQuery = query;
-        suggestProc.command = ["bash", "-c",
-            `curl -s 'https://duckduckgo.com/ac/?q=${encodeURIComponent(query)}&type=list'`
-        ];
-        suggestProc.running = true;
-    }
-
-    function clearSuggestions(): void {
-        suggestions = [];
-        _lastSuggestionQuery = "";
-    }
-
-    Process {
-        id: suggestProc
-        command: []
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    root.suggestions = data[1] ?? [];
-                } catch(e) {
-                    root.suggestions = [];
-                }
-            }
-        }
-    }
-
-    // SearXNG
-    readonly property string searxngUrl: "http://localhost:8080"
-    property list<var> searchResults: []
-    property string _lastSearchQuery: ""
-
-
-    property int currentPage: 0
-    readonly property int resultsPerPage: 5
-    
-    function fetchResults(query: string, page: int): void {
-        if (!query.trim()) return;
-        _lastSearchQuery = query;
-        currentPage = page ?? 0;
-        searchResults = [];
-        const pageno = (page ?? 0) + 1;
-        searxProc.command = ["bash", "-c",
-            `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json&pageno=${pageno}'`
-        ];
-        searxProc.running = true;
-    }
-
-
-    // function fetchResults(query: string): void {
-    //     if (!query.trim() || query === _lastSearchQuery) return;
-    //     _lastSearchQuery = query;
-    //     searchResults = [];
-    //     searxProc.command = ["bash", "-c",
-    //         `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
-    //     ];
-    //     searxProc.running = true;
-    // }
-
-    function clearResults(): void {
-        searchResults = [];
-        _lastSearchQuery = "";
-    }
-
-    Process {
-        id: searxProc
-        command: []
-        stdout: StdioCollector {
-            root.totalResults = data.number_of_results ?? 0;
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    root.searchResults = (data.results ?? []).slice(0, 5);
-                } catch(e) {
-                    root.searchResults = [];
-                }
-            }
-        }
-    }
-
-    // Instant answers
-    property string instantAnswer: ""
-    property string instantAbstract: ""
-    property string instantAbstractUrl: ""
-    property string instantAbstractSource: ""
-    property string _lastInstantQuery: ""
-
-    function fetchInstant(query: string): void {
-        if (!query.trim() || query === _lastInstantQuery) return;
-        _lastInstantQuery = query;
-        instantProc.command = ["bash", "-c",
-            `curl -s 'https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1'`
-        ];
-        instantProc.running = true;
-    }
-
-    function clearInstant(): void {
-        instantAnswer = "";
-        instantAbstract = "";
-        instantAbstractUrl = "";
-        instantAbstractSource = "";
-        _lastInstantQuery = "";
-    }
-
-    Process {
-        id: instantProc
-        command: []
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(text);
-                    root.instantAnswer = data.Answer ?? "";
-                    root.instantAbstract = data.AbstractText ?? "";
-                    root.instantAbstractUrl = data.AbstractURL ?? "";
-                    root.instantAbstractSource = data.AbstractSource ?? "";
-                } catch(e) {
-                    root.clearInstant();
-                }
-            }
-        }
-    }
-
     function nextEngine(): void {
         currentEngineIndex = (currentEngineIndex + 1) % engines.length;
     }
@@ -225,4 +99,131 @@ Singleton {
     function prevEngine(): void {
         currentEngineIndex = (currentEngineIndex - 1 + engines.length) % engines.length;
     }
+
+    // SearXNG search
+    readonly property string searxngUrl: "http://localhost:8080"
+    property list<var> searchResults: []
+    property int totalResults: 0
+    property int currentPage: 0
+    property string _lastSearchQuery: ""
+
+    // function fetchResults(query: string, page: int): void {
+    //     if (!query.trim()) return;
+    //     currentPage = page ?? 0;
+    //     // Yeni query ise fetch et, aynıysa sadece sayfa değiştir
+    //     if (query !== _lastSearchQuery) {
+    //         _lastSearchQuery = query;
+    //         allSearchResults = [];
+    //         searchResults = [];
+    //         searxProc.command = ["bash", "-c",
+    //             `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
+    //         ];
+    //         searxProc.running = true;
+    //     } else {
+    //         // Sadece sayfa değiştir
+    //         searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
+    //     }
+    // }
+    //
+    //
+    function fetchResults(query: string, page: int): void {
+        if (!query.trim()) return;
+        currentPage = page ?? 0;
+    
+        if (query !== _lastSearchQuery) {
+            _lastSearchQuery = query;
+            allSearchResults = [];
+            searchResults = [];
+    
+            const engine = root.currentEngine.searxEngine ?? "";
+            const engineParam = engine ? `&engines=${engine}` : "";
+            const xhr = new XMLHttpRequest();
+            // xhr.open("GET", `${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json`);
+            xhr.open("GET", `${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json${engineParam}`);
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        root.allSearchResults = data.results ?? [];
+                        root.totalResults = root.allSearchResults.length;
+                        root.searchResults = root.allSearchResults.slice(0, 5);
+                    } catch(e) {
+                        root.allSearchResults = [];
+                        root.searchResults = [];
+                        root.totalResults = 0;
+                    }
+                }
+            };
+            xhr.send();
+        } else {
+            searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
+        }
+    }
+
+    function clearResults(): void {
+        searchResults = [];
+        allSearchResults = [];
+        totalResults = 0;
+        currentPage = 0;
+        _lastSearchQuery = "";
+    }
+
+    Process {
+        id: searxProc
+        command: []
+        stdout: StdioCollector {
+          // onStreamFinished: {
+          //     try {
+          //         const data = JSON.parse(text);
+          //         const allResults = data.results ?? [];
+          //         root.totalResults = allResults.length;
+          //         root.searchResults = allResults.slice(
+          //             root.currentPage * 5,
+          //             (root.currentPage + 1) * 5
+          //         );
+          //     } catch(e) {
+          //         root.searchResults = [];
+          //         root.totalResults = 0;
+          //     }
+          // }
+          //
+          onStreamFinished: {
+              try {
+                  const data = JSON.parse(text);
+                  root.allSearchResults = data.results ?? [];
+                  root.totalResults = root.allSearchResults.length;
+                  root.searchResults = root.allSearchResults.slice(0, 5);
+              } catch(e) {
+                  root.allSearchResults = [];
+                  root.searchResults = [];
+                  root.totalResults = 0;
+              }
+          }
+        }
+    }
+
+    // Engine index persistence
+    readonly property string engineIndexPath: `${Paths.state}/websearch_engine.txt`
+
+    onCurrentEngineIndexChanged: {
+        saveEngineProc.command = ["bash", "-c",
+            `mkdir -p '${Paths.state}' && printf '%s' '${currentEngineIndex}' > '${root.engineIndexPath}'`
+        ];
+        saveEngineProc.running = true;
+    }
+
+    Process { id: saveEngineProc; command: [] }
+
+    FileView {
+        id: engineReader
+        path: root.engineIndexPath
+        onLoaded: {
+            const idx = parseInt(engineReader.text());
+            if (!isNaN(idx) && idx >= 0 && idx < root.engines.length)
+                root.currentEngineIndex = idx;
+        }
+        onLoadFailed: {}
+    }
+
+    Component.onCompleted: engineReader.reload()
 }

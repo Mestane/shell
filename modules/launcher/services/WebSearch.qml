@@ -11,10 +11,10 @@ Singleton {
 
     readonly property list<var> engines: Config.launcher.webSearch.engines
     property bool searchEnabled: Config.launcher.webSearch.searchEnabled
-    property list<var> allSearchResults: []
 
     property int currentEngineIndex: 0
     readonly property var currentEngine: engines[currentEngineIndex]
+    readonly property string currentEngineType: currentEngine?.type ?? "web"
 
     readonly property var browserCommands: ({
         "firefox":              { new: ["firefox", "--new-window"],          private: ["firefox", "--private-window"] },
@@ -94,68 +94,221 @@ Singleton {
 
     function nextEngine(): void {
         currentEngineIndex = (currentEngineIndex + 1) % engines.length;
+        clearResults();
     }
 
     function prevEngine(): void {
         currentEngineIndex = (currentEngineIndex - 1 + engines.length) % engines.length;
+        clearResults();
     }
 
     // SearXNG search
     readonly property string searxngUrl: "http://localhost:8080"
     property list<var> searchResults: []
+    property list<var> allSearchResults: []
     property int totalResults: 0
     property int currentPage: 0
     property string _lastSearchQuery: ""
 
+    function buildSearchUrl(query: string): string {
+        const engine = root.currentEngine?.searxEngine ?? "";
+        const type = root.currentEngineType;
+        let params = `q=${encodeURIComponent(query)}&format=json`;
+        if (type === "images") {
+            params += "&categories=images";
+        } else if (type === "video") {
+            params += "&categories=videos";
+            if (engine) params += `&engines=${engine}`;
+        } else {
+            if (engine) params += `&engines=${engine}`;
+        }
+        return `${root.searxngUrl}/search?${params}`;
+    }
+
+
+      property var _cache: ({})
+      
+      function fetchResults(query: string, page: int): void {
+          if (!query.trim()) return;
+          if (!root.searchEnabled) return;
+          currentPage = page ?? 0;
+      
+          const cacheKey = `${query}__${root.currentEngineIndex}`;
+      
+          if (query !== _lastSearchQuery) {
+              _lastSearchQuery = query;
+      
+              // Cache'de var mı?
+              if (root._cache[cacheKey]) {
+                  const perPage = root.currentEngineType === "images" ? 12 : 5;
+                  root.allSearchResults = root._cache[cacheKey];
+                  root.totalResults = root._cache[cacheKey].length;
+                  root.searchResults = root._cache[cacheKey].slice(currentPage * perPage, (currentPage + 1) * perPage);
+                  return;
+              }
+      
+              allSearchResults = [];
+              searchResults = [];
+              const xhr = new XMLHttpRequest();
+              xhr.open("GET", root.buildSearchUrl(query));
+              xhr.onreadystatechange = () => {
+                  if (xhr.readyState === XMLHttpRequest.DONE) {
+                      try {
+                          const data = JSON.parse(xhr.responseText);
+                          const perPage = root.currentEngineType === "images" ? 12 : 5;
+                          const allResults = data.results ?? [];
+                          const filtered = root.currentEngineType === "images"
+                              ? allResults.filter(r => {
+                                  const src = r.img_src ?? r.thumbnail ?? "";
+                                  return src.startsWith("http");
+                              })
+                              : allResults;
+                          // Cache'e kaydet
+                          const newCache = Object.assign({}, root._cache);
+                          newCache[cacheKey] = filtered;
+                          root._cache = newCache;
+                          root.allSearchResults = filtered;
+                          root.totalResults = filtered.length;
+                          root.searchResults = filtered.slice(0, perPage);
+                      } catch(e) {
+                          root.allSearchResults = [];
+                          root.searchResults = [];
+                          root.totalResults = 0;
+                      }
+                  }
+              };
+              xhr.send();
+          } else {
+              const perPage = root.currentEngineType === "images" ? 12 : 5;
+              searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
+          }
+      }
+
+
+
     // function fetchResults(query: string, page: int): void {
     //     if (!query.trim()) return;
     //     currentPage = page ?? 0;
-    //     // Yeni query ise fetch et, aynıysa sadece sayfa değiştir
+    //
     //     if (query !== _lastSearchQuery) {
     //         _lastSearchQuery = query;
     //         allSearchResults = [];
     //         searchResults = [];
-    //         searxProc.command = ["bash", "-c",
-    //             `curl -s '${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json'`
-    //         ];
-    //         searxProc.running = true;
+    //         const xhr = new XMLHttpRequest();
+    //         xhr.open("GET", root.buildSearchUrl(query));
+    //         xhr.onreadystatechange = () => {
+    //             if (xhr.readyState === XMLHttpRequest.DONE) {
+    //                 try {
+    //                     const data = JSON.parse(xhr.responseText);
+    //                     const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //                     const blockedDomains = ["artic.edu", "flickr.com"];
+    //                     // root.allSearchResults = data.results ?? [];
+    //
+    //                     root.allSearchResults = (data.results ?? []).filter(r => {
+    //                         if (root.currentEngineType !== "images") return true;
+    //                         const src = r.img_src ?? r.thumbnail ?? "";
+    //                         if (!src.startsWith("http")) return false;
+    //                         return !blockedDomains.some(d => src.includes(d));
+    //                     });
+    //                     root.totalResults = root.allSearchResults.length;
+    //                     root.searchResults = root.allSearchResults.slice(0, perPage);
+    //                 } catch(e) {
+    //                     root.allSearchResults = [];
+    //                     root.searchResults = [];
+    //                     root.totalResults = 0;
+    //                 }
+    //             }
+    //         };
+    //         xhr.send();
     //     } else {
-    //         // Sadece sayfa değiştir
-    //         searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
+    //         const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //         searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
     //     }
     // }
     //
     //
-    function fetchResults(query: string, page: int): void {
-        if (!query.trim()) return;
-        currentPage = page ?? 0;
-    
-        if (query !== _lastSearchQuery) {
-            _lastSearchQuery = query;
-            allSearchResults = [];
-            searchResults = [];
-    
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", `${root.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json`);
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === XMLHttpRequest.DONE) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        root.allSearchResults = data.results ?? [];
-                        root.totalResults = root.allSearchResults.length;
-                        root.searchResults = root.allSearchResults.slice(0, 5);
-                    } catch(e) {
-                        root.allSearchResults = [];
-                        root.searchResults = [];
-                        root.totalResults = 0;
-                    }
-                }
-            };
-            xhr.send();
-        } else {
-            searchResults = allSearchResults.slice(currentPage * 5, (currentPage + 1) * 5);
-        }
-    }
+    // function fetchResults(query: string, page: int): void {
+    //       if (!query.trim()) return;
+    //       currentPage = page ?? 0;
+    //       if (query !== _lastSearchQuery) {
+    //           _lastSearchQuery = query;
+    //           allSearchResults = [];
+    //           searchResults = [];
+    //           const xhr = new XMLHttpRequest();
+    //           xhr.open("GET", root.buildSearchUrl(query));
+    //           xhr.onreadystatechange = () => {
+    //               if (xhr.readyState === XMLHttpRequest.DONE) {
+    //                   try {
+    //                       const data = JSON.parse(xhr.responseText);
+    //                       const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //                       const allResults = data.results ?? [];
+    //                       const filtered = root.currentEngineType === "images"
+    //                           ? allResults.filter(r => {
+    //                               const src = r.img_src ?? r.thumbnail ?? "";
+    //                               return src.startsWith("http");
+    //                           })
+    //                           : allResults;
+    //                       root.allSearchResults = filtered;
+    //                       root.totalResults = filtered.length;
+    //                       root.searchResults = filtered.slice(0, perPage);
+    //                   } catch(e) {
+    //                       root.allSearchResults = [];
+    //                       root.searchResults = [];
+    //                       root.totalResults = 0;
+    //                   }
+    //               }
+    //           };
+    //           xhr.send();
+    //       } else {
+    //           const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //           searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
+    //       }
+    //   }
+    //
+    //
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // function fetchResults(query: string, page: int): void {
+    //     if (!query.trim()) return;
+    //     currentPage = page ?? 0;
+    //     if (query !== _lastSearchQuery) {
+    //         _lastSearchQuery = query;
+    //         allSearchResults = [];
+    //         searchResults = [];
+    //         const xhr = new XMLHttpRequest();
+    //         xhr.open("GET", root.buildSearchUrl(query));
+    //         xhr.onreadystatechange = () => {
+    //             if (xhr.readyState === XMLHttpRequest.DONE) {
+    //                 try {
+    //                     const data = JSON.parse(xhr.responseText);
+    //                     const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //                     const allResults = data.results ?? [];
+    //                     const filtered = root.currentEngineType === "images"
+    //                         ? allResults.filter(r => {
+    //                             const src = r.img_src ?? r.thumbnail ?? "";
+    //                             return src.startsWith("http");
+    //                         })
+    //                         : allResults;
+    //                     root.allSearchResults = filtered;
+    //                     root.totalResults = filtered.length;
+    //                     root.searchResults = filtered.slice(0, perPage);
+    //                 } catch(e) {
+    //                     root.allSearchResults = [];
+    //                     root.searchResults = [];
+    //                     root.totalResults = 0;
+    //                 }
+    //             }
+    //         };
+    //         xhr.send();
+    //     } else {
+    //         const perPage = root.currentEngineType === "images" ? 12 : 5;
+    //         searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
+    //     }
+    // }
+    //
+    //
+    //
 
     function clearResults(): void {
         searchResults = [];
@@ -163,40 +316,6 @@ Singleton {
         totalResults = 0;
         currentPage = 0;
         _lastSearchQuery = "";
-    }
-
-    Process {
-        id: searxProc
-        command: []
-        stdout: StdioCollector {
-          // onStreamFinished: {
-          //     try {
-          //         const data = JSON.parse(text);
-          //         const allResults = data.results ?? [];
-          //         root.totalResults = allResults.length;
-          //         root.searchResults = allResults.slice(
-          //             root.currentPage * 5,
-          //             (root.currentPage + 1) * 5
-          //         );
-          //     } catch(e) {
-          //         root.searchResults = [];
-          //         root.totalResults = 0;
-          //     }
-          // }
-          //
-          onStreamFinished: {
-              try {
-                  const data = JSON.parse(text);
-                  root.allSearchResults = data.results ?? [];
-                  root.totalResults = root.allSearchResults.length;
-                  root.searchResults = root.allSearchResults.slice(0, 5);
-              } catch(e) {
-                  root.allSearchResults = [];
-                  root.searchResults = [];
-                  root.totalResults = 0;
-              }
-          }
-        }
     }
 
     // Engine index persistence

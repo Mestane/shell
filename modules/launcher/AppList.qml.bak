@@ -24,29 +24,37 @@ StyledListView {
     spacing: Appearance.spacing.small
     orientation: Qt.Vertical
 
+    // implicitHeight: {
+    //     if (state === "calc" || state === "timer")
+    //         return currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight;
+    //     if (state === "web") {
+    //         const results = WebSearch.searchResults.length;
+    //         const hasPages = WebSearch.totalResults > 5;
+    //         return Config.launcher.sizes.itemHeight
+    //             + (results > 0 ? results * (Config.launcher.sizes.itemHeight * 1.5) + Appearance.spacing.small : 0)
+    //             + (hasPages ? 36 + Appearance.spacing.small : 0);
+    //     }
+    //     return (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing;
+    // }
+
+
     implicitHeight: {
         if (state === "calc" || state === "timer")
             return currentItem?.implicitHeight ?? Config.launcher.sizes.itemHeight;
+            if (state === "web") {
+                const results = WebSearch.searchResults.length;
+                const hasPages = WebSearch.totalResults > 5;
+                const type = WebSearch.currentEngineType;
+                const itemH = type === "video" ? 80 : type === "images" ? 0 : Config.launcher.sizes.itemHeight * 1.5;
+                const rowH = type === "images" ? Math.ceil(results / 5) * 108 : results * (itemH + Appearance.spacing.smaller / 2);
+                return Config.launcher.sizes.itemHeight
+                    + (results > 0 ? rowH + Appearance.spacing.small : 0)
+                    + (hasPages ? 36 + Appearance.spacing.small : 0);
+            }
         return (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing;
     }
 
-    Binding {
-        when: root.state === "web"
-        target: root
-        property: "implicitHeight"
-        value: {
-            const results = WebSearch.searchResults.length;
-            const type = WebSearch.currentEngineType;
-            const hasPages = WebSearch.totalResults > 5;
-            const itemH = type === "video" ? 88 : type === "images" ? 0 : Config.launcher.sizes.itemHeight * 1.5;
-            const rowH = type === "images"
-                ? Math.ceil(results / 5) * 108
-                : results * (itemH + Appearance.spacing.smaller / 2);
-            return Config.launcher.sizes.itemHeight
-                + (results > 0 ? rowH + Appearance.spacing.small : 0)
-                + (hasPages ? 36 + Appearance.spacing.small : 0);
-        }
-    }
+
 
     preferredHighlightBegin: 0
     preferredHighlightEnd: height
@@ -131,6 +139,13 @@ StyledListView {
                 root.delegate: variantItem
             }
         },
+        // State {
+        //     name: "settings"
+        //     PropertyChanges {
+        //         model.values: SettingsSearch.query(search.text)
+        //         root.delegate: settingsItem
+        //     }
+        // },
         State {
             name: "web"
             PropertyChanges {
@@ -190,6 +205,8 @@ StyledListView {
     Component { id: calcItem; CalcItem { list: root } }
     Component { id: schemeItem; SchemeItem { list: root } }
     Component { id: variantItem; VariantItem { list: root } }
+    // Component { id: settingsItem; SettingsItem { list: root } }
     Component { id: webSearchItem; WebSearchItem { list: root } }
     Component { id: timerItem; TimerItem { list: root } }
 }
+

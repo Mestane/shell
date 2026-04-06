@@ -21,7 +21,7 @@ Item {
         interval: 600
         onTriggered: {
             if (root.query.length > 2 && WebSearch.searchEnabled)
-                WebSearch.fetchResults(root.query);
+                WebSearch.fetchResults(root.query, 0);
             else
                 WebSearch.clearResults();
         }
@@ -41,6 +41,7 @@ Item {
 
     implicitHeight: mainItem.implicitHeight
         + (resultsList.visible ? resultsList.implicitHeight + Appearance.spacing.small : 0)
+        + (pagination.visible ? pagination.implicitHeight + Appearance.spacing.small : 0)
     anchors.left: parent?.left
     anchors.right: parent?.right
 
@@ -146,7 +147,6 @@ Item {
                     }
                 }
             }
-
 
           // Search toggle
             StyledRect {
@@ -320,13 +320,50 @@ Item {
         }
     }
 
-    // Connections {
-    //     target: root.list.visibilities
-    //     function onLauncherChanged(): void {
-    //         if (!root.list.visibilities.launcher)
-    //             WebSearch.clearResults();
-    //     }
-    // }
+
+    // Pagination
+    Row {
+        id: pagination
+        anchors.top: resultsList.bottom
+        anchors.topMargin: Appearance.spacing.small
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Appearance.spacing.smaller
+        visible: WebSearch.totalResults > 5 && !root.isUrl
+
+        readonly property int totalPages: Math.min(Math.ceil(WebSearch.totalResults / 5), 10)
+
+        Repeater {
+            model: pagination.totalPages
+
+            StyledRect {
+                required property int index
+
+                implicitWidth: implicitHeight
+                implicitHeight: pageLabel.implicitHeight + Appearance.padding.small * 2
+                radius: Appearance.rounding.small
+                color: WebSearch.currentPage === index
+                    ? Colours.palette.m3primaryContainer
+                    : Colours.layer(Colours.palette.m3surfaceContainer, 2)
+
+                StateLayer {
+                    function onClicked(): void {
+                        WebSearch.fetchResults(root.query, index);
+                    }
+                    radius: parent.radius
+                }
+
+                StyledText {
+                    id: pageLabel
+                    anchors.centerIn: parent
+                    text: `${index + 1}`
+                    font.pointSize: Appearance.font.size.small
+                    color: WebSearch.currentPage === index
+                        ? Colours.palette.m3onPrimaryContainer
+                        : Colours.palette.m3onSurfaceVariant
+                }
+            }
+        }
+    }
     Connections {
         target: WebSearch
         function onSearchEnabledChanged(): void {
@@ -336,5 +373,4 @@ Item {
                 WebSearch.clearResults();
         }
     }
-
 }

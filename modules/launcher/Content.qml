@@ -139,6 +139,19 @@ Item {
                         return;
                     }
 
+                  // Alt+Enter → default browser'da aç
+                  if (event.key === Qt.Key_Return && (event.modifiers & Qt.AltModifier)) {
+                      const q = text.slice(`${Config.launcher.actionPrefix}web `.length);
+                      if (q.length > 0) {
+                          if (WebSearch.isUrl(q)) WebSearch.openUrl(q);
+                          else WebSearch.search(q);
+                          root.visibilities.launcher = false;
+                      }
+                      event.accepted = true;
+                      return;
+                  }
+
+
                     // Ctrl+Enter → new window
                     if (event.key === Qt.Key_Return && (event.modifiers & Qt.ControlModifier)) {
                         const q = text.slice(`${Config.launcher.actionPrefix}web `.length);
