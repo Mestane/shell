@@ -157,7 +157,8 @@ JsonObject {
     component WebSearch: JsonObject {
         property bool searchEnabled: true
         property list<var> engines: [
-            { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1", searxEngine: "", type: "web" },
+            { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=%1", searxEngine: "duckduckgo", type: "web" },
+            { name: "SearXNG",url: "http://localhost:8080/search?q=%1",type: "web"},
             { name: "Google", url: "https://www.google.com/search?q=%1", searxEngine: "google", type: "web" },
             { name: "Bing", url: "https://www.bing.com/search?q=%1", searxEngine: "bing", type: "web" },
             { name: "Brave", url: "https://search.brave.com/search?q=%1", searxEngine: "brave", type: "web" },

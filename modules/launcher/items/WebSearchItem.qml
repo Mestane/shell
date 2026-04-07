@@ -462,64 +462,68 @@ Item {
             Repeater {
                 model: imageResults.visible ? WebSearch.searchResults : []
 
-                StyledRect {
-                    id: imageItem
-                    required property var modelData
-                    required property int index
-                    implicitWidth: 100
-                    implicitHeight: 100
-                    radius: Appearance.rounding.small
-                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
-                    clip: true
-
-                    Image {
-                        anchors.fill: parent
-                        source: imageItem.modelData.img_src ?? imageItem.modelData.thumbnail ?? ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                    }
-
-                    StateLayer {
-                      function onClicked(): void {
-                          if (query.length === 0) return;
-                          if (isUrl) WebSearch.openUrl(query);
-                          else WebSearch.fetchResults(query, 0);
-                      }
-                        radius: parent.radius
-                    }
-                }
-                //
                 // StyledRect {
                 //     id: imageItem
                 //     required property var modelData
                 //     required property int index
-                //     implicitWidth: img.status === Image.Error ? 0 : 100
-                //     implicitHeight: img.status === Image.Error ? 0 : 100
+                //     implicitWidth: 100
+                //     implicitHeight: 100
                 //     radius: Appearance.rounding.small
                 //     color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
                 //     clip: true
-                //     visible: img.status !== Image.Error
-                // 
+                //
                 //     Image {
-                //         id: img
                 //         anchors.fill: parent
                 //         source: imageItem.modelData.img_src ?? imageItem.modelData.thumbnail ?? ""
                 //         fillMode: Image.PreserveAspectCrop
                 //         asynchronous: true
-                //         // onStatusChanged: if (status === Image.Error) source = "" // hide logs
                 //     }
-                //     //
-                //     //
-                //     //
-                // 
+                //
                 //     StateLayer {
-                //         function onClicked(): void {
-                //             Quickshell.execDetached(["xdg-open", imageItem.modelData.url]);
-                //             root.list.visibilities.launcher = false;
-                //         }
+                //       function onClicked(): void {
+                //           if (query.length === 0) return;
+                //           if (isUrl) WebSearch.openUrl(query);
+                //           else WebSearch.fetchResults(query, 0);
+                //       }
                 //         radius: parent.radius
                 //     }
                 // }
+                //
+                StyledRect {
+                    id: imageItem
+                    required property var modelData
+                    required property int index
+                    // implicitWidth: img.status === Image.Error ? 0 : 100
+                    // implicitHeight: img.status === Image.Error ? 0 : 100
+                    implicitWidth: 100
+                    implicitHeight: 100
+                    // visible: img.status !== Image.Error
+                    //
+                    radius: Appearance.rounding.small
+                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                    clip: true
+                    visible: img.status !== Image.Error
+
+                    Image {
+                        id: img
+                        anchors.fill: parent
+                        source: imageItem.modelData.img_src ?? imageItem.modelData.thumbnail ?? ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        // onStatusChanged: if (status === Image.Error) source = "" // hide logs
+                    }
+                    //
+                    //
+                    //
+
+                    StateLayer {
+                        function onClicked(): void {
+                            Quickshell.execDetached(["xdg-open", imageItem.modelData.url]);
+                            root.list.visibilities.launcher = false;
+                        }
+                        radius: parent.radius
+                    }
+                }
                 //
                 //
             }

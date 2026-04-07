@@ -127,57 +127,62 @@ Singleton {
 
 
       property var _cache: ({})
-      
+
+
       function fetchResults(query: string, page: int): void {
           if (!query.trim()) return;
           if (!root.searchEnabled) return;
           currentPage = page ?? 0;
       
-          const cacheKey = `${query}__${root.currentEngineIndex}`;
-      
           if (query !== _lastSearchQuery) {
               _lastSearchQuery = query;
       
               // Cache'de var mı?
+              const cacheKey = `${query}__${root.currentEngineIndex}`;
               if (root._cache[cacheKey]) {
                   const perPage = root.currentEngineType === "images" ? 12 : 5;
                   root.allSearchResults = root._cache[cacheKey];
                   root.totalResults = root._cache[cacheKey].length;
-                  root.searchResults = root._cache[cacheKey].slice(currentPage * perPage, (currentPage + 1) * perPage);
+                  root.searchResults = root._cache[cacheKey].slice(0, perPage);
                   return;
               }
       
               allSearchResults = [];
               searchResults = [];
-              const xhr = new XMLHttpRequest();
-              xhr.open("GET", root.buildSearchUrl(query));
-              xhr.onreadystatechange = () => {
-                  if (xhr.readyState === XMLHttpRequest.DONE) {
-                      try {
-                          const data = JSON.parse(xhr.responseText);
-                          const perPage = root.currentEngineType === "images" ? 12 : 5;
-                          const allResults = data.results ?? [];
-                          const filtered = root.currentEngineType === "images"
-                              ? allResults.filter(r => {
-                                  const src = r.img_src ?? r.thumbnail ?? "";
-                                  return src.startsWith("http");
-                              })
-                              : allResults;
-                          // Cache'e kaydet
-                          const newCache = Object.assign({}, root._cache);
-                          newCache[cacheKey] = filtered;
-                          root._cache = newCache;
-                          root.allSearchResults = filtered;
-                          root.totalResults = filtered.length;
-                          root.searchResults = filtered.slice(0, perPage);
-                      } catch(e) {
-                          root.allSearchResults = [];
-                          root.searchResults = [];
-                          root.totalResults = 0;
+              const pages = [1, 2, 3];
+              let completed = 0;
+              let combined = [];
+      
+              pages.forEach(pageno => {
+                  const xhr = new XMLHttpRequest();
+                  xhr.open("GET", root.buildSearchUrl(query) + `&pageno=${pageno}`);
+                  xhr.onreadystatechange = () => {
+                      if (xhr.readyState === XMLHttpRequest.DONE) {
+                          try {
+                              const data = JSON.parse(xhr.responseText);
+                              combined = combined.concat(data.results ?? []);
+                          } catch(e) {}
+                          completed++;
+                          if (completed === pages.length) {
+                              const perPage = root.currentEngineType === "images" ? 12 : 5;
+                              const filtered = root.currentEngineType === "images"
+                                  ? combined.filter(r => {
+                                      const src = r.img_src ?? r.thumbnail ?? "";
+                                      return src.startsWith("http");
+                                  })
+                                  : combined;
+                              // Cache'e kaydet
+                              const newCache = Object.assign({}, root._cache);
+                              newCache[cacheKey] = filtered;
+                              root._cache = newCache;
+                              root.allSearchResults = filtered;
+                              root.totalResults = filtered.length;
+                              root.searchResults = filtered.slice(0, perPage);
+                          }
                       }
-                  }
-              };
-              xhr.send();
+                  };
+                  xhr.send();
+              });
           } else {
               const perPage = root.currentEngineType === "images" ? 12 : 5;
               searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
@@ -185,6 +190,65 @@ Singleton {
       }
 
 
+
+
+      
+      // function fetchResults(query: string, page: int): void {
+      //     if (!query.trim()) return;
+      //     if (!root.searchEnabled) return;
+      //     currentPage = page ?? 0;
+      // 
+      //     const cacheKey = `${query}__${root.currentEngineIndex}`;
+      // 
+      //     if (query !== _lastSearchQuery) {
+      //         _lastSearchQuery = query;
+      // 
+      //         // Cache'de var mı?
+      //         if (root._cache[cacheKey]) {
+      //             const perPage = root.currentEngineType === "images" ? 12 : 5;
+      //             root.allSearchResults = root._cache[cacheKey];
+      //             root.totalResults = root._cache[cacheKey].length;
+      //             root.searchResults = root._cache[cacheKey].slice(currentPage * perPage, (currentPage + 1) * perPage);
+      //             return;
+      //         }
+      // 
+      //         allSearchResults = [];
+      //         searchResults = [];
+      //         const xhr = new XMLHttpRequest();
+      //         xhr.open("GET", root.buildSearchUrl(query));
+      //         xhr.onreadystatechange = () => {
+      //             if (xhr.readyState === XMLHttpRequest.DONE) {
+      //                 try {
+      //                     const data = JSON.parse(xhr.responseText);
+      //                     const perPage = root.currentEngineType === "images" ? 12 : 5;
+      //                     const allResults = data.results ?? [];
+      //                     const filtered = root.currentEngineType === "images"
+      //                         ? allResults.filter(r => {
+      //                             const src = r.img_src ?? r.thumbnail ?? "";
+      //                             return src.startsWith("http");
+      //                         })
+      //                         : allResults;
+      //                     // Cache'e kaydet
+      //                     const newCache = Object.assign({}, root._cache);
+      //                     newCache[cacheKey] = filtered;
+      //                     root._cache = newCache;
+      //                     root.allSearchResults = filtered;
+      //                     root.totalResults = filtered.length;
+      //                     root.searchResults = filtered.slice(0, perPage);
+      //                 } catch(e) {
+      //                     root.allSearchResults = [];
+      //                     root.searchResults = [];
+      //                     root.totalResults = 0;
+      //                 }
+      //             }
+      //         };
+      //         xhr.send();
+      //     } else {
+      //         const perPage = root.currentEngineType === "images" ? 12 : 5;
+      //         searchResults = allSearchResults.slice(currentPage * perPage, (currentPage + 1) * perPage);
+      //     }
+      // }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// üsttekini kullaniyorum
 
     // function fetchResults(query: string, page: int): void {
     //     if (!query.trim()) return;
