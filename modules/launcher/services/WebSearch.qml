@@ -59,16 +59,29 @@ Singleton {
                /^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(text);
     }
 
+
+    function resolveUrl(url: string): string {
+        if (url.startsWith("http")) return url;
+        if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/.test(url)) return "http://" + url;
+        return "https://" + url;
+    }
+
+
     function search(query: string): void {
         if (!query.trim()) return;
         const url = currentEngine.url.replace("%1", encodeURIComponent(query));
         Quickshell.execDetached(["xdg-open", url]);
     }
 
+    // function openUrl(url: string): void {
+    //     const fullUrl = url.startsWith("http") ? url : "https://" + url;
+    //     Quickshell.execDetached(["xdg-open", fullUrl]);
+    // }
+    //
     function openUrl(url: string): void {
-        const fullUrl = url.startsWith("http") ? url : "https://" + url;
-        Quickshell.execDetached(["xdg-open", fullUrl]);
+        Quickshell.execDetached(["xdg-open", resolveUrl(url)]);
     }
+    //
 
     function searchInNewWindow(query: string): void {
         if (!query.trim()) return;
@@ -82,15 +95,25 @@ Singleton {
         Quickshell.execDetached([...getBrowserCmd("private"), url]);
     }
 
+    // function openUrlInNewWindow(url: string): void {
+    //     const fullUrl = url.startsWith("http") ? url : "https://" + url;
+    //     Quickshell.execDetached([...getBrowserCmd("new"), fullUrl]);
+    // }
+    //
     function openUrlInNewWindow(url: string): void {
-        const fullUrl = url.startsWith("http") ? url : "https://" + url;
-        Quickshell.execDetached([...getBrowserCmd("new"), fullUrl]);
+        Quickshell.execDetached([...getBrowserCmd("new"), resolveUrl(url)]);
     }
+    //
 
+    // function openUrlInPrivateWindow(url: string): void {
+    //     const fullUrl = url.startsWith("http") ? url : "https://" + url;
+    //     Quickshell.execDetached([...getBrowserCmd("private"), fullUrl]);
+    // }
+    //
     function openUrlInPrivateWindow(url: string): void {
-        const fullUrl = url.startsWith("http") ? url : "https://" + url;
-        Quickshell.execDetached([...getBrowserCmd("private"), fullUrl]);
+        Quickshell.execDetached([...getBrowserCmd("private"), resolveUrl(url)]);
     }
+    //
 
     function nextEngine(): void {
         currentEngineIndex = (currentEngineIndex + 1) % engines.length;
