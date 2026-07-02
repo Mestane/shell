@@ -162,199 +162,223 @@ VerticalFadeFlickable {
             }
         }
 
-        ListView {
+        Column {
             id: resultList
 
-            // Grouped results: the model is one entry per top-level page, and
-            // each delegate renders that page's heading plus the matching
-            // settings joined into a single rounded card (first/last rounded,
-            // middles square, thin dividers between them), like the Android
-            // settings search. A ScriptModel diffs the groups so only changed
-            // ones animate. Scrolling is delegated to the outer flickable.
             Layout.fillWidth: true
-            implicitHeight: contentHeight
-            interactive: false
-            cacheBuffer: 10000
             spacing: Tokens.padding.large
 
-            // The list's implicitHeight tracks contentHeight; while items animate
-            // their position the reported height fluctuates, which left gaps in
-            // the surrounding layout on fast typing. So additions, removals and
-            // reordering are all instant - no transitions - keeping the height
-            // correct at every frame.
-            model: ScriptModel {
-                // Match groups by their page so content updates in place rather
-                // than rebuilding the delegate when ranking shifts the order.
-                objectProp: "pageIdx"
-                values: root.groups
+            add: Transition {
+                Anim {
+                    type: Anim.DefaultEffects
+                    property: "opacity"
+                    from: 0
+                    to: 1
+                }
             }
 
-            delegate: ColumnLayout {
-                id: group
-
-                required property var modelData
-                required property int index
-
-                width: resultList.width
-                spacing: Tokens.spacing.small
-
-                // Group heading: the top-level page name, shown once.
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Tokens.padding.small
-                    spacing: Tokens.spacing.small
-
-                    MaterialIcon {
-                        text: group.modelData.icon
-                        color: Colours.palette.m3primary
-                        fontStyle: Tokens.font.icon.small
-                    }
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: group.modelData.page
-                        color: Colours.palette.m3primary
-                        font: Tokens.font.label.large
-                        elide: Text.ElideRight
-                    }
+            move: Transition {
+                Anim {
+                    properties: "x,y"
                 }
 
-                // The matching settings, joined into one card.
+                // A move may interrupt an in-flight add; drive opacity back to 1
+                // so the interrupted fade doesn't leave the group half-visible.
+                Anim {
+                    type: Anim.DefaultEffects
+                    property: "opacity"
+                    to: 1
+                }
+            }
+
+            Repeater {
+                model: ScriptModel {
+                    objectProp: "pageIdx"
+                    values: root.groups
+                }
+
                 ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
+                    id: group
 
-                    Repeater {
-                        model: group.modelData.entries
+                    required property var modelData
+                    required property int index
 
-                        StyledRect {
-                            id: result
+                    width: resultList.width
+                    spacing: Tokens.spacing.small
 
-                            required property var modelData
-                            required property int index
+                    // Group heading: the top-level page name, shown once.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: Tokens.padding.small
+                        spacing: Tokens.spacing.small
 
-                            readonly property bool isFirst: index === 0
-                            readonly property bool isLast: index === group.modelData.entries.length - 1
+                        MaterialIcon {
+                            text: group.modelData.icon
+                            color: Colours.palette.m3primary
+                            fontStyle: Tokens.font.icon.small
+                        }
 
+                        StyledText {
                             Layout.fillWidth: true
-                            implicitHeight: {
-                                const h = resultLayout.implicitHeight + resultLayout.anchors.margins * 2;
-                                return h % 2 === 0 ? h : h + 1;
+                            text: group.modelData.page
+                            color: Colours.palette.m3primary
+                            font: Tokens.font.label.large
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Column {
+                        id: cardList
+
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        add: Transition {
+                            Anim {
+                                type: Anim.DefaultEffects
+                                property: "opacity"
+                                from: 0
+                                to: 1
                             }
-                            // Joined card: round only the outer corners so the
-                            // rows read as one block (square where they meet),
-                            // matching the page tabs' corner radius.
-                            topLeftRadius: isFirst ? Tokens.rounding.extraLarge : 0
-                            topRightRadius: isFirst ? Tokens.rounding.extraLarge : 0
-                            bottomLeftRadius: isLast ? Tokens.rounding.extraLarge : 0
-                            bottomRightRadius: isLast ? Tokens.rounding.extraLarge : 0
-                            color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+                        }
+
+                        move: Transition {
+                            Anim {
+                                properties: "x,y"
+                            }
+
+                            Anim {
+                                type: Anim.DefaultEffects
+                                property: "opacity"
+                                to: 1
+                            }
+                        }
+
+                        Repeater {
+                            model: ScriptModel {
+                                objectProp: "anchor"
+                                values: group.modelData.entries
+                            }
 
                             StyledRect {
-                                anchors.bottom: parent.bottom
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.leftMargin: Tokens.padding.large
-                                anchors.rightMargin: Tokens.padding.large
-                                implicitHeight: 1
-                                visible: !result.isLast
-                                color: Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
-                            }
+                                id: result
 
-                            ColumnLayout {
-                                id: resultLayout
+                                required property var modelData
+                                required property int index
 
-                                anchors.fill: parent
-                                anchors.margins: Tokens.padding.large
-                                // Leave room on the right for the toggle switch.
-                                anchors.rightMargin: result.modelData.togglePath ? toggle.width + Tokens.padding.large * 2 : Tokens.padding.large
-                                spacing: Tokens.spacing.small / 2
+                                readonly property bool isFirst: index === 0
+                                readonly property bool isLast: index === group.modelData.entries.length - 1
 
-                                // Location line: deepest icon + "Section > sub", faint.
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    text: {
-                                        const labels = result.modelData.crumbLabels.slice(1);
-                                        const section = result.modelData.section;
-                                        const parts = section && section !== labels[labels.length - 1] ? labels.concat(section) : labels;
-                                        return parts.join("  \u203a  ");
+                                width: cardList.width
+                                implicitHeight: {
+                                    const h = resultLayout.implicitHeight + resultLayout.anchors.margins * 2;
+                                    return h % 2 === 0 ? h : h + 1;
+                                }
+                                // Joined card: round only the outer corners so the
+                                // rows read as one block (square where they meet),
+                                // matching the page tabs' corner radius.
+                                topLeftRadius: isFirst ? Tokens.rounding.extraLarge : 0
+                                topRightRadius: isFirst ? Tokens.rounding.extraLarge : 0
+                                bottomLeftRadius: isLast ? Tokens.rounding.extraLarge : 0
+                                bottomRightRadius: isLast ? Tokens.rounding.extraLarge : 0
+                                color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+
+                                StyledRect {
+                                    anchors.bottom: parent.bottom
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.leftMargin: Tokens.padding.large
+                                    anchors.rightMargin: Tokens.padding.large
+                                    implicitHeight: 1
+                                    visible: !result.isLast
+                                    color: Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
+                                }
+
+                                ColumnLayout {
+                                    id: resultLayout
+
+                                    anchors.fill: parent
+                                    anchors.margins: Tokens.padding.large
+                                    // Leave room on the right for the toggle switch.
+                                    anchors.rightMargin: result.modelData.togglePath ? toggle.width + Tokens.padding.large * 2 : Tokens.padding.large
+                                    spacing: Tokens.spacing.small / 2
+
+                                    // Location line: deepest icon + "Section > sub", faint.
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        text: {
+                                            const labels = result.modelData.crumbLabels.slice(1);
+                                            const section = result.modelData.section;
+                                            const parts = section && section !== labels[labels.length - 1] ? labels.concat(section) : labels;
+                                            return parts.join("  \u203a  ");
+                                        }
+                                        visible: text.length > 0
+                                        color: Colours.palette.m3onSurfaceVariant
+                                        font: Tokens.font.label.small
+                                        elide: Text.ElideRight
                                     }
-                                    visible: text.length > 0
-                                    color: Colours.palette.m3onSurfaceVariant
-                                    font: Tokens.font.label.small
-                                    elide: Text.ElideRight
-                                }
 
-                                // The setting itself, most prominent.
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    text: SettingsSearcher.highlight(result.modelData.title, root.search, Colours.palette.m3primary)
-                                    // Only pay for rich-text parsing when the
-                                    // string actually carries a highlight tag.
-                                    textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
-                                    color: Colours.palette.m3onSurface
-                                    font: Tokens.font.body.medium
-                                    elide: Text.ElideRight
-                                }
-
-                                // Optional description, faintest and smallest.
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    visible: result.modelData.subtext.length > 0
-                                    text: SettingsSearcher.highlight(result.modelData.subtext, root.search, Colours.palette.m3primary)
-                                    // Most subtexts have no match, so skip the
-                                    // rich-text parse unless there's a highlight.
-                                    textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
-                                    color: Colours.palette.m3outline
-                                    font: Tokens.font.label.small
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            // Hover/click layer on top of the content so the
-                            // rich-text labels underneath can't intercept pointer
-                            // events (which made the hover flicker as the mouse
-                            // moved over them). It's transparent apart from the
-                            // hover tint, so the text still shows through.
-                            StateLayer {
-                                anchors.fill: parent
-                                z: 1
-                                radius: 0
-
-                                onClicked: {
-                                    // Ethernet detail settings need a selected interface
-                                    // to show the right device; a search deep-link has
-                                    // none, so point it at the connected (or first) one.
-                                    if (result.modelData.anchor.startsWith("ethernet-")) {
-                                        const active = Nmcli.activeEthernet ?? Nmcli.ethernetDevices[0] ?? null;
-                                        if (active)
-                                            root.nState.selectedEthernetInterface = active.iface;
+                                    // The setting itself, most prominent.
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        text: SettingsSearcher.highlight(result.modelData.title, root.search, Colours.palette.m3primary)
+                                        // Only pay for rich-text parsing when the
+                                        // string actually carries a highlight tag.
+                                        textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
+                                        color: Colours.palette.m3onSurface
+                                        font: Tokens.font.body.medium
+                                        elide: Text.ElideRight
                                     }
-                                    root.nState.jumpToSetting(result.modelData.pageIdx, result.modelData.subPath, result.modelData.anchor);
+
+                                    // Optional description, faintest and smallest.
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        visible: result.modelData.subtext.length > 0
+                                        text: SettingsSearcher.highlight(result.modelData.subtext, root.search, Colours.palette.m3primary)
+                                        // Most subtexts have no match, so skip the
+                                        // rich-text parse unless there's a highlight.
+                                        textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
+                                        color: Colours.palette.m3outline
+                                        font: Tokens.font.label.small
+                                        elide: Text.ElideRight
+                                    }
                                 }
-                            }
 
-                            // For plain on/off settings, a switch on the right
-                            // flips the value straight from the results (One UI
-                            // style). It sits above the click layer (higher z) so
-                            // tapping it toggles without also opening the page;
-                            // tapping anywhere else still deep-links.
-                            StyledSwitch {
-                                id: toggle
+                                StateLayer {
+                                    anchors.fill: parent
+                                    z: 1
+                                    radius: 0
 
-                                anchors.right: parent.right
-                                anchors.rightMargin: Tokens.padding.large
-                                anchors.verticalCenter: parent.verticalCenter
-                                z: 2
-                                visible: result.modelData.togglePath
-                                checked: result.modelData.toggleValue
-                                cLayer: 3
-                                // A touch smaller than the in-page switches since
-                                // the result rows are denser.
-                                scale: 0.85
-                                transformOrigin: Item.Right
+                                    onClicked: {
+                                        // Ethernet detail settings need a selected interface
+                                        // to show the right device; a search deep-link has
+                                        // none, so point it at the connected (or first) one.
+                                        if (result.modelData.anchor.startsWith("ethernet-")) {
+                                            const active = Nmcli.activeEthernet ?? Nmcli.ethernetDevices[0] ?? null;
+                                            if (active)
+                                                root.nState.selectedEthernetInterface = active.iface;
+                                        }
+                                        root.nState.jumpToSetting(result.modelData.pageIdx, result.modelData.subPath, result.modelData.anchor);
+                                    }
+                                }
 
-                                onToggled: result.modelData.setToggle(checked)
+                                StyledSwitch {
+                                    id: toggle
+
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: Tokens.padding.large
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    z: 2
+                                    visible: result.modelData.togglePath
+                                    checked: result.modelData.toggleValue
+                                    cLayer: 3
+                                    // A touch smaller than the in-page switches since
+                                    // the result rows are denser.
+                                    scale: 0.85
+                                    transformOrigin: Item.Right
+
+                                    onToggled: result.modelData.setToggle(checked)
+                                }
                             }
                         }
                     }
