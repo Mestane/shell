@@ -172,42 +172,6 @@ PageBase {
 
         InfoRow {
             first: true
-            icon: "dashboard"
-            label: qsTr("Shell")
-            value: "caelestia/shell"
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Qt.openUrlExternally("https://github.com/caelestia-dots/shell")
-            }
-        }
-
-        InfoRow {
-            icon: "web"
-            label: qsTr("CLI")
-            value: "caelestia/cli"
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Qt.openUrlExternally("https://github.com/caelestia-dots/cli")
-            }
-        }
-
-        InfoRow {
-            icon: "tune"
-            label: qsTr("Dots")
-            value: "caelestia/dots"
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Qt.openUrlExternally("https://github.com/caelestia-dots/caelestia")
-            }
-        }
-
-        InfoRow {
             icon: "forum"
             label: qsTr("Discord")
             value: "discord.gg/Caelestia"
