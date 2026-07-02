@@ -289,7 +289,9 @@ VerticalFadeFlickable {
                                 StyledText {
                                     Layout.fillWidth: true
                                     text: SettingsSearcher.highlight(result.modelData.title, root.search, Colours.palette.m3primary)
-                                    textFormat: Text.StyledText
+                                    // Only pay for rich-text parsing when the
+                                    // string actually carries a highlight tag.
+                                    textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
                                     color: Colours.palette.m3onSurface
                                     font: Tokens.font.body.medium
                                     elide: Text.ElideRight
@@ -300,7 +302,9 @@ VerticalFadeFlickable {
                                     Layout.fillWidth: true
                                     visible: result.modelData.subtext.length > 0
                                     text: SettingsSearcher.highlight(result.modelData.subtext, root.search, Colours.palette.m3primary)
-                                    textFormat: Text.StyledText
+                                    // Most subtexts have no match, so skip the
+                                    // rich-text parse unless there's a highlight.
+                                    textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
                                     color: Colours.palette.m3outline
                                     font: Tokens.font.label.small
                                     elide: Text.ElideRight

@@ -20,11 +20,12 @@ import Caelestia.Config
 Singleton {
     id: root
 
-    // entries: forward index (one record per setting)
-    // inverted: token -> [entry id...]
-    // ranking:  token -> { entry id (string): weight }
     property var inverted: ({})
     property var ranking: ({})
+    readonly property var highlightCache: ({
+            "search": "",
+            "pattern": null
+        })
     // fzf finder over the entries (title + keywords), used as a fuzzy fallback
     // when the exact/prefix index lookup comes up short. fzf is the same matcher
     // the launcher uses, so typo and mid-word matching behave consistently.
@@ -48,18 +49,11 @@ Singleton {
             }
         }
 
-        // Sort by score, breaking ties by id so the order is stable (otherwise
-        // entries with equal scores can be dropped arbitrarily by the limit).
         const ranked = Object.keys(scores).filter(id => hitCounts[id] === tokens.length).sort((a, b) => scores[b] - scores[a] || (parseInt(a) - parseInt(b))).slice(0, 25);
 
         const all = entries.instances;
         const out = ranked.map(id => all[parseInt(id)]).filter(e => e !== undefined);
 
-        // The inverted index only does exact/prefix matches. When it finds little
-        // or nothing - a typo ("trasparency") or a mid-word query ("paper") - fall
-        // back to fzf over the same entries. fzf hits that the index already
-        // returned are skipped, and the rest are appended after the (stronger)
-        // index results, so precise matches always lead.
         if (out.length < 5 && root.fzfFinder) {
             const seen = ({});
             for (const id of ranked)
@@ -104,19 +98,36 @@ Singleton {
         return text.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 0);
     }
 
-    // Wrap the parts of `text` that match the search in the given colour, for use
-    // with a StyledText in Text.StyledText format. Matches each query token as a
-    // prefix at a word boundary (mirroring how lookup matches), so "wall"
-    // highlights the start of "wallpaper". StyledText supports <font color> but
-    // not CSS <span style>. HTML-significant characters are escaped first so the
-    // rich-text parser doesn't choke on names with & < or >.
     function highlight(text: string, search: string, colour: color): string {
         const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const tokens = tokenize(search);
-        if (tokens.length === 0)
+        if (search.length === 0)
             return escaped;
-        const escapedTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-        const pattern = new RegExp("\\b(" + escapedTokens.join("|") + ")", "gi");
+
+        // Rebuild the regex only when the search changes; every card reuses it.
+        const cache = root.highlightCache;
+        if (search !== cache.search) {
+            const tokens = root.tokenize(search);
+            cache.search = search;
+            if (tokens.length === 0) {
+                cache.pattern = null;
+            } else {
+                const escapedTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+                cache.pattern = new RegExp("\\b(" + escapedTokens.join("|") + ")", "gi");
+            }
+        }
+
+        const pattern = cache.pattern;
+        if (!pattern)
+            return escaped;
+
+        // Skip building (and later rich-text parsing) an HTML string when this
+        // text has no match - which is most subtexts. The caller checks for a
+        // "<font" tag to decide between StyledText and the cheaper PlainText.
+        pattern.lastIndex = 0;
+        if (!pattern.test(escaped))
+            return escaped;
+
+        pattern.lastIndex = 0;
         return escaped.replace(pattern, `<font color="${colour}">$1</font>`);
     }
 
