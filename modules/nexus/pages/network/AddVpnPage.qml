@@ -29,7 +29,7 @@ PageBase {
         const name = nameField.text.trim();
         if (name.length === 0) {
             nameField.isError = true;
-            nameField.forceFieldFocus();
+            nameField.forceActiveFocus();
             return;
         }
 
@@ -77,69 +77,65 @@ PageBase {
             wrapMode: Text.WordWrap
         }
 
-        M3TextField {
+        StyledTextField {
             id: nameField
 
             Layout.fillWidth: true
             Layout.topMargin: Tokens.spacing.small
-            label: qsTr("Provider name")
-            placeholder: qsTr("wireguard, warp, tailscale…")
+            placeholderText: qsTr("Provider name")
             leadingIcon: "vpn_key"
             supportingText: qsTr("Built-in id or a custom name")
             errorText: qsTr("Provider name is required")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
-            onAccepted: displayField.forceFieldFocus()
+            onAccepted: displayField.forceActiveFocus()
         }
 
-        M3TextField {
+        StyledTextField {
             id: displayField
 
             Layout.fillWidth: true
-            label: qsTr("Display name")
-            placeholder: qsTr("Shown in the list")
+            placeholderText: qsTr("Display name")
+            supportingText: qsTr("Shown in the list")
             leadingIcon: "label"
             inputMethodHints: Qt.ImhNoPredictiveText
 
-            onAccepted: interfaceField.forceFieldFocus()
+            onAccepted: interfaceField.forceActiveFocus()
         }
 
-        M3TextField {
+        StyledTextField {
             id: interfaceField
 
             Layout.fillWidth: true
-            label: qsTr("Interface")
-            placeholder: qsTr("e.g. wg0, tailscale0")
+            placeholderText: qsTr("Interface")
             leadingIcon: "lan"
             supportingText: qsTr("Network interface (for WireGuard / status checks)")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
-            onAccepted: connectField.forceFieldFocus()
+            onAccepted: connectField.forceActiveFocus()
         }
 
         SectionHeader {
             text: qsTr("Custom commands (optional)")
         }
 
-        M3TextField {
+        StyledTextField {
             id: connectField
 
             Layout.fillWidth: true
-            label: qsTr("Connect command")
-            placeholder: qsTr("e.g. tailscale up")
+            placeholderText: qsTr("Connect command")
             leadingIcon: "play_arrow"
             supportingText: qsTr("Leave empty to use the built-in default")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
-            onAccepted: disconnectField.forceFieldFocus()
+            onAccepted: disconnectField.forceActiveFocus()
         }
 
-        M3TextField {
+        StyledTextField {
             id: disconnectField
 
             Layout.fillWidth: true
-            label: qsTr("Disconnect command")
-            placeholder: qsTr("e.g. tailscale down")
+            placeholderText: qsTr("Disconnect command")
             leadingIcon: "stop"
             supportingText: qsTr("Leave empty to use the built-in default")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText

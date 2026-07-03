@@ -183,7 +183,7 @@ PageBase {
                             icon: "edit"
                             onClicked: {
                                 root.nState.editingVpnIndex = providerRow.modelData.index;
-                                root.nState.openSubPage(2);
+                                root.nState.openSubPage(3);
                             }
                         }
 
@@ -286,7 +286,7 @@ PageBase {
             StateLayer {
                 onClicked: {
                     root.nState.editingVpnIndex = -1;
-                    root.nState.openSubPage(2);
+                    root.nState.openSubPage(3);
                 }
             }
 

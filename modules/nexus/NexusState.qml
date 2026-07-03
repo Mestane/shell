@@ -14,6 +14,7 @@ QtObject {
     property BluetoothDevice selectedBtDevice
     property DesktopEntry selectedApp
     property int editingVpnIndex: -1
+    property string selectedEthernetInterface
 
     signal close
     signal subPageOpened(idx: int)

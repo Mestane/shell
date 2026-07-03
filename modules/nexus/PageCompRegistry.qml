@@ -47,6 +47,9 @@ QtObject {
                     NetworkPage {}
                 }
                 Component {
+                    EthernetDetailPage {}
+                }
+                Component {
                     VpnPage {}
                 }
                 Component {

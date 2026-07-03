@@ -14,109 +14,65 @@ Singleton {
             connected: false,
             state: "disconnected",
             reason: "",
-            authUrl: ""
+            authUrl: "",
+            server: ""
         })
 
     readonly property bool connecting: connectProc.running || disconnectProc.running
     readonly property bool enabled: GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false)
+
+    // Live connection stats, refreshed on demand by the UI via refreshStats().
+    property double connectedSince: 0
+    property string bytesIn: ""
+    property string bytesOut: ""
+    property int pingMs: -1
+    property string serverLocation: ""
+
+    // Tracks an in-flight provider switch that must wait for disconnect.
+    property int pendingSwitchIndex: -1
+
     readonly property var providerInput: {
         const enabledProvider = GlobalConfig.utilities.vpn.provider.find(p => typeof p === "object" ? (p.enabled === true) : false);
         return enabledProvider || "wireguard";
     }
-    readonly property bool isCustomProvider: typeof providerInput === "object"
-    readonly property string providerName: isCustomProvider ? (providerInput.name || "custom") : String(providerInput)
-    readonly property string interfaceName: isCustomProvider ? (providerInput.interface || "") : ""
-    readonly property var currentConfig: {
-        const name = providerName;
-        const iface = interfaceName;
-        const defaults = getBuiltinDefaults(name, iface);
 
-        if (isCustomProvider) {
-            const custom = providerInput;
-            return {
-                connectCmd: custom.connectCmd || defaults.connectCmd,
-                disconnectCmd: custom.disconnectCmd || defaults.disconnectCmd,
-                interface: custom.interface || defaults.interface,
-                displayName: custom.displayName || defaults.displayName
-            };
-        }
-
-        return defaults;
-    }
-
-    // Tracks an in-flight provider switch that must wait for disconnect.
-    property int pendingSwitchIndex: -1
-    // Tracks whether the previous status read was empty, so we tolerate a single
-    // starved read but still report persistent empties (e.g. no connectivity).
-    property bool _sawEmptyStatus: false
-    // Epoch ms when the VPN connection was established (0 = not connected).
-    property double connectedSince: 0
-    // Live counters for the active VPN interface (cumulative bytes since the
-    // interface came up). "In" = received, "Out" = transmitted.
-    property string bytesIn: ""
-    property string bytesOut: ""
-    // Round-trip latency over the VPN tunnel, in ms (-1 = unknown/not measured).
-    property int pingMs: -1
-    // Best-effort server/exit location (currently only resolvable for WARP).
-    property string serverLocation: ""
-
-    function getBuiltinDefaults(name, iface) {
-        const builtins = {
-            "wireguard": {
-                connectCmd: ["pkexec", "wg-quick", "up", iface],
-                disconnectCmd: ["pkexec", "wg-quick", "down", iface],
-                interface: iface,
-                displayName: iface
-            },
-            "warp": {
-                connectCmd: ["warp-cli", "connect"],
-                disconnectCmd: ["warp-cli", "disconnect"],
-                interface: "CloudflareWARP",
-                displayName: "Warp"
-            },
-            "netbird": {
-                connectCmd: ["netbird", "up", "--no-browser"],
-                disconnectCmd: ["netbird", "down"],
-                interface: "wt0",
-                displayName: "NetBird"
-            },
-            "tailscale": {
-                connectCmd: ["tailscale", "up"],
-                disconnectCmd: ["tailscale", "down"],
-                interface: "tailscale0",
-                displayName: "Tailscale"
-            }
-        };
-
-        return builtins[name] || {
-            connectCmd: [name, "up"],
-            disconnectCmd: [name, "down"],
-            interface: iface || name,
-            displayName: name
+    // The single point where every configured provider - a built-in name, a
+    // customised built-in, or a fully user-defined entry - is folded into one
+    // uniform endpoint object. Built-in knowledge lives in the adapters below;
+    // config values override adapter defaults; anything unknown falls back to
+    // generic `<name> up/down` commands with an interface-presence status
+    // check. Everything downstream runs off this object and never branches on
+    // a provider name.
+    readonly property var active: {
+        const input = providerInput;
+        const custom = typeof input === "object" ? input : null;
+        const name = custom ? (custom.name || "custom") : String(input);
+        const adapter = adapters.find(a => a.name === name) ?? null;
+        const iface = (custom ? custom.interface : "") || (adapter ? adapter.iface : "") || (adapter ? "" : name);
+        const resolve = c => typeof c === "function" ? c(iface) : c;
+        return {
+            name: name,
+            displayName: (custom ? custom.displayName : "") || resolve(adapter ? adapter.display : null) || name,
+            interface: iface,
+            connectCmd: (custom && custom.connectCmd && custom.connectCmd.length > 0 ? custom.connectCmd : resolve(adapter ? adapter.connectCmd : null)) || [name, "up"],
+            disconnectCmd: (custom && custom.disconnectCmd && custom.disconnectCmd.length > 0 ? custom.disconnectCmd : resolve(adapter ? adapter.disconnectCmd : null)) || [name, "down"],
+            statusCmd: (adapter ? adapter.statusCmd : null) || ["ip", "link", "show"],
+            parse: (adapter ? adapter.parse : null) || (out => root.parseInterfaceStatus(out, iface)),
+            service: adapter ? adapter.service : `${name}d`,
+            connectHint: adapter ? adapter.connectHint : null,
+            registerCmd: adapter ? adapter.registerCmd : null,
+            serverCmd: adapter ? adapter.serverCmd : null,
+            parseServer: adapter ? adapter.parseServer : null
         };
     }
 
-    function connect(): void {
-        if (status.state === "needs-auth" && status.authUrl) {
-            emitStatusToast(status);
-            return;
-        }
-        if (!connected && !connecting && root.currentConfig && root.currentConfig.connectCmd) {
-            connectProc.exec(root.currentConfig.connectCmd);
-        }
-    }
+    // Kept as thin readouts for the UI.
+    readonly property string providerName: active.name
+    readonly property string interfaceName: active.interface
+    readonly property var currentConfig: active
 
-    function disconnect(): void {
-        if (connected && !connecting && root.currentConfig && root.currentConfig.disconnectCmd) {
-            disconnectProc.exec(root.currentConfig.disconnectCmd);
-        }
-    }
+    readonly property var adapters: [wireguardAdapter, warpAdapter, netbirdAdapter, tailscaleAdapter]
 
-    function toggle(): void {
-        connected ? disconnect() : connect();
-    }
-
-    // ---- Provider management -------------------------------------------------
     // Normalised view of the configured providers, one entry per provider with
     // a stable index. Used by the VPN management UI.
     function providers(): var {
@@ -196,25 +152,43 @@ Singleton {
     // Make the provider at `index` the active (enabled) one, disabling others.
     // If a VPN is currently connected, disconnect first, switch, then reconnect.
     function setActiveProvider(index: int): void {
-        const apply = () => {
-            const current = GlobalConfig.utilities.vpn.provider;
-            const result = [];
-            for (let i = 0; i < current.length; i++) {
-                const p = current[i];
-                if (typeof p === "object")
-                    result.push(buildProviderObject(p, i === index));
-                else
-                    result.push(p);
-            }
-            writeProviders(result);
-        };
-
         if (root.connected) {
             root.pendingSwitchIndex = index;
             root.disconnect();
         } else {
-            apply();
+            applyActiveProvider(index);
         }
+    }
+
+    function applyActiveProvider(index: int): void {
+        const current = GlobalConfig.utilities.vpn.provider;
+        const result = [];
+        for (let i = 0; i < current.length; i++) {
+            const p = current[i];
+            if (typeof p === "object")
+                result.push(buildProviderObject(p, i === index));
+            else
+                result.push(p);
+        }
+        writeProviders(result);
+    }
+
+    function connect(): void {
+        if (status.state === "needs-auth" && status.authUrl) {
+            emitStatusToast(status);
+            return;
+        }
+        if (!connected && !connecting)
+            connectProc.exec(active.connectCmd);
+    }
+
+    function disconnect(): void {
+        if (connected && !connecting)
+            disconnectProc.exec(active.disconnectCmd);
+    }
+
+    function toggle(): void {
+        connected ? disconnect() : connect();
     }
 
     function checkStatus(): void {
@@ -236,11 +210,12 @@ Singleton {
         return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
     }
 
-    // Refresh live In/Out byte counters and (for WARP) the server location.
+    // Refresh live In/Out byte counters, tunnel latency and - for providers
+    // that expose one - the server location.
     function refreshStats(): void {
         if (!connected)
             return;
-        const iface = root.currentConfig?.interface || "";
+        const iface = active.interface;
         if (iface.length > 0) {
             statsProc.command = ["sh", "-c", `cat /sys/class/net/${iface}/statistics/rx_bytes /sys/class/net/${iface}/statistics/tx_bytes 2>/dev/null`];
             statsProc.running = true;
@@ -251,23 +226,8 @@ Singleton {
                 pingProc.running = true;
             }
         }
-        if (providerName === "warp" && serverLocation.length === 0)
-            warpServerProc.running = true;
-    }
-
-    function getStatusCommand(): var {
-        switch (providerName) {
-        case "tailscale":
-            return ["tailscale", "status", "--json"];
-        case "netbird":
-            return ["netbird", "status", "--json"];
-        case "warp":
-            return ["warp-cli", "status"];
-        case "wireguard":
-            return ["ip", "link", "show"];
-        default:
-            return ["ip", "link", "show"];
-        }
+        if (active.serverCmd && serverLocation.length === 0)
+            serverProc.exec(active.serverCmd);
     }
 
     function parseTailscaleStatus(output: string): var {
@@ -395,7 +355,9 @@ Singleton {
         return status;
     }
 
-    function parseWireGuardStatus(output: string): var {
+    // Generic status for providers without a status command: the tunnel is up
+    // if its interface shows up in `ip link show`.
+    function parseInterfaceStatus(output: string, iface: string): var {
         const status = {
             connected: false,
             state: "disconnected",
@@ -403,7 +365,6 @@ Singleton {
             authUrl: "",
             server: ""
         };
-        const iface = root.currentConfig?.interface || "";
 
         if (iface && output.includes(iface + ":")) {
             status.connected = true;
@@ -412,18 +373,16 @@ Singleton {
         return status;
     }
 
-    function parseStatusOutput(output: string): var {
-        switch (providerName) {
-        case "tailscale":
-            return parseTailscaleStatus(output);
-        case "netbird":
-            return parseNetBirdStatus(output);
-        case "warp":
-            return parseWarpStatus(output);
-        case "wireguard":
-        default:
-            return parseWireGuardStatus(output);
+    function parseWarpServer(output: string): string {
+        // Look for an endpoint hint in the tunnel stats output. WARP shows an
+        // "Endpoint" line with the server IP.
+        const lines = output.split("\n");
+        for (const line of lines) {
+            const m = line.match(/Endpoint[^\d]*([\d.]+)/i);
+            if (m)
+                return m[1];
         }
+        return "";
     }
 
     function extractAuthUrl(text: string): string {
@@ -436,7 +395,8 @@ Singleton {
             connected: false,
             state: "needs-auth",
             reason: "Authentication required",
-            authUrl: authUrl
+            authUrl: authUrl,
+            server: ""
         };
     }
 
@@ -449,9 +409,9 @@ Singleton {
         status = newStatus;
         root.connected = newStatus.connected;
 
-        // Surface a parsed server/exit-node (Tailscale, NetBird, WireGuard).
-        // WARP is handled separately via warpServerProc.
-        if (newStatus.connected && providerName !== "warp" && newStatus.server)
+        // Surface a server parsed straight out of the status output; providers
+        // with a dedicated server command fill this via refreshStats() instead.
+        if (newStatus.connected && newStatus.server)
             root.serverLocation = newStatus.server;
 
         if (oldState !== newStatus.state) {
@@ -463,7 +423,7 @@ Singleton {
         if (!GlobalConfig.utilities.toasts.vpnChanged)
             return;
 
-        const displayName = root.currentConfig ? (root.currentConfig.displayName || "VPN") : "VPN";
+        const displayName = active.displayName || "VPN";
 
         switch (statusObj.state) {
         case "connected":
@@ -486,7 +446,7 @@ Singleton {
     }
 
     onConnectedChanged: {
-        // Stamp / clear the connection start time.
+        // Stamp / clear the connection start time and the per-connection stats.
         if (connected) {
             if (connectedSince === 0)
                 connectedSince = Date.now();
@@ -501,26 +461,15 @@ Singleton {
         if (!connected && pendingSwitchIndex >= 0) {
             const idx = pendingSwitchIndex;
             pendingSwitchIndex = -1;
-
-            const current = GlobalConfig.utilities.vpn.provider;
-            const result = [];
-            for (let i = 0; i < current.length; i++) {
-                const p = current[i];
-                if (typeof p === "object")
-                    result.push(buildProviderObject(p, i === idx));
-                else
-                    result.push(p);
-            }
-            GlobalConfig.utilities.vpn.provider = result;
-
+            applyActiveProvider(idx);
             Qt.callLater(() => root.connect());
         }
     }
 
     onStatusChanged: {
-        if (providerName === "warp" && status.state === "needs-auth" && status.reason.includes("registration")) {
-            warpRegisterProc.exec(["warp-cli", "registration", "new"]);
-        }
+        // Providers that can self-register (WARP) do so on demand.
+        if (status.state === "needs-auth" && active.registerCmd)
+            registerProc.exec(active.registerCmd);
     }
 
     onProviderNameChanged: {
@@ -541,60 +490,67 @@ Singleton {
 
     Component.onCompleted: root.enabled && statusCheckTimer.start()
 
-    // Reads cumulative rx/tx bytes for the active VPN interface from sysfs.
-    Process {
-        id: statsProc
+    // ── Provider adapters ───────────────────────────────────────────────────
+    // One adapter per built-in provider, holding everything that is specific
+    // to it. Supporting a new provider means adding one adapter here (plus a
+    // parser if it has a status command) - nothing else changes.
 
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const nums = text.trim().split("\n").map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
-                if (nums.length >= 2) {
-                    root.bytesIn = root.formatBytes(nums[0]);
-                    root.bytesOut = root.formatBytes(nums[1]);
-                }
-            }
-        }
+    Adapter {
+        id: wireguardAdapter
+
+        name: "wireguard"
+        // No daemon and no CLI status; the interface comes from config and the
+        // generic interface-presence check reports the state.
+        display: iface => iface
+        connectCmd: iface => ["pkexec", "wg-quick", "up", iface]
+        disconnectCmd: iface => ["pkexec", "wg-quick", "down", iface]
+        connectHint: error => error.includes("Unknown device type") || error.includes("Protocol not supported") ? "WireGuard module not loaded. Run: sudo modprobe wireguard" : ""
     }
 
-    // Measures tunnel latency. Parses "time=21.3 ms" from ping output.
-    Process {
-        id: pingProc
+    Adapter {
+        id: warpAdapter
 
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const m = text.match(/time[=<]\s*([\d.]+)\s*ms/i);
-                if (m) {
-                    root.pingMs = Math.round(parseFloat(m[1]));
-                } else if (root.connected) {
-                    // Reachable interface but no reply parsed → mark unknown.
-                    root.pingMs = -1;
-                }
-            }
-        }
-        stderr: StdioCollector {}
+        name: "warp"
+        display: "Warp"
+        iface: "CloudflareWARP"
+        service: "warp-svc"
+        connectCmd: ["warp-cli", "connect"]
+        disconnectCmd: ["warp-cli", "disconnect"]
+        statusCmd: ["warp-cli", "status"]
+        parse: out => root.parseWarpStatus(out)
+        registerCmd: ["warp-cli", "registration", "new"]
+        serverCmd: ["warp-cli", "tunnel", "stats"]
+        parseServer: out => root.parseWarpServer(out)
     }
 
-    // Best-effort WARP server/endpoint location from warp-cli.
-    Process {
-        id: warpServerProc
+    Adapter {
+        id: netbirdAdapter
 
-        command: ["warp-cli", "tunnel", "stats"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                // Look for an endpoint/colo hint in the stats output. WARP shows
-                // an "Endpoint" line with an IP; some versions include a colo.
-                const lines = text.split("\n");
-                for (const line of lines) {
-                    const m = line.match(/Endpoint[^\d]*([\d.]+)/i);
-                    if (m) {
-                        root.serverLocation = m[1];
-                        break;
-                    }
-                }
-            }
-        }
-        stderr: StdioCollector {}
+        name: "netbird"
+        display: "NetBird"
+        iface: "wt0"
+        service: "netbird"
+        connectCmd: ["netbird", "up", "--no-browser"]
+        disconnectCmd: ["netbird", "down"]
+        statusCmd: ["netbird", "status", "--json"]
+        parse: out => root.parseNetBirdStatus(out)
     }
+
+    Adapter {
+        id: tailscaleAdapter
+
+        name: "tailscale"
+        display: "Tailscale"
+        iface: "tailscale0"
+        service: "tailscaled"
+        connectCmd: ["tailscale", "up"]
+        disconnectCmd: ["tailscale", "down"]
+        statusCmd: ["tailscale", "status", "--json"]
+        parse: out => root.parseTailscaleStatus(out)
+        connectHint: error => error.includes("Access denied") || error.includes("checkprefs access denied") ? "Permission denied. Run in terminal: sudo tailscale set --operator=$USER" : ""
+    }
+
+    // ── Generic engine ──────────────────────────────────────────────────────
 
     Process {
         id: nmMonitor
@@ -609,7 +565,7 @@ Singleton {
     Process {
         id: statusProc
 
-        command: root.getStatusCommand()
+        command: root.active.statusCmd
         // qmllint disable incompatible-type
         environment: ({
                 // qmllint enable incompatible-type
@@ -618,49 +574,24 @@ Singleton {
             })
         stdout: StdioCollector {
             onStreamFinished: {
-                // A single empty read can mean the status command was briefly
-                // starved (e.g. by a concurrent ping sweep). Ignore one, but if
-                // empties persist it's a real condition (e.g. no connectivity),
-                // so fall through and let the parser report it.
-                if (text.trim().length === 0) {
-                    if (!root._sawEmptyStatus) {
-                        root._sawEmptyStatus = true;
-                        return;
-                    }
-                } else {
-                    root._sawEmptyStatus = false;
-                }
-                const newStatus = root.parseStatusOutput(text);
+                const newStatus = root.active.parse(text);
                 root.updateStatus(newStatus);
             }
         }
         stderr: StdioCollector {
             onStreamFinished: {
-                if (text.trim().length > 0) {
-                    if (text.includes("doesn't appear to be running") || text.includes("failed to connect to local tailscaled") || text.includes("daemon is not running") || text.includes("not running") && (text.includes("netbird") || text.includes("warp"))) {
-                        let cmd = "sudo systemctl start ";
-                        switch (root.providerName) {
-                        case "tailscale":
-                            cmd += "tailscaled";
-                            break;
-                        case "netbird":
-                            cmd += "netbird";
-                            break;
-                        case "warp":
-                            cmd += "warp-svc";
-                            break;
-                        default:
-                            cmd += root.providerName + "d";
-                            break;
-                        }
-                        const errorStatus = {
-                            connected: false,
-                            state: "disconnected",
-                            reason: `Service not running (run: ${cmd})`,
-                            authUrl: ""
-                        };
-                        root.updateStatus(errorStatus);
-                    }
+                if (text.trim().length === 0)
+                    return;
+
+                const daemonDown = text.includes("doesn't appear to be running") || text.includes("failed to connect") || text.includes("daemon is not running") || (text.includes("not running") && root.active.service);
+                if (daemonDown && root.active.service) {
+                    root.updateStatus({
+                        connected: false,
+                        state: "disconnected",
+                        reason: `Service not running (run: sudo systemctl start ${root.active.service})`,
+                        authUrl: "",
+                        server: ""
+                    });
                 }
             }
         }
@@ -670,19 +601,14 @@ Singleton {
         id: connectProc
 
         onExited: exitCode => { // qmllint disable signal-handler-parameters
-            if (exitCode !== 0) {
+            if (exitCode !== 0)
                 return;
-            }
 
-            if (root.providerName === "tailscale") {
-                Qt.callLater(() => {
-                    if (root.status.state !== "needs-auth") {
-                        statusCheckTimer.start();
-                    }
-                });
-            } else if (root.status.state !== "needs-auth") {
-                statusCheckTimer.start();
-            }
+            // Deferred so an auth URL parsed from the output wins the race.
+            Qt.callLater(() => {
+                if (root.status.state !== "needs-auth")
+                    statusCheckTimer.start();
+            });
         }
         stdout: SplitParser {
             onRead: data => {
@@ -696,25 +622,16 @@ Singleton {
             onStreamFinished: {
                 const error = text.trim();
 
-                if (error.includes("Access denied") || error.includes("checkprefs access denied")) {
-                    const errorStatus = {
+                // Let the provider turn a known failure into an actionable hint.
+                const hint = root.active.connectHint ? root.active.connectHint(error) : "";
+                if (hint) {
+                    root.updateStatus({
                         connected: false,
                         state: "disconnected",
-                        reason: "Permission denied. Run in terminal: sudo tailscale set --operator=$USER",
-                        authUrl: ""
-                    };
-                    root.updateStatus(errorStatus);
-                    return;
-                }
-
-                if (error.includes("Unknown device type") || error.includes("Protocol not supported")) {
-                    const errorStatus = {
-                        connected: false,
-                        state: "disconnected",
-                        reason: "WireGuard module not loaded. Run: sudo modprobe wireguard",
-                        authUrl: ""
-                    };
-                    root.updateStatus(errorStatus);
+                        reason: hint,
+                        authUrl: "",
+                        server: ""
+                    });
                     return;
                 }
 
@@ -744,11 +661,56 @@ Singleton {
     }
 
     Process {
-        id: warpRegisterProc
+        id: registerProc
 
         onExited: exitCode => { // qmllint disable signal-handler-parameters
             if (exitCode === 0) {
                 statusCheckTimer.start();
+            }
+        }
+    }
+
+    // Reads cumulative rx/tx bytes for the active VPN interface from sysfs.
+    Process {
+        id: statsProc
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const nums = text.trim().split("\n").map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+                if (nums.length >= 2) {
+                    root.bytesIn = root.formatBytes(nums[0]);
+                    root.bytesOut = root.formatBytes(nums[1]);
+                }
+            }
+        }
+    }
+
+    Process {
+        id: pingProc
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const m = text.match(/time[=<]\s*([\d.]+)\s*ms/i);
+                if (m) {
+                    root.pingMs = Math.round(parseFloat(m[1]));
+                } else if (root.connected) {
+                    // Reachable interface but no reply parsed → mark unknown.
+                    root.pingMs = -1;
+                }
+            }
+        }
+    }
+
+    Process {
+        id: serverProc
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (root.active.parseServer) {
+                    const server = root.active.parseServer(text);
+                    if (server)
+                        root.serverLocation = server;
+                }
             }
         }
     }
@@ -765,5 +727,25 @@ Singleton {
 
         name: "caelestia.qml.services.vpn"
         defaultLogLevel: LoggingCategory.Info
+    }
+
+    // Everything a provider needs to be driven by the generic engine above.
+    // Commands may be plain arrays or functions of the interface name; parse
+    // hooks are optional and fall back to the interface-presence check.
+    component Adapter: QtObject {
+        required property string name
+        property var display
+        property string iface
+        // Systemd unit behind the provider's CLI; used for the "service not
+        // running" hint. Empty = daemonless.
+        property string service
+        property var connectCmd
+        property var disconnectCmd
+        property var statusCmd
+        property var parse
+        property var connectHint
+        property var registerCmd
+        property var serverCmd
+        property var parseServer
     }
 }
