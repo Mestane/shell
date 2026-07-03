@@ -9,55 +9,70 @@ import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
 
-// Detail / settings sub-page for the active Wi-Fi network. Reached by tapping
-// the active network row (settings icon) on NetworkPage.
+// Detail / settings sub-page for an ethernet device. Reached by tapping an
+// ethernet row on NetworkPage.
 PageBase {
     id: root
 
-    readonly property string ssid: nState.selectedNetworkSsid
-    readonly property var ap: Nmcli.findNetwork(root.ssid)
-    readonly property var details: Nmcli.wirelessDeviceDetails
+    readonly property string ifaceName: nState.selectedEthernetInterface
+    readonly property Nmcli.EthernetDevice device: Nmcli.ethernetDevices.find(d => d.iface === root.ifaceName) ?? null
+    readonly property var details: Nmcli.ethernetDeviceDetails
+    readonly property string connectionName: root.device?.connection ?? ""
 
     // Locally-edited IPv4 form state.
     property string ipMethod: "auto" // "auto" | "auto-dns" | "manual"
     property bool ipLoaded: false
     property bool savingIp: false
-    property bool autoconnect: true
 
-    // Snapshot of the saved IPv4 config, so the Apply button only shows up once
-    // something actually changed.
-    property string _origMethod: "auto"
-    property string _origAddress: ""
-    property string _origGateway: ""
-    property string _origDns: ""
+    // Original loaded values, so the Apply button only shows on a real change.
+    property string origMethod: "auto"
+    property string origAddress: ""
+    property string origGateway: ""
+    property string origDns: ""
 
-    readonly property bool hasChanges: root.ipLoaded && (root.ipMethod !== root._origMethod || (root.ipMethod === "manual" && (addressField.text.trim() !== root._origAddress || gatewayField.text.trim() !== root._origGateway)) || ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && dnsField.text.trim() !== root._origDns))
+    readonly property bool hasChanges: root.ipLoaded && (root.ipMethod !== root.origMethod || (root.ipMethod === "manual" && (addressField.text.trim() !== root.origAddress || gatewayField.text.trim() !== root.origGateway)) || ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && dnsField.text.trim() !== root.origDns))
 
     function loadIpConfig(): void {
-        if (!root.ssid)
+        if (!root.connectionName)
             return;
-        Nmcli.getIpv4Config(root.ssid, cfg => {
+        Nmcli.getIpv4Config(root.connectionName, cfg => {
             if (!cfg)
                 return;
-            root.ipMethod = cfg.method; // "auto" | "auto-dns" | "manual"
+            root.ipMethod = cfg.method;
             methodSelect.active = cfg.method === "manual" ? manualItem : (cfg.method === "auto-dns" ? autoDnsItem : autoItem);
             addressField.text = cfg.address;
             gatewayField.text = cfg.gateway;
             dnsField.text = cfg.dns;
-            root.autoconnect = cfg.autoconnect;
-            root._origMethod = cfg.method;
-            root._origAddress = cfg.address;
-            root._origGateway = cfg.gateway;
-            root._origDns = cfg.dns;
+            root.origMethod = cfg.method;
+            root.origAddress = cfg.address;
+            root.origGateway = cfg.gateway;
+            root.origDns = cfg.dns;
             root.ipLoaded = true;
         });
     }
 
     function saveIpConfig(): void {
-        if (!root.ssid)
+        if (!root.connectionName)
             return;
+
+        // Bail out and flag the offending field before touching nmcli.
+        if (root.ipMethod === "manual") {
+            if (!addressField.valid) {
+                addressField.isError = true;
+                return;
+            }
+            if (!gatewayField.valid) {
+                gatewayField.isError = true;
+                return;
+            }
+        }
+        if ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && !dnsField.valid) {
+            dnsField.isError = true;
+            return;
+        }
+
         root.savingIp = true;
-        Nmcli.setIpv4Config(root.ssid, {
+        Nmcli.setIpv4Config(root.connectionName, {
             method: root.ipMethod,
             address: addressField.text.trim(),
             gateway: gatewayField.text.trim(),
@@ -70,25 +85,22 @@ PageBase {
                 else
                     dnsField.isError = true;
             } else {
-                root._origMethod = root.ipMethod;
-                root._origAddress = addressField.text.trim();
-                root._origGateway = gatewayField.text.trim();
-                root._origDns = dnsField.text.trim();
+                // Persisted — make the current values the new baseline so the
+                // Apply button hides again until something else changes.
+                root.origMethod = root.ipMethod;
+                root.origAddress = addressField.text.trim();
+                root.origGateway = gatewayField.text.trim();
+                root.origDns = dnsField.text.trim();
             }
         });
     }
 
-    // Close if the network is no longer active (e.g. disconnected elsewhere).
-    onApChanged: {
-        if (root.ipLoaded && !root.ap)
-            nState.closeSubPage();
-    }
-
-    title: root.ssid || qsTr("Network")
+    title: root.device?.connection || root.ifaceName || qsTr("Ethernet")
     isSubPage: true
 
     Component.onCompleted: {
-        Nmcli.getWirelessDeviceDetails("", () => {});
+        Nmcli.getEthernetDeviceDetails(root.ifaceName, () => {});
+        Nmcli.getEthernetSpeed(root.ifaceName);
         loadIpConfig();
     }
 
@@ -98,91 +110,55 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.extraSmall / 2
 
-        // ---- Action buttons --------------------------------------------------
+        // ---- Action button --------------------------------------------------
         ButtonRow {
             Layout.bottomMargin: Tokens.spacing.large - parent.spacing
             Layout.alignment: Qt.AlignHCenter
-            Layout.minimumWidth: Math.round(root.cappedWidth * 0.7)
+            Layout.minimumWidth: Math.round(root.cappedWidth * 0.5)
             spacing: Tokens.spacing.small
 
             ButtonBase {
-                id: forgetBtn
+                id: connectBtn
 
                 fillWidth: true
                 shapeMorph: true
                 isRound: true
-                inactiveColour: Colours.palette.m3errorContainer
-                inactiveOnColour: Colours.palette.m3onErrorContainer
+                inactiveColour: root.device?.connected ? Colours.palette.m3primaryContainer : Colours.palette.m3secondaryContainer
+                inactiveOnColour: root.device?.connected ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSecondaryContainer
 
-                implicitWidth: forgetLayout.implicitWidth + Tokens.padding.extraLarge * 2
-                implicitHeight: forgetLayout.implicitHeight + Tokens.padding.medium * 2
+                implicitWidth: connectLayout.implicitWidth + Tokens.padding.extraLarge * 2
+                implicitHeight: connectLayout.implicitHeight + Tokens.padding.medium * 2
 
                 onClicked: {
-                    Nmcli.forgetNetwork(root.ssid);
-                    root.nState.closeSubPage();
+                    if (root.device?.connected)
+                        Nmcli.disconnectEthernet(root.connectionName);
+                    else
+                        Nmcli.connectEthernet(root.connectionName, root.ifaceName);
                 }
 
                 ColumnLayout {
-                    id: forgetLayout
+                    id: connectLayout
 
                     anchors.centerIn: parent
                     spacing: 0
 
                     MaterialIcon {
                         Layout.alignment: Qt.AlignHCenter
-                        text: "delete"
-                        color: forgetBtn.onColour
+                        text: root.device?.connected ? "link_off" : "link"
+                        color: connectBtn.onColour
                         fontStyle: Tokens.font.icon.medium
                     }
 
                     StyledText {
                         Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Forget")
-                        color: forgetBtn.onColour
-                    }
-                }
-            }
-
-            ButtonBase {
-                id: disconnectBtn
-
-                fillWidth: true
-                shapeMorph: true
-                isRound: true
-                inactiveColour: Colours.palette.m3primaryContainer
-                inactiveOnColour: Colours.palette.m3onPrimaryContainer
-
-                implicitWidth: disconnectLayout.implicitWidth + Tokens.padding.extraLarge * 2
-                implicitHeight: disconnectLayout.implicitHeight + Tokens.padding.medium * 2
-
-                onClicked: {
-                    Nmcli.disconnectFromNetwork();
-                    root.nState.closeSubPage();
-                }
-
-                ColumnLayout {
-                    id: disconnectLayout
-
-                    anchors.centerIn: parent
-                    spacing: 0
-
-                    MaterialIcon {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "link_off"
-                        color: disconnectBtn.onColour
-                        fontStyle: Tokens.font.icon.medium
-                    }
-
-                    StyledText {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Disconnect")
-                        color: disconnectBtn.onColour
+                        text: root.device?.connected ? qsTr("Disconnect") : qsTr("Connect")
+                        color: connectBtn.onColour
                     }
                 }
             }
         }
 
-        // ---- Connection info -------------------------------------------------
+        // ---- Connection info ------------------------------------------------
         SectionHeader {
             first: true
             text: qsTr("Connection")
@@ -190,21 +166,22 @@ PageBase {
 
         InfoRow {
             first: true
-            icon: "signal_wifi_4_bar"
-            label: qsTr("Signal")
-            value: root.ap ? qsTr("%1%").arg(root.ap.strength) : qsTr("—")
+            icon: "link"
+            label: qsTr("Status")
+            value: root.device?.connected ? qsTr("Connected") : qsTr("Not connected")
         }
 
         InfoRow {
-            icon: "lock"
-            label: qsTr("Security")
-            value: root.ap?.security || qsTr("Open")
+            icon: "settings_ethernet"
+            label: qsTr("Interface")
+            value: root.ifaceName || qsTr("—")
         }
 
         InfoRow {
-            icon: "graphic_eq"
-            label: qsTr("Frequency")
-            value: root.ap && root.ap.frequency > 0 ? qsTr("%1 MHz").arg(root.ap.frequency) : qsTr("—")
+            icon: "speed"
+            label: qsTr("Speed")
+            visible: Nmcli.ethernetSpeed.length > 0
+            value: Nmcli.ethernetSpeed
         }
 
         InfoRow {
@@ -226,25 +203,6 @@ PageBase {
             value: root.details?.macAddress || qsTr("—")
         }
 
-        // ---- Behaviour -------------------------------------------------------
-        SectionHeader {
-            text: qsTr("Behaviour")
-        }
-
-        ToggleRow {
-            Layout.fillWidth: true
-            first: true
-            last: true
-            text: qsTr("Connect automatically")
-            subtext: qsTr("Join this network when it's in range")
-            checked: root.autoconnect
-            enabled: root.ipLoaded
-            onToggled: {
-                root.autoconnect = checked;
-                Nmcli.setAutoconnect(root.ssid, checked, () => {});
-            }
-        }
-
         // ---- IPv4 ------------------------------------------------------------
         SectionHeader {
             text: qsTr("IPv4")
@@ -262,9 +220,7 @@ PageBase {
 
             menuItems: [autoItem, autoDnsItem, manualItem]
 
-            onSelected: item => {
-                root.ipMethod = item === manualItem ? "manual" : (item === autoDnsItem ? "auto-dns" : "auto");
-            }
+            onSelected: item => root.ipMethod = item === manualItem ? "manual" : (item === autoDnsItem ? "auto-dns" : "auto")
 
             MenuItem {
                 id: autoItem
@@ -288,7 +244,6 @@ PageBase {
             }
         }
 
-        // Address + gateway: manual only. DNS: manual and DNS-only.
         ColumnLayout {
             Layout.fillWidth: true
             Layout.topMargin: Tokens.spacing.large
@@ -333,9 +288,8 @@ PageBase {
             }
         }
 
-        // Apply button — swaps to a loading spinner while applying, matching the
-        // connect animation used in the Wi-Fi list. Only shown once the form
-        // actually diverges from the saved config.
+        // Apply button — swaps to a loading spinner while applying. Shown only
+        // when the IP assignment has unsaved changes.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: Tokens.spacing.large

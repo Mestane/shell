@@ -47,7 +47,20 @@ PageBase {
             target: Nmcli
         }
 
+        Loader {
+            Layout.fillWidth: true
+            active: Nmcli.hasAvailableEthernet
+            visible: active
+            asynchronous: true
+
+            sourceComponent: EthernetSection {
+                nState: root.nState
+                cappedWidth: root.cappedWidth
+            }
+        }
+
         ToggleRow {
+            Layout.topMargin: Nmcli.hasAvailableEthernet ? Tokens.spacing.large : 0
             first: true
             text: qsTr("Wi-Fi")
             font: Tokens.font.body.medium
@@ -97,7 +110,7 @@ PageBase {
                     } else {
                         // Active network: open its detail/settings sub-page.
                         root.nState.selectedNetworkSsid = modelData.ssid;
-                        root.nState.openSubPage(2);
+                        root.nState.openSubPage(3);
                     }
                 }
 
@@ -210,7 +223,7 @@ PageBase {
             last: true
 
             StateLayer {
-                onClicked: root.nState.openSubPage(1)
+                onClicked: root.nState.openSubPage(2)
             }
 
             RowLayout {

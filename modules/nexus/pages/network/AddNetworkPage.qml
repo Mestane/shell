@@ -22,12 +22,12 @@ PageBase {
         const ssid = ssidField.text.trim();
         if (ssid.length === 0) {
             ssidField.isError = true;
-            ssidField.forceFieldFocus();
+            ssidField.forceActiveFocus();
             return;
         }
         if (root.secured && passwordField.text.length < 8) {
             passwordField.isError = true;
-            passwordField.forceFieldFocus();
+            passwordField.forceActiveFocus();
             return;
         }
 
@@ -66,18 +66,18 @@ PageBase {
             wrapMode: Text.WordWrap
         }
 
-        M3TextField {
+        StyledTextField {
             id: ssidField
 
             Layout.fillWidth: true
             Layout.topMargin: Tokens.spacing.small
-            label: qsTr("Network name (SSID)")
-            placeholder: qsTr("e.g. MyHiddenNetwork")
+            placeholderText: qsTr("Network name (SSID)")
+            supportingText: qsTr("e.g. MyHiddenNetwork")
             leadingIcon: "wifi"
             errorText: qsTr("Network name is required")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
 
-            onAccepted: root.secured ? passwordField.forceFieldFocus() : root.submit()
+            onAccepted: root.secured ? passwordField.forceActiveFocus() : root.submit()
         }
 
         SelectRow {
@@ -109,16 +109,15 @@ PageBase {
             }
         }
 
-        M3TextField {
+        StyledTextField {
             id: passwordField
 
             Layout.fillWidth: true
             visible: root.secured
             enabled: root.secured
-            label: qsTr("Password")
-            placeholder: qsTr("At least 8 characters")
+            placeholderText: qsTr("Password")
             leadingIcon: "key"
-            password: true
+            echoMode: TextInput.Password
             supportingText: qsTr("WPA passwords are at least 8 characters")
             errorText: root.failed ? qsTr("Connection failed — check the password") : qsTr("Password must be at least 8 characters")
 
