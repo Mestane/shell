@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtQuick/qquickitem.h>
+#include <qlist.h>
 #include <qobject.h>
 #include <qqmlintegration.h>
 
@@ -34,6 +35,10 @@ public:
     // build time so it lives with the compiled module rather than in a
     // user-editable config file.
     Q_INVOKABLE static QString settingsIndex();
+
+    Q_INVOKABLE static QQuickItem* findChild(QQuickItem* root, const QString& name);
+    Q_INVOKABLE static QList<QQuickItem*> findChildren(QQuickItem* root, const QString& name);
+    Q_INVOKABLE static QList<QQuickItem*> findChildrenMatching(QQuickItem* root, const QString& pattern);
 
     [[nodiscard]] QString version() const;
     [[nodiscard]] QString qtVersion() const;

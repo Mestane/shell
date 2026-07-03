@@ -165,16 +165,6 @@ VerticalFadeFlickable {
         Column {
             id: resultList
 
-            // Grouped results: one heading per top-level page with the matching
-            // settings joined into a rounded card underneath, like the Android
-            // settings search. A Column positioner instead of a ListView: its
-            // heights settle instantly (so new content is never hidden behind an
-            // animating clip and no hole opens where content left), while its
-            // `move` transition slides children whenever they reposition - which,
-            // unlike a ListView, includes repositioning caused by a sibling group
-            // growing or shrinking. The ScriptModel keyed by pageIdx keeps a
-            // surviving group's delegate alive so it slides rather than rebuilds;
-            // removed groups vanish and the move transition closes the space.
             Layout.fillWidth: true
             spacing: Tokens.padding.large
 
@@ -237,11 +227,6 @@ VerticalFadeFlickable {
                         }
                     }
 
-                    // The matching settings, joined into one card. Same Column +
-                    // keyed-ScriptModel arrangement as the group list, for the same
-                    // reasons: rows appear at their final spot immediately (fading
-                    // in), removed rows vanish and the move transition slides the
-                    // rest closed - no animated bounds to hide behind or lag behind.
                     Column {
                         id: cardList
 
@@ -372,11 +357,6 @@ VerticalFadeFlickable {
                                     }
                                 }
 
-                                // Hover/click layer on top of the content so the
-                                // rich-text labels underneath can't intercept pointer
-                                // events (which made the hover flicker as the mouse
-                                // moved over them). It's transparent apart from the
-                                // hover tint, so the text still shows through.
                                 StateLayer {
                                     anchors.fill: parent
                                     z: 1
@@ -395,11 +375,6 @@ VerticalFadeFlickable {
                                     }
                                 }
 
-                                // For plain on/off settings, a switch on the right
-                                // flips the value straight from the results (One UI
-                                // style). It sits above the click layer (higher z) so
-                                // tapping it toggles without also opening the page;
-                                // tapping anywhere else still deep-links.
                                 StyledSwitch {
                                     id: toggle
 
