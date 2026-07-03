@@ -20,8 +20,16 @@ import Caelestia.Config
 Singleton {
     id: root
 
+    // entries: forward index (one record per setting)
+    // inverted: token -> [entry id...]
+    // ranking:  token -> { entry id (string): weight }
     property var inverted: ({})
     property var ranking: ({})
+    // Cache the highlight regex so it's compiled once per search rather than
+    // once per card per keystroke. Held inside a plain JS object (never
+    // reassigned) because highlight() runs inside text bindings: writing to a
+    // real property from there would notify and re-trigger the binding - a
+    // binding loop. Mutating an object's fields emits no change signals.
     readonly property var highlightCache: ({
             "search": "",
             "pattern": null
@@ -49,11 +57,18 @@ Singleton {
             }
         }
 
+        // Sort by score, breaking ties by id so the order is stable (otherwise
+        // entries with equal scores can be dropped arbitrarily by the limit).
         const ranked = Object.keys(scores).filter(id => hitCounts[id] === tokens.length).sort((a, b) => scores[b] - scores[a] || (parseInt(a) - parseInt(b))).slice(0, 25);
 
         const all = entries.instances;
         const out = ranked.map(id => all[parseInt(id)]).filter(e => e !== undefined);
 
+        // The inverted index only does exact/prefix matches. When it finds little
+        // or nothing - a typo ("trasparency") or a mid-word query ("paper") - fall
+        // back to fzf over the same entries. fzf hits that the index already
+        // returned are skipped, and the rest are appended after the (stronger)
+        // index results, so precise matches always lead.
         if (out.length < 5 && root.fzfFinder) {
             const seen = ({});
             for (const id of ranked)
@@ -98,6 +113,12 @@ Singleton {
         return text.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 0);
     }
 
+    // Wrap the parts of `text` that match the search in the given colour, for use
+    // with a StyledText in Text.StyledText format. Matches each query token as a
+    // prefix at a word boundary (mirroring how lookup matches), so "wall"
+    // highlights the start of "wallpaper". StyledText supports <font color> but
+    // not CSS <span style>. HTML-significant characters are escaped first so the
+    // rich-text parser doesn't choke on names with & < or >.
     function highlight(text: string, search: string, colour: color): string {
         const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         if (search.length === 0)
@@ -173,6 +194,8 @@ Singleton {
         readonly property string section: modelData.section ?? ""
         readonly property string subtext: modelData.subtext ?? ""
         readonly property string anchor: modelData.anchor ?? ""
+        // The setting's own icon for the result card, baked by the index script.
+        readonly property string icon: modelData.icon ?? ""
 
         // A non-empty togglePath means this is a plain on/off setting that can be
         // flipped straight from the results (e.g. "background.wallpaperEnabled").

@@ -165,6 +165,16 @@ VerticalFadeFlickable {
         Column {
             id: resultList
 
+            // Grouped results: one heading per top-level page with the matching
+            // settings joined into a rounded card underneath, like the Android
+            // settings search. A Column positioner instead of a ListView: its
+            // heights settle instantly (so new content is never hidden behind an
+            // animating clip and no hole opens where content left), while its
+            // `move` transition slides children whenever they reposition - which,
+            // unlike a ListView, includes repositioning caused by a sibling group
+            // growing or shrinking. The ScriptModel keyed by pageIdx keeps a
+            // surviving group's delegate alive so it slides rather than rebuilds;
+            // removed groups vanish and the move transition closes the space.
             Layout.fillWidth: true
             spacing: Tokens.padding.large
 
@@ -227,6 +237,11 @@ VerticalFadeFlickable {
                         }
                     }
 
+                    // The matching settings, joined into one card. Same Column +
+                    // keyed-ScriptModel arrangement as the group list, for the same
+                    // reasons: rows appear at their final spot immediately (fading
+                    // in), removed rows vanish and the move transition slides the
+                    // rest closed - no animated bounds to hide behind or lag behind.
                     Column {
                         id: cardList
 
@@ -294,56 +309,74 @@ VerticalFadeFlickable {
                                     color: Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
                                 }
 
-                                ColumnLayout {
+                                RowLayout {
                                     id: resultLayout
 
                                     anchors.fill: parent
                                     anchors.margins: Tokens.padding.large
                                     // Leave room on the right for the toggle switch.
                                     anchors.rightMargin: result.modelData.togglePath ? toggle.width + Tokens.padding.large * 2 : Tokens.padding.large
-                                    spacing: Tokens.spacing.small / 2
+                                    spacing: Tokens.spacing.medium
 
-                                    // Location line: deepest icon + "Section > sub", faint.
-                                    StyledText {
-                                        Layout.fillWidth: true
-                                        text: {
-                                            const labels = result.modelData.crumbLabels.slice(1);
-                                            const section = result.modelData.section;
-                                            const parts = section && section !== labels[labels.length - 1] ? labels.concat(section) : labels;
-                                            return parts.join("  \u203a  ");
-                                        }
-                                        visible: text.length > 0
+                                    // The setting's own icon, baked into the
+                                    // index per anchor.
+                                    MaterialIcon {
+                                        text: result.modelData.icon
                                         color: Colours.palette.m3onSurfaceVariant
-                                        font: Tokens.font.label.small
-                                        elide: Text.ElideRight
+                                        fontStyle: Tokens.font.icon.medium
                                     }
 
-                                    // The setting itself, most prominent.
-                                    StyledText {
+                                    ColumnLayout {
                                         Layout.fillWidth: true
-                                        text: SettingsSearcher.highlight(result.modelData.title, root.search, Colours.palette.m3primary)
-                                        // Only pay for rich-text parsing when the
-                                        // string actually carries a highlight tag.
-                                        textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
-                                        color: Colours.palette.m3onSurface
-                                        font: Tokens.font.body.medium
-                                        elide: Text.ElideRight
-                                    }
+                                        spacing: Tokens.spacing.small / 2
 
-                                    // Optional description, faintest and smallest.
-                                    StyledText {
-                                        Layout.fillWidth: true
-                                        visible: result.modelData.subtext.length > 0
-                                        text: SettingsSearcher.highlight(result.modelData.subtext, root.search, Colours.palette.m3primary)
-                                        // Most subtexts have no match, so skip the
-                                        // rich-text parse unless there's a highlight.
-                                        textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
-                                        color: Colours.palette.m3outline
-                                        font: Tokens.font.label.small
-                                        elide: Text.ElideRight
+                                        // Location line: "Section > sub", faint.
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: {
+                                                const labels = result.modelData.crumbLabels.slice(1);
+                                                const section = result.modelData.section;
+                                                const parts = section && section !== labels[labels.length - 1] ? labels.concat(section) : labels;
+                                                return parts.join("  \u203a  ");
+                                            }
+                                            visible: text.length > 0
+                                            color: Colours.palette.m3onSurfaceVariant
+                                            font: Tokens.font.label.small
+                                            elide: Text.ElideRight
+                                        }
+
+                                        // The setting itself, most prominent.
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: SettingsSearcher.highlight(result.modelData.title, root.search, Colours.palette.m3primary)
+                                            // Only pay for rich-text parsing when the
+                                            // string actually carries a highlight tag.
+                                            textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
+                                            color: Colours.palette.m3onSurface
+                                            font: Tokens.font.body.medium
+                                            elide: Text.ElideRight
+                                        }
+
+                                        // Optional description, faintest and smallest.
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            visible: result.modelData.subtext.length > 0
+                                            text: SettingsSearcher.highlight(result.modelData.subtext, root.search, Colours.palette.m3primary)
+                                            // Most subtexts have no match, so skip the
+                                            // rich-text parse unless there's a highlight.
+                                            textFormat: text.includes("<font") ? Text.StyledText : Text.PlainText
+                                            color: Colours.palette.m3outline
+                                            font: Tokens.font.label.small
+                                            elide: Text.ElideRight
+                                        }
                                     }
                                 }
 
+                                // Hover/click layer on top of the content so the
+                                // rich-text labels underneath can't intercept pointer
+                                // events (which made the hover flicker as the mouse
+                                // moved over them). It's transparent apart from the
+                                // hover tint, so the text still shows through.
                                 StateLayer {
                                     anchors.fill: parent
                                     z: 1
@@ -362,6 +395,11 @@ VerticalFadeFlickable {
                                     }
                                 }
 
+                                // For plain on/off settings, a switch on the right
+                                // flips the value straight from the results (One UI
+                                // style). It sits above the click layer (higher z) so
+                                // tapping it toggles without also opening the page;
+                                // tapping anywhere else still deep-links.
                                 StyledSwitch {
                                     id: toggle
 
