@@ -171,6 +171,13 @@ ColumnLayout {
         contentHeight: root.contentChild?.implicitHeight ?? 0
         contentItem.children: [root.contentChild]
 
+        rebound: Transition {
+            Anim {
+                properties: "x,y"
+                type: Anim.DefaultEffects
+            }
+        }
+
         Behavior on contentY {
             enabled: root.animateScroll
 
