@@ -1,22 +1,19 @@
 pragma Singleton
 
 import "../../utils/scripts/fzf.js" as Fzf
+import "../../utils/scripts/settings-indexer.js" as SettingsIndexer
 import QtQuick
 import Quickshell
 import Caelestia
 import Caelestia.Config
+import qs.utils
 
-// Search service over the settings index. The index is generated at build time
-// from the page QML files by scripts/build-settings-index.py and baked into the
-// plugin binary (read via CUtils.settingsIndex), so it stays in sync with the UI
-// without any hand-maintained entries and without a user-editable data file.
+// Search service over the settings index. The index is built by the shell
+// itself on first use - the page QML sources are parsed at runtime (see
+// utils/scripts/settings-indexer.js) and the result is cached on disk, keyed
+// by the plugin's git revision so an update rebuilds it. No build step, no
+// hand-maintained entries, no user-editable data file.
 //
-// Unlike the launcher's fuzzy searcher, this uses the real inverted index +
-// ranking baked into the JSON: a query is tokenised, each token is looked up in
-// the inverted index (exact token or prefix), the matching entry ids are scored
-// with the precomputed per-token ranking, and the best entries are returned.
-// SettingEntry QObjects are produced via Variants so the result objects expose
-// the same properties the result list expects.
 Singleton {
     id: root
 
@@ -25,11 +22,6 @@ Singleton {
     // ranking:  token -> { entry id (string): weight }
     property var inverted: ({})
     property var ranking: ({})
-    // Cache the highlight regex so it's compiled once per search rather than
-    // once per card per keystroke. Held inside a plain JS object (never
-    // reassigned) because highlight() runs inside text bindings: writing to a
-    // real property from there would notify and re-trigger the binding - a
-    // binding loop. Mutating an object's fields emits no change signals.
     readonly property var highlightCache: ({
             "search": "",
             "pattern": null
@@ -113,12 +105,6 @@ Singleton {
         return text.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 0);
     }
 
-    // Wrap the parts of `text` that match the search in the given colour, for use
-    // with a StyledText in Text.StyledText format. Matches each query token as a
-    // prefix at a word boundary (mirroring how lookup matches), so "wall"
-    // highlights the start of "wallpaper". StyledText supports <font color> but
-    // not CSS <span style>. HTML-significant characters are escaped first so the
-    // rich-text parser doesn't choke on names with & < or >.
     function highlight(text: string, search: string, colour: color): string {
         const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         if (search.length === 0)
@@ -152,9 +138,27 @@ Singleton {
         return escaped.replace(pattern, `<font color="${colour}">$1</font>`);
     }
 
+    function loadIndex(): var {
+        const revision = CUtils.gitRevision();
+        const cachePath = `${Paths.cache}/settings-index.json`;
+        const cached = CUtils.readTextFile(cachePath);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (parsed.version === 3 && revision && parsed.revision === revision)
+                    return parsed;
+            } catch (e) {}
+        }
+        const data = SettingsIndexer.buildIndex(`${Quickshell.shellDir}/modules/nexus`, p => CUtils.readTextFile(p), (d, s) => CUtils.listFiles(d, s));
+        data.revision = revision;
+        CUtils.writeTextFile(cachePath, JSON.stringify(data));
+        console.log(`SettingsSearcher: indexed ${data.entries.length} settings (revision ${revision || "unknown"})`);
+        return data;
+    }
+
     Component.onCompleted: {
         try {
-            const data = JSON.parse(CUtils.settingsIndex());
+            const data = root.loadIndex();
             entries.model = data.entries;
             root.inverted = data.inverted ?? {};
             root.ranking = data.ranking ?? {};
@@ -170,6 +174,7 @@ Singleton {
                 limit: 25
             });
         } catch (e) {
+            console.warn("SettingsSearcher: failed to build settings index:", e);
             entries.model = [];
             root.inverted = {};
             root.ranking = {};

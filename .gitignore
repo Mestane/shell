@@ -4,4 +4,3 @@
 build/
 .cache/
 logs
-__pycache__/
