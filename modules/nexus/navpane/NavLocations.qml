@@ -208,9 +208,9 @@ VerticalFadeFlickable {
                     StyledText {
                         Layout.fillWidth: true
                         Layout.leftMargin: Tokens.padding.medium
-                        text: group.modelData.page.toUpperCase()
-                        color: Colours.palette.m3primary
-                        font: Tokens.font.label.medium
+                        text: group.modelData.page
+                        color: Colours.palette.m3secondary
+                        font: Tokens.font.label.large
                         elide: Text.ElideRight
                     }
 
