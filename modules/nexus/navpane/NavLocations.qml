@@ -40,7 +40,6 @@ VerticalFadeFlickable {
                 byPage[key] = {
                     "pageIdx": e.pageIdx,
                     "page": e.crumbLabels[0],
-                    "icon": e.crumbIcons[0],
                     "entries": []
                 };
                 out.push(byPage[key]);
@@ -206,25 +205,13 @@ VerticalFadeFlickable {
                     width: resultList.width
                     spacing: Tokens.spacing.small
 
-                    // Group heading: the top-level page name, shown once.
-                    RowLayout {
+                    StyledText {
                         Layout.fillWidth: true
-                        Layout.leftMargin: Tokens.padding.small
-                        spacing: Tokens.spacing.small
-
-                        MaterialIcon {
-                            text: group.modelData.icon
-                            color: Colours.palette.m3primary
-                            fontStyle: Tokens.font.icon.small
-                        }
-
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: group.modelData.page
-                            color: Colours.palette.m3primary
-                            font: Tokens.font.label.large
-                            elide: Text.ElideRight
-                        }
+                        Layout.leftMargin: Tokens.padding.medium
+                        text: group.modelData.page.toUpperCase()
+                        color: Colours.palette.m3primary
+                        font: Tokens.font.label.medium
+                        elide: Text.ElideRight
                     }
 
                     Column {
