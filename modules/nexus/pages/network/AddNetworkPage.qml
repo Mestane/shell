@@ -48,7 +48,7 @@ PageBase {
         });
     }
 
-    title: qsTr("Add hidden network")
+    title: qsTr("Add network")
     isSubPage: true
 
     ColumnLayout {
@@ -57,10 +57,20 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.large
 
+        Connections {
+            function onSubPageClosed(): void {
+                const ssid = ssidField.text.trim();
+                if (ssid)
+                    Nmcli.forgetNetwork(ssid);
+            }
+
+            target: root.nState
+        }
+
         StyledText {
             Layout.fillWidth: true
-            Layout.leftMargin: Tokens.padding.small
-            text: qsTr("Hidden networks don't broadcast their name, so enter the details manually.")
+            Layout.leftMargin: Tokens.padding.extraSmall
+            text: qsTr("Enter the details below to manually connect to a network.")
             color: Colours.palette.m3onSurfaceVariant
             font: Tokens.font.body.small
             wrapMode: Text.WordWrap
@@ -70,7 +80,7 @@ PageBase {
             id: ssidField
 
             Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.small
+            Layout.topMargin: Tokens.spacing.extraSmall
             placeholderText: qsTr("Network name (SSID)")
             supportingText: qsTr("e.g. MyHiddenNetwork")
             leadingIcon: "wifi"
@@ -90,54 +100,71 @@ PageBase {
             fallbackText: qsTr("WPA/WPA2/WPA3 Personal")
             fallbackIcon: "lock"
 
-            menuItems: [wpaItem, noneItem]
+            menuItems: [
+                MenuItem {
+                    icon: "lock"
+                    text: qsTr("WPA/WPA2/WPA3 Personal")
+                },
+                MenuItem {
+                    id: noneItem
 
-            Component.onCompleted: active = wpaItem
-
-            MenuItem {
-                id: wpaItem
-
-                icon: "lock"
-                text: qsTr("WPA/WPA2/WPA3 Personal")
-            }
-
-            MenuItem {
-                id: noneItem
-
-                icon: "lock_open"
-                text: qsTr("None (open)")
-            }
+                    icon: "lock_open"
+                    text: qsTr("None (open)")
+                }
+            ]
         }
 
-        StyledTextField {
-            id: passwordField
-
+        Item {
             Layout.fillWidth: true
-            visible: root.secured
-            enabled: root.secured
-            placeholderText: qsTr("Password")
-            leadingIcon: "key"
-            echoMode: TextInput.Password
-            supportingText: qsTr("WPA passwords are at least 8 characters")
-            errorText: root.failed ? qsTr("Connection failed — check the password") : qsTr("Password must be at least 8 characters")
+            Layout.bottomMargin: root.secured ? Tokens.spacing.small : -parent.spacing
+            implicitHeight: root.secured ? passwordField.implicitHeight : 0
+            opacity: root.secured ? 1 : 0
 
-            onAccepted: root.submit()
+            Behavior on Layout.bottomMargin {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on implicitHeight {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            StyledTextField {
+                id: passwordField
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+
+                enabled: root.secured
+                placeholderText: qsTr("Password")
+                leadingIcon: "key"
+                echoMode: TextInput.Password
+                supportingText: qsTr("WPA passwords are at least 8 characters")
+                errorText: root.failed ? qsTr("Connection failed — check the password") : qsTr("Password must be at least 8 characters")
+
+                onAccepted: root.submit()
+            }
         }
 
         RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.medium
-            spacing: Tokens.spacing.medium
-
-            Item {
-                Layout.fillWidth: true
-            }
+            Layout.alignment: Qt.AlignRight
+            spacing: Tokens.spacing.small
 
             TextButton {
-                Layout.minimumHeight: Tokens.font.body.medium.pointSize + Tokens.padding.medium * 2
-                type: TextButton.Text
+                Layout.fillHeight: true
+                isRound: true
+                horizontalPadding: Tokens.padding.extraLarge
+                type: TextButton.Tonal
                 text: qsTr("Cancel")
-                enabled: !root.connecting
                 onClicked: root.nState.closeSubPage()
             }
 
@@ -152,11 +179,20 @@ PageBase {
                 inactiveOnColour: Colours.palette.m3onPrimary
                 stateLayer.disabled: root.connecting || ssidField.text.trim().length === 0
 
-                implicitWidth: connectContent.implicitWidth + Tokens.padding.extraLarge * 2
-                implicitHeight: connectContent.implicitHeight + Tokens.padding.medium * 2
+                implicitWidth: connectMetrics.width + Tokens.padding.extraLarge * 2
+                implicitHeight: connectMetrics.height + Tokens.padding.medium * 2
 
-                onClicked: if (!root.connecting && ssidField.text.trim().length > 0)
-                    root.submit()
+                onClicked: {
+                    if (!root.connecting && ssidField.text.trim().length > 0)
+                        root.submit();
+                }
+
+                TextMetrics {
+                    id: connectMetrics
+
+                    text: qsTr("Connect")
+                    font: connectBtn.font
+                }
 
                 AnimLoader {
                     id: connectContent
@@ -180,9 +216,9 @@ PageBase {
                     id: connectTextComp
 
                     StyledText {
-                        text: qsTr("Connect")
+                        text: connectMetrics.text
+                        font: connectBtn.font
                         color: connectBtn.onColour
-                        animate: true
                     }
                 }
             }
