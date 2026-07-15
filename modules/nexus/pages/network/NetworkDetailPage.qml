@@ -32,6 +32,7 @@ PageBase {
     property string origDns: ""
 
     readonly property bool hasChanges: root.ipLoaded && (root.ipMethod !== root.origMethod || (root.ipMethod === "manual" && (addressField.text.trim() !== root.origAddress || gatewayField.text.trim() !== root.origGateway)) || ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && dnsField.text.trim() !== root.origDns))
+    readonly property bool showDnsSettings: root.ipMethod === "manual" || root.ipMethod === "auto-dns"
 
     function loadIpConfig(): void {
         if (!root.ssid)
@@ -260,90 +261,162 @@ PageBase {
             fallbackText: qsTr("Automatic (DHCP)")
             fallbackIcon: "lan"
 
-            menuItems: [autoItem, autoDnsItem, manualItem]
+            onSelected: item => root.ipMethod = item === manualItem ? "manual" : (item === autoDnsItem ? "auto-dns" : "auto")
 
-            onSelected: item => {
-                root.ipMethod = item === manualItem ? "manual" : (item === autoDnsItem ? "auto-dns" : "auto");
+            menuItems: [
+                MenuItem {
+                    id: autoItem
+
+                    icon: "lan"
+                    text: qsTr("Automatic (DHCP)")
+                },
+                MenuItem {
+                    id: autoDnsItem
+
+                    icon: "dns"
+                    text: qsTr("Automatic, DNS only")
+                },
+                MenuItem {
+                    id: manualItem
+
+                    icon: "edit"
+                    text: qsTr("Manual")
+                }
+            ]
+
+            Behavior on bottomLeftRadius {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
 
-            MenuItem {
-                id: autoItem
-
-                icon: "lan"
-                text: qsTr("Automatic (DHCP)")
-            }
-
-            MenuItem {
-                id: autoDnsItem
-
-                icon: "dns"
-                text: qsTr("Automatic, DNS only")
-            }
-
-            MenuItem {
-                id: manualItem
-
-                icon: "edit"
-                text: qsTr("Manual")
+            Behavior on bottomRightRadius {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
         }
 
         // Address + gateway: manual only. DNS: manual and DNS-only.
-        ColumnLayout {
+        Item {
             Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.large
-            spacing: Tokens.spacing.large
-            visible: root.ipMethod === "manual" || root.ipMethod === "auto-dns"
+            Layout.topMargin: root.showDnsSettings ? Tokens.spacing.large : -parent.spacing
+            implicitHeight: root.showDnsSettings ? dnsColumn.implicitHeight : 0
+            opacity: root.showDnsSettings ? 1 : 0
 
-            StyledTextField {
-                id: addressField
-
-                Layout.fillWidth: true
-                visible: root.ipMethod === "manual"
-                placeholderText: qsTr("Address (CIDR)")
-                leadingIcon: "router"
-                supportingText: qsTr("IP and prefix, e.g. 192.168.1.50/24")
-                errorText: qsTr("Enter a valid address in CIDR notation")
-                inputMethodHints: Qt.ImhNoPredictiveText
-                validate: /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\/(?:3[0-2]|[12]?\d)$/
+            Behavior on Layout.topMargin {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
 
-            StyledTextField {
-                id: gatewayField
-
-                Layout.fillWidth: true
-                visible: root.ipMethod === "manual"
-                placeholderText: qsTr("Gateway")
-                leadingIcon: "exit_to_app"
-                errorText: qsTr("Enter a valid gateway address")
-                inputMethodHints: Qt.ImhNoPredictiveText
-                validate: /^$|^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/
+            Behavior on implicitHeight {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
 
-            StyledTextField {
-                id: dnsField
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
 
-                Layout.fillWidth: true
-                placeholderText: qsTr("DNS servers")
-                leadingIcon: "dns"
-                supportingText: qsTr("Comma-separated")
-                errorText: qsTr("Enter valid DNS server addresses")
-                inputMethodHints: Qt.ImhNoPredictiveText
-                validate: /^$|^\s*(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\s*,\s*(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d))*\s*$/
+            ColumnLayout {
+                id: dnsColumn
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: root.ipMethod === "manual" ? Tokens.spacing.large : 0
+
+                Behavior on spacing {
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    implicitHeight: root.ipMethod === "manual" ? manualDnsColumn.implicitHeight : 0
+                    opacity: root.ipMethod === "manual" ? 1 : 0
+
+                    Behavior on implicitHeight {
+                        Anim {
+                            type: Anim.DefaultEffects
+                        }
+                    }
+
+                    Behavior on opacity {
+                        Anim {
+                            type: Anim.DefaultEffects
+                        }
+                    }
+
+                    ColumnLayout {
+                        id: manualDnsColumn
+
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        spacing: Tokens.spacing.large
+
+                        StyledTextField {
+                            id: addressField
+
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("Address (CIDR)")
+                            leadingIcon: "router"
+                            supportingText: qsTr("IP and prefix, e.g. 192.168.1.50/24")
+                            errorText: qsTr("Enter a valid address in CIDR notation")
+                            inputMethodHints: Qt.ImhNoPredictiveText
+                            validate: /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\/(?:3[0-2]|[12]?\d)$/
+                        }
+
+                        StyledTextField {
+                            id: gatewayField
+
+                            Layout.fillWidth: true
+                            placeholderText: qsTr("Gateway")
+                            leadingIcon: "exit_to_app"
+                            errorText: qsTr("Enter a valid gateway address")
+                            inputMethodHints: Qt.ImhNoPredictiveText
+                            validate: /^$|^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/
+                        }
+                    }
+                }
+
+                StyledTextField {
+                    id: dnsField
+
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("DNS servers")
+                    leadingIcon: "dns"
+                    supportingText: qsTr("Comma-separated")
+                    errorText: qsTr("Enter valid DNS server addresses")
+                    inputMethodHints: Qt.ImhNoPredictiveText
+                    validate: /^$|^\s*(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\s*,\s*(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d))*\s*$/
+                }
             }
         }
 
         // Apply button — swaps to a loading spinner while applying, matching the
         // connect animation used in the Wi-Fi list. Only shown once the form
         // actually diverges from the saved config.
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.large
-            spacing: Tokens.spacing.medium
-            visible: root.hasChanges || root.savingIp
+        Item {
+            Layout.alignment: Qt.AlignRight
+            implicitWidth: applyBtn.implicitWidth
+            implicitHeight: root.hasChanges || root.savingIp ? applyBtn.implicitHeight : 0
+            opacity: root.hasChanges || root.savingIp ? 1 : 0
 
-            Item {
-                Layout.fillWidth: true
+            Behavior on implicitHeight {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
             }
 
             ButtonBase {
