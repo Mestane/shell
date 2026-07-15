@@ -428,11 +428,20 @@ PageBase {
                 inactiveOnColour: Colours.palette.m3onPrimary
                 stateLayer.disabled: !root.ipLoaded || root.savingIp
 
-                implicitWidth: applyContent.implicitWidth + Tokens.padding.extraLarge * 2
-                implicitHeight: applyContent.implicitHeight + Tokens.padding.medium * 2
+                implicitWidth: applyMetrics.width + Tokens.padding.extraLarge * 2
+                implicitHeight: applyMetrics.height + Tokens.padding.medium * 2
 
-                onClicked: if (root.ipLoaded && !root.savingIp)
-                    root.saveIpConfig()
+                onClicked: {
+                    if (root.ipLoaded && !root.savingIp)
+                        root.saveIpConfig();
+                }
+
+                TextMetrics {
+                    id: applyMetrics
+
+                    text: qsTr("Apply")
+                    font: applyBtn.font
+                }
 
                 AnimLoader {
                     id: applyContent
@@ -456,9 +465,9 @@ PageBase {
                     id: applyTextComp
 
                     StyledText {
-                        text: qsTr("Apply")
+                        text: applyMetrics.text
+                        font: applyBtn.font
                         color: applyBtn.onColour
-                        animate: true
                     }
                 }
             }
