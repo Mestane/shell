@@ -602,10 +602,10 @@ Singleton {
         return hasConnectionName;
     }
 
-    // Adds and connects to a hidden SSID (one that doesn't broadcast). The
-    // profile is created with 802-11-wireless.hidden=yes so NetworkManager
-    // actively probes for it.
-    function addHiddenNetwork(ssid: string, password: string, security: string, callback: var): void {
+    // Adds and connects to an SSID by name. When hidden is true the profile is
+    // created with 802-11-wireless.hidden=yes so NetworkManager actively probes
+    // for it.
+    function addHiddenNetwork(ssid: string, password: string, security: string, hidden: bool, callback: var): void {
         if (!ssid || ssid.length === 0) {
             if (callback)
                 callback({
@@ -621,7 +621,7 @@ Singleton {
 
         // Remove any stale profile with the same name first so we don't collide.
         checkAndDeleteConnection(ssid, () => {
-            let cmd = [root.nmcliCommandConnection, "add", root.connectionParamType, root.deviceTypeWifi, root.connectionParamConName, ssid, root.connectionParamIfname, "*", root.connectionParamSsid, ssid, root.connectionParamHidden, "yes"];
+            let cmd = [root.nmcliCommandConnection, "add", root.connectionParamType, root.deviceTypeWifi, root.connectionParamConName, ssid, root.connectionParamIfname, "*", root.connectionParamSsid, ssid, root.connectionParamHidden, hidden ? "yes" : "no"];
 
             if (isSecure) {
                 cmd.push(root.securityKeyMgmt, root.keyMgmtWpaPsk, root.securityPsk, password);

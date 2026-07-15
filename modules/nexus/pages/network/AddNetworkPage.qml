@@ -35,7 +35,7 @@ PageBase {
         root.failed = false;
         root.connecting = true;
 
-        Nmcli.addHiddenNetwork(ssid, root.secured ? passwordField.text : "", root.secured ? "wpa" : "none", result => {
+        Nmcli.addHiddenNetwork(ssid, root.secured ? passwordField.text : "", root.secured ? "wpa" : "none", hiddenToggle.checked, result => {
             root.connecting = false;
             if (result && result.success) {
                 root.success = true;
@@ -95,12 +95,20 @@ PageBase {
             onAccepted: root.secured ? passwordField.forceActiveFocus() : root.submit()
         }
 
+        ToggleRow {
+            id: hiddenToggle
+
+            first: true
+            text: qsTr("Hidden network")
+            subtext: qsTr("Actively probe for a network that doesn't broadcast its name")
+            checked: true
+        }
+
         SelectRow {
             id: securitySelect
 
-            Layout.fillWidth: true
-            first: true
-            last: true
+            Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+            last: !root.secured
             label: qsTr("Security")
             fallbackText: qsTr("WPA/WPA2/WPA3 Personal")
             fallbackIcon: "lock"
@@ -117,11 +125,23 @@ PageBase {
                     text: qsTr("None (open)")
                 }
             ]
+
+            Behavior on bottomLeftRadius {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on bottomRightRadius {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
         }
 
         Item {
             Layout.fillWidth: true
-            Layout.bottomMargin: root.secured ? Tokens.spacing.small : -parent.spacing
+            Layout.bottomMargin: root.secured ? 0 : -parent.spacing
             implicitHeight: root.secured ? passwordField.implicitHeight : 0
             opacity: root.secured ? 1 : 0
 
@@ -162,6 +182,7 @@ PageBase {
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
+            Layout.topMargin: Tokens.spacing.extraSmall - parent.spacing
             spacing: Tokens.spacing.small
 
             TextButton {

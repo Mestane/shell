@@ -254,7 +254,6 @@ PageBase {
         SelectRow {
             id: methodSelect
 
-            Layout.fillWidth: true
             first: true
             last: root.ipMethod === "auto"
             label: qsTr("IP assignment")
