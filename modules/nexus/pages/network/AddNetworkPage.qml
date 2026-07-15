@@ -17,6 +17,7 @@ PageBase {
     readonly property bool secured: securitySelect.active !== noneItem
     property bool connecting: false
     property bool failed: false
+    property bool success: false
 
     function submit(): void {
         const ssid = ssidField.text.trim();
@@ -37,6 +38,7 @@ PageBase {
         Nmcli.addHiddenNetwork(ssid, root.secured ? passwordField.text : "", root.secured ? "wpa" : "none", result => {
             root.connecting = false;
             if (result && result.success) {
+                root.success = true;
                 root.nState.closeSubPage();
             } else {
                 root.failed = true;
@@ -59,6 +61,9 @@ PageBase {
 
         Connections {
             function onSubPageClosed(): void {
+                if (root.success)
+                    return;
+
                 const ssid = ssidField.text.trim();
                 if (ssid)
                     Nmcli.forgetNetwork(ssid);
