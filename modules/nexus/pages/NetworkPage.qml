@@ -263,7 +263,7 @@ PageBase {
             horizontalPadding: Tokens.padding.largeIncreased
             checked: VPN.connected
             // Connectable as long as there's a provider and we're not mid-switch.
-            enabled: !VPN.connecting && VPN.providers().length > 0
+            disabled: VPN.connecting || VPN.providers().length === 0
             onToggled: VPN.toggle()
 
             Timer {
