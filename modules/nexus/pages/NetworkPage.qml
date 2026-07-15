@@ -491,7 +491,7 @@ PageBase {
             implicitHeight: manageLayout.implicitHeight + manageLayout.anchors.margins * 2
 
             StateLayer {
-                onClicked: root.nState.openSubPage(2)
+                onClicked: root.nState.openSubPage(4)
             }
 
             RowLayout {

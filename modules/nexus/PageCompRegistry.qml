@@ -50,16 +50,16 @@ QtObject {
                     EthernetDetailPage {}
                 }
                 Component {
-                    VpnPage {}
-                }
-                Component {
-                    AddVpnPage {}
-                }
-                Component {
                     AddNetworkPage {}
                 }
                 Component {
                     NetworkDetailPage {}
+                }
+                Component {
+                    VpnPage {}
+                }
+                Component {
+                    AddVpnPage {}
                 }
             }
         },
