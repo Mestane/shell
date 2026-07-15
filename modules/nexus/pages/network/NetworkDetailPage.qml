@@ -26,12 +26,12 @@ PageBase {
 
     // Snapshot of the saved IPv4 config, so the Apply button only shows up once
     // something actually changed.
-    property string _origMethod: "auto"
-    property string _origAddress: ""
-    property string _origGateway: ""
-    property string _origDns: ""
+    property string origMethod: "auto"
+    property string origAddress: ""
+    property string origGateway: ""
+    property string origDns: ""
 
-    readonly property bool hasChanges: root.ipLoaded && (root.ipMethod !== root._origMethod || (root.ipMethod === "manual" && (addressField.text.trim() !== root._origAddress || gatewayField.text.trim() !== root._origGateway)) || ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && dnsField.text.trim() !== root._origDns))
+    readonly property bool hasChanges: root.ipLoaded && (root.ipMethod !== root.origMethod || (root.ipMethod === "manual" && (addressField.text.trim() !== root.origAddress || gatewayField.text.trim() !== root.origGateway)) || ((root.ipMethod === "manual" || root.ipMethod === "auto-dns") && dnsField.text.trim() !== root.origDns))
 
     function loadIpConfig(): void {
         if (!root.ssid)
@@ -45,10 +45,10 @@ PageBase {
             gatewayField.text = cfg.gateway;
             dnsField.text = cfg.dns;
             root.autoconnect = cfg.autoconnect;
-            root._origMethod = cfg.method;
-            root._origAddress = cfg.address;
-            root._origGateway = cfg.gateway;
-            root._origDns = cfg.dns;
+            root.origMethod = cfg.method;
+            root.origAddress = cfg.address;
+            root.origGateway = cfg.gateway;
+            root.origDns = cfg.dns;
             root.ipLoaded = true;
         });
     }
@@ -70,10 +70,10 @@ PageBase {
                 else
                     dnsField.isError = true;
             } else {
-                root._origMethod = root.ipMethod;
-                root._origAddress = addressField.text.trim();
-                root._origGateway = gatewayField.text.trim();
-                root._origDns = dnsField.text.trim();
+                root.origMethod = root.ipMethod;
+                root.origAddress = addressField.text.trim();
+                root.origGateway = gatewayField.text.trim();
+                root.origDns = dnsField.text.trim();
             }
         });
     }
