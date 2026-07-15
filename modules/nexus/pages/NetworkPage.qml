@@ -223,7 +223,7 @@ PageBase {
             last: true
 
             StateLayer {
-                onClicked: root.nState.openSubPage(2)
+                onClicked: root.nState.openSubPage(2) // Add network sub-page
             }
 
             RowLayout {
