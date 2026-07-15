@@ -144,26 +144,25 @@ PageBase {
         }
 
         RowLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: Tokens.spacing.medium
-            spacing: Tokens.spacing.medium
-
-            Item {
-                Layout.fillWidth: true
-            }
+            Layout.alignment: Qt.AlignRight
+            Layout.topMargin: Tokens.spacing.extraSmall - parent.spacing
+            spacing: Tokens.spacing.small
 
             TextButton {
-                Layout.minimumHeight: Tokens.font.body.medium.pointSize + Tokens.padding.medium * 2
-                type: TextButton.Text
+                isRound: true
+                horizontalPadding: Tokens.padding.extraLarge
+                verticalPadding: Tokens.padding.medium
+                type: TextButton.Tonal
                 text: qsTr("Cancel")
                 onClicked: root.nState.closeSubPage()
             }
 
             TextButton {
-                Layout.minimumHeight: Tokens.font.body.medium.pointSize + Tokens.padding.medium * 2
-                type: TextButton.Filled
+                isRound: true
+                horizontalPadding: Tokens.padding.extraLarge
+                verticalPadding: Tokens.padding.medium
                 text: root.editing ? qsTr("Save") : qsTr("Add")
-                enabled: nameField.text.trim().length > 0
+                disabled: !nameField.text.trim()
                 onClicked: root.submit()
             }
         }
