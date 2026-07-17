@@ -38,14 +38,33 @@ PageBase {
             name: name,
             displayName: displayField.text.trim() || name,
             interface: interfaceField.text.trim(),
-            connectCmd: root.joinCmd(connectField.text),
-            disconnectCmd: root.joinCmd(disconnectField.text)
+            connectCmd: joinCmd(connectField.text),
+            disconnectCmd: joinCmd(disconnectField.text)
         };
 
-        if (root.editing)
-            VPN.updateProvider(root.editIndex, data);
-        else
+        if (editing) {
+            const wasConnected = existing.enabled && VPN.connected;
+            if (wasConnected)
+                VPN.disconnect();
+            VPN.updateProvider(editIndex, data);
+            if (wasConnected) {
+                if (!VPN.connecting) {
+                    VPN.connect();
+                } else {
+                    let onConnChanged = () => {
+                        if (onConnChanged && !VPN.connecting) {
+                            VPN.connectingChanged.disconnect(onConnChanged);
+                            onConnChanged = null;
+                            if (!VPN.connected)
+                                VPN.connect();
+                        }
+                    };
+                    VPN.connectingChanged.connect(onConnChanged);
+                }
+            }
+        } else {
             VPN.addProvider(data);
+        }
 
         nState.closeSubPage();
     }
