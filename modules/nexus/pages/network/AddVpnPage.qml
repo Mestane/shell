@@ -50,7 +50,7 @@ PageBase {
             if (wasConnected) {
                 if (!VPN.connecting && !VPN.disconnecting) {
                     VPN.connect();
-                } else {
+                } else if (VPN.disconnecting) {
                     let onConnChanged = () => {
                         if (onConnChanged && !VPN.disconnecting) {
                             VPN.disconnectingChanged.disconnect(onConnChanged);
