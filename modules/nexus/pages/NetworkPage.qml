@@ -466,7 +466,7 @@ PageBase {
                         icon: "edit"
                         onClicked: {
                             root.nState.editingVpnIndex = provider.modelData.index;
-                            root.nState.openSubPage(4);
+                            root.nState.openSubPage(4); // Add/edit provider sub-page
                         }
                     }
                 }
@@ -480,7 +480,10 @@ PageBase {
             implicitHeight: manageLayout.implicitHeight + manageLayout.anchors.margins * 2
 
             StateLayer {
-                onClicked: root.nState.openSubPage(4) // Add provider sub-page
+                onClicked: {
+                    root.nState.editingVpnIndex = -1;
+                    root.nState.openSubPage(4); // Add/edit provider sub-page
+                }
             }
 
             RowLayout {
