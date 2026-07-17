@@ -381,6 +381,84 @@ PageBase {
                         }
                     }
 
+                    Item {
+                        Layout.rightMargin: Tokens.spacing.small
+                        opacity: provider.isConnected && root?.cappedWidth > Tokens.sizes.nexus.networkShowVpnDetailWidth ? 1 : 0
+                        visible: opacity > 0
+
+                        implicitWidth: provider.isConnected && root?.cappedWidth > Tokens.sizes.nexus.networkShowVpnDetailWidth ? providerDetailRow.implicitWidth : 0
+                        implicitHeight: providerDetailRow.implicitHeight
+
+                        Behavior on opacity {
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
+                        }
+
+                        RowLayout {
+                            id: providerDetailRow
+
+                            anchors.right: parent.right
+                            spacing: Tokens.spacing.large
+
+                            ColumnLayout {
+                                spacing: 0
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignRight
+                                    text: qsTr("Interface")
+                                    color: Colours.palette.m3onSurfaceVariant
+                                    font: Tokens.font.label.small
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignRight
+                                }
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignRight
+                                    text: provider.modelData.interface
+                                    color: Colours.palette.m3outline
+                                    font: Tokens.font.label.small
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                            }
+
+                            ColumnLayout {
+                                spacing: 0
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignRight
+                                    text: qsTr("Current Ping")
+                                    color: Colours.palette.m3onSurfaceVariant
+                                    font: Tokens.font.label.small
+                                    elide: Text.ElideRight
+                                    horizontalAlignment: Text.AlignRight
+                                }
+
+                                RowLayout {
+                                    Layout.alignment: Qt.AlignRight
+                                    spacing: Tokens.spacing.small
+
+                                    StyledRect {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        implicitWidth: Math.round(Tokens.font.body.small.pointSize * 0.7)
+                                        implicitHeight: implicitWidth
+                                        radius: Tokens.rounding.full
+                                        color: VPN.pingMs <= 80 ? Colours.palette.m3primary : VPN.pingMs <= 150 ? Colours.palette.m3tertiary : Colours.palette.m3error
+                                    }
+
+                                    StyledText {
+                                        text: qsTr("%1 ms").arg(VPN.pingMs)
+                                        color: Colours.palette.m3outline
+                                        font: Tokens.font.label.small
+                                        elide: Text.ElideRight
+                                        horizontalAlignment: Text.AlignRight
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     IconButton {
                         implicitWidth: implicitHeight + (Tokens.padding.large - padding) * 2
                         type: IconButton.Tonal
