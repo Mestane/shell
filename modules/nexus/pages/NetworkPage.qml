@@ -484,14 +484,14 @@ PageBase {
             }
         }
 
-        // Manage (switch provider, add/edit/delete).
+        // Add provider
         ConnectedRect {
             Layout.fillWidth: true
             last: true
             implicitHeight: manageLayout.implicitHeight + manageLayout.anchors.margins * 2
 
             StateLayer {
-                onClicked: root.nState.openSubPage(4)
+                onClicked: root.nState.openSubPage(4) // Add provider sub-page
             }
 
             RowLayout {
@@ -504,27 +504,15 @@ PageBase {
                 spacing: Tokens.spacing.medium
 
                 MaterialIcon {
-                    text: "settings"
+                    text: "add"
                     fontStyle: Tokens.font.icon.medium
                 }
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: qsTr("Manage providers")
+                    text: qsTr("Add provider")
                     font: Tokens.font.body.small
                     elide: Text.ElideRight
-                }
-
-                StyledText {
-                    text: qsTr("%1 configured").arg(VPN.providers().length)
-                    color: Colours.palette.m3outline
-                    font: Tokens.font.label.small
-                }
-
-                MaterialIcon {
-                    text: "chevron_right"
-                    color: Colours.palette.m3onSurfaceVariant
-                    fontStyle: Tokens.font.icon.small
                 }
             }
         }
