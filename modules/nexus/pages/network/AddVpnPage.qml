@@ -26,6 +26,10 @@ PageBase {
         return t.length > 0 ? t.split(/\s+/) : [];
     }
 
+    function arrEq(a: var, b: var): bool {
+        return a.length === b.length && a.every((x, i) => x === b[i]);
+    }
+
     function submit(): void {
         const name = nameField.text.trim();
         if (name.length === 0) {
@@ -43,11 +47,11 @@ PageBase {
         };
 
         if (editing) {
-            const wasConnected = existing.enabled && VPN.connected;
-            if (wasConnected)
+            const needsReload = existing.enabled && VPN.connected && (existing.name !== name || existing.iface !== data.interface || !arrEq(existing.connectCmd, data.connectCmd) || !arrEq(existing.disconnectCmd, data.disconnectCmd));
+            if (needsReload)
                 VPN.disconnect();
             VPN.updateProvider(editIndex, data);
-            if (wasConnected) {
+            if (needsReload) {
                 if (!VPN.connecting && !VPN.disconnecting) {
                     VPN.connect();
                 } else if (VPN.disconnecting) {
