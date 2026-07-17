@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -171,22 +172,28 @@ PageBase {
                 Layout.fillWidth: true
             }
 
-            TextButton {
-                isRound: true
-                horizontalPadding: Tokens.padding.extraLarge
-                verticalPadding: Tokens.padding.medium
-                type: TextButton.Tonal
-                text: qsTr("Cancel")
-                onClicked: root.nState.closeSubPage()
-            }
+            ButtonRow {
+                spacing: parent.spacing
 
-            TextButton {
-                isRound: true
-                horizontalPadding: Tokens.padding.extraLarge
-                verticalPadding: Tokens.padding.medium
-                text: root.editing ? qsTr("Save") : qsTr("Add")
-                disabled: !nameField.text.trim()
-                onClicked: root.submit()
+                TextButton {
+                    isRound: true
+                    shapeMorph: true
+                    horizontalPadding: Tokens.padding.extraLarge
+                    verticalPadding: Tokens.padding.medium
+                    type: TextButton.Tonal
+                    text: qsTr("Cancel")
+                    onClicked: root.nState.closeSubPage()
+                }
+
+                TextButton {
+                    isRound: true
+                    shapeMorph: true
+                    horizontalPadding: Tokens.padding.extraLarge
+                    verticalPadding: Tokens.padding.medium
+                    text: root.editing ? qsTr("Save") : qsTr("Add")
+                    disabled: !nameField.text.trim()
+                    onClicked: root.submit()
+                }
             }
         }
     }
