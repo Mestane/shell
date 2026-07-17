@@ -18,7 +18,8 @@ Singleton {
             server: ""
         })
 
-    readonly property bool connecting: connectProc.running || disconnectProc.running
+    readonly property bool connecting: connectProc.running
+    readonly property bool disconnecting: disconnectProc.running
     readonly property bool enabled: GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false)
 
     // Live connection stats, refreshed on demand by the UI via refreshStats().

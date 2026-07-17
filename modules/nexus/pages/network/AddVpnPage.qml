@@ -48,18 +48,18 @@ PageBase {
                 VPN.disconnect();
             VPN.updateProvider(editIndex, data);
             if (wasConnected) {
-                if (!VPN.connecting) {
+                if (!VPN.connecting && !VPN.disconnecting) {
                     VPN.connect();
                 } else {
                     let onConnChanged = () => {
-                        if (onConnChanged && !VPN.connecting) {
-                            VPN.connectingChanged.disconnect(onConnChanged);
+                        if (onConnChanged && !VPN.disconnecting) {
+                            VPN.disconnectingChanged.disconnect(onConnChanged);
                             onConnChanged = null;
                             if (!VPN.connected)
                                 VPN.connect();
                         }
                     };
-                    VPN.connectingChanged.connect(onConnChanged);
+                    VPN.disconnectingChanged.connect(onConnChanged);
                 }
             }
         } else {

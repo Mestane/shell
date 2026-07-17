@@ -260,7 +260,7 @@ PageBase {
             horizontalPadding: Tokens.padding.largeIncreased
             checked: VPN.connected
             // Connectable as long as there's a provider and we're not mid-switch.
-            disabled: VPN.connecting || VPN.providers.length === 0
+            disabled: VPN.connecting || VPN.disconnecting || VPN.providers.length === 0
             onToggled: VPN.toggle()
 
             Timer {
@@ -352,6 +352,8 @@ PageBase {
                                     return qsTr("Tap to activate");
                                 if (VPN.connecting)
                                     return qsTr("Connecting...");
+                                if (VPN.disconnecting)
+                                    return qsTr("Disconnecting...");
                                 switch (VPN.status.state) {
                                 case "connected":
                                     return qsTr("Connected");
