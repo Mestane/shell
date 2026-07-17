@@ -299,6 +299,7 @@ PageBase {
                 implicitHeight: providerLayout.implicitHeight + providerLayout.anchors.margins * 2
 
                 StateLayer {
+                    disabled: provider.isActive
                     radius: Tokens.rounding.extraSmall
                     onClicked: {
                         if (!provider.isActive)
