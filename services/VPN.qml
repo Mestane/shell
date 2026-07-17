@@ -32,6 +32,10 @@ Singleton {
     // Tracks an in-flight provider switch that must wait for disconnect.
     property int pendingSwitchIndex: -1
 
+    // To track whether connect/disconnect procs actually ran
+    property bool connectExited
+    property bool disconnectExited
+
     readonly property var providerInput: {
         const enabledProvider = GlobalConfig.utilities.vpn.provider.find(p => typeof p === "object" ? (p.enabled === true) : false);
         return enabledProvider || "wireguard";
@@ -228,6 +232,19 @@ Singleton {
 
     function toggle(): void {
         connected ? disconnect() : connect();
+    }
+
+    function reportConnectFailure(reason: string): void {
+        connected = false;
+        connectedChanged(); // Force bindings to reeval (mainly for switches)
+        if (GlobalConfig.utilities.toasts.vpnChanged)
+            Toaster.toast(qsTr("VPN connection failed"), reason, "vpn_key_alert");
+    }
+
+    function reportDisconnectFailure(reason: string): void {
+        connectedChanged(); // Force bindings to reeval (mainly for switches)
+        if (GlobalConfig.utilities.toasts.vpnChanged)
+            Toaster.toast(qsTr("VPN disconnection failed"), reason, "vpn_key_alert");
     }
 
     function checkStatus(): void {
@@ -645,7 +662,21 @@ Singleton {
     Process {
         id: connectProc
 
+        onRunningChanged: {
+            if (running) {
+                root.connectExited = false;
+                return;
+            }
+
+            if (!root.connectExited) {
+                console.warn(lc, `Failed to start connect command '${command.join(" ")}'`);
+                root.reportConnectFailure(qsTr("Could not start %1. Is it installed?").arg(root.active.displayName));
+            }
+        }
+
         onExited: exitCode => { // qmllint disable signal-handler-parameters
+            root.connectExited = true;
+
             // Deferred so an auth URL parsed from the output wins the race.
             Qt.callLater(() => {
                 if (root.status.state === "needs-auth")
@@ -653,9 +684,7 @@ Singleton {
 
                 if (exitCode !== 0) {
                     console.warn(lc, `Connect command '${command.join(" ")}' failed with exit code`, exitCode);
-                    root.connected = false;
-                    if (GlobalConfig.utilities.toasts.vpnChanged)
-                        Toaster.toast(qsTr("VPN connection failed"), qsTr("Could not connect to %1").arg(root.active.displayName || "VPN"), "vpn_key_off");
+                    root.reportConnectFailure(qsTr("Could not connect to %1").arg(root.active.displayName));
                     return;
                 }
 
@@ -701,7 +730,22 @@ Singleton {
     Process {
         id: disconnectProc
 
-        onExited: statusCheckTimer.start() // qmllint disable signal-handler-parameters
+        onRunningChanged: {
+            if (running) {
+                root.disconnectExited = false;
+                return;
+            }
+
+            if (!root.disconnectExited) {
+                console.warn(lc, `Failed to start disconnect command '${command.join(" ")}'`);
+                root.reportDisconnectFailure(qsTr("Could not start %1. Is it installed?").arg(root.active.displayName));
+            }
+        }
+
+        onExited: { // qmllint disable signal-handler-parameters
+            root.disconnectExited = true;
+            statusCheckTimer.start();
+        }
         stderr: StdioCollector {
             onStreamFinished: {
                 const error = text.trim();
