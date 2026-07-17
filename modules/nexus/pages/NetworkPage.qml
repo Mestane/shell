@@ -260,7 +260,7 @@ PageBase {
             horizontalPadding: Tokens.padding.largeIncreased
             checked: VPN.connected
             // Connectable as long as there's a provider and we're not mid-switch.
-            disabled: VPN.connecting || VPN.providers().length === 0
+            disabled: VPN.connecting || VPN.providers.length === 0
             onToggled: VPN.toggle()
 
             Timer {
@@ -284,13 +284,13 @@ PageBase {
             placeholderText: qsTr("No VPN providers configured")
 
             model: ScriptModel {
-                values: VPN.providers()
+                values: [...VPN.providers]
             }
 
             delegate: Item {
                 id: provider
 
-                required property var modelData
+                required property VPN.Provider modelData
                 readonly property bool isActive: modelData.enabled
                 readonly property bool isConnected: isActive && VPN.connected
 
@@ -415,7 +415,7 @@ PageBase {
 
                                 StyledText {
                                     Layout.alignment: Qt.AlignRight
-                                    text: provider.modelData.interface
+                                    text: provider.modelData.iface
                                     color: Colours.palette.m3outline
                                     font: Tokens.font.label.small
                                     elide: Text.ElideRight

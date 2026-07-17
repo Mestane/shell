@@ -73,9 +73,14 @@ Singleton {
 
     readonly property var adapters: [wireguardAdapter, warpAdapter, netbirdAdapter, tailscaleAdapter]
 
-    // Normalised view of the configured providers, one entry per provider with
-    // a stable index. Used by the VPN management UI.
-    function providers(): var {
+    // Live list of configured providers as QtObjects, one entry per provider
+    // with a stable index. Kept in sync with the config below and consumed by
+    // the VPN management UI (mirrors Nmcli's networks / ethernetDevices).
+    readonly property list<Provider> providers: []
+
+    // Normalised, plain-data view of the configured providers. Re-evaluated
+    // whenever the config changes; syncProviders() folds it into `providers`.
+    readonly property var providerConfigs: {
         const list = GlobalConfig.utilities.vpn.provider;
         const out = [];
         for (let i = 0; i < list.length; i++) {
@@ -93,6 +98,39 @@ Singleton {
             });
         }
         return out;
+    }
+
+    // Sync the normalised config into the `providers` object list, reusing
+    // existing entries by index. Same create/update/destroy diff as
+    // Nmcli.syncEthernetDevices / getNetworks.
+    function syncProviders(): void {
+        const configs = root.providerConfigs;
+        const rProviders = root.providers;
+
+        const newMap = new Map();
+        for (const c of configs)
+            newMap.set(c.index, c);
+
+        for (let i = rProviders.length - 1; i >= 0; i--) {
+            if (!newMap.has(rProviders[i].index)) {
+                const removed = rProviders.splice(i, 1)[0];
+                removed.destroy();
+            }
+        }
+
+        const existingMap = new Map();
+        for (const rp of rProviders)
+            existingMap.set(rp.index, rp);
+
+        for (const [index, data] of newMap) {
+            const match = existingMap.get(index);
+            if (match)
+                match.lastIpcObject = data;
+            else
+                rProviders.push(providerComp.createObject(root, {
+                    lastIpcObject: data
+                }));
+        }
     }
 
     // Rebuild a provider object for persistence, preserving optional commands.
@@ -472,6 +510,8 @@ Singleton {
             registerProc.exec(active.registerCmd);
     }
 
+    onProviderConfigsChanged: root.syncProviders()
+
     onProviderNameChanged: {
         status = {
             connected: false,
@@ -488,7 +528,11 @@ Singleton {
         statusCheckTimer.start();
     }
 
-    Component.onCompleted: root.enabled && statusCheckTimer.start()
+    Component.onCompleted: {
+        root.syncProviders();
+        if (root.enabled)
+            statusCheckTimer.start();
+    }
 
     // ── Provider adapters ───────────────────────────────────────────────────
     // One adapter per built-in provider, holding everything that is specific
@@ -722,11 +766,31 @@ Singleton {
         onTriggered: root.checkStatus()
     }
 
+    Component {
+        id: providerComp
+
+        Provider {}
+    }
+
     LoggingCategory {
         id: lc
 
         name: "caelestia.qml.services.vpn"
         defaultLogLevel: LoggingCategory.Info
+    }
+
+    // A single configured provider, wrapping the normalised config data. Mirrors
+    // Nmcli's AccessPoint / EthernetDevice objects.
+    component Provider: QtObject {
+        required property var lastIpcObject
+        readonly property int index: lastIpcObject.index
+        readonly property string name: lastIpcObject.name
+        readonly property string displayName: lastIpcObject.displayName
+        readonly property string iface: lastIpcObject.interface
+        readonly property var connectCmd: lastIpcObject.connectCmd
+        readonly property var disconnectCmd: lastIpcObject.disconnectCmd
+        readonly property bool enabled: lastIpcObject.enabled
+        readonly property bool isObject: lastIpcObject.isObject
     }
 
     // Everything a provider needs to be driven by the generic engine above.

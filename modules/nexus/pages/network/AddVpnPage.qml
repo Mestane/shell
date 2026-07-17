@@ -14,7 +14,7 @@ PageBase {
 
     readonly property int editIndex: nState.editingVpnIndex
     readonly property bool editing: editIndex >= 0
-    readonly property var existing: editing ? (VPN.providers()[editIndex] ?? null) : null
+    readonly property VPN.Provider existing: editing ? (VPN.providers[editIndex] ?? null) : null
 
     function splitCmd(arr: var): string {
         return (arr && arr.length > 0) ? arr.join(" ") : "";
@@ -56,7 +56,7 @@ PageBase {
         if (existing) {
             nameField.text = existing.name;
             displayField.text = existing.displayName;
-            interfaceField.text = existing.interface;
+            interfaceField.text = existing.iface;
             connectField.text = splitCmd(existing.connectCmd);
             disconnectField.text = splitCmd(existing.disconnectCmd);
         }
