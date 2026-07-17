@@ -646,13 +646,20 @@ Singleton {
         id: connectProc
 
         onExited: exitCode => { // qmllint disable signal-handler-parameters
-            if (exitCode !== 0)
-                return;
-
             // Deferred so an auth URL parsed from the output wins the race.
             Qt.callLater(() => {
-                if (root.status.state !== "needs-auth")
-                    statusCheckTimer.start();
+                if (root.status.state === "needs-auth")
+                    return;
+
+                if (exitCode !== 0) {
+                    console.warn(lc, `Connect command '${command.join(" ")}' failed with exit code`, exitCode);
+                    root.connected = false;
+                    if (GlobalConfig.utilities.toasts.vpnChanged)
+                        Toaster.toast(qsTr("VPN connection failed"), qsTr("Could not connect to %1").arg(root.active.displayName || "VPN"), "vpn_key_off");
+                    return;
+                }
+
+                statusCheckTimer.start();
             });
         }
         stdout: SplitParser {
