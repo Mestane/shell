@@ -144,9 +144,32 @@ PageBase {
         }
 
         RowLayout {
-            Layout.alignment: Qt.AlignRight
-            Layout.topMargin: Tokens.spacing.extraSmall - parent.spacing
+            Layout.fillWidth: true
+            Layout.topMargin: (root.editing ? Tokens.spacing.medium : Tokens.spacing.extraSmall) - parent.spacing
             spacing: Tokens.spacing.small
+
+            IconTextButton {
+                visible: root.editing
+                isRound: true
+                horizontalPadding: Tokens.padding.extraLarge
+                verticalPadding: Tokens.padding.medium
+                inactiveColour: Colours.palette.m3errorContainer
+                inactiveOnColour: Colours.palette.m3onErrorContainer
+                iconLabel.fill: 1
+                iconLabel.grade: 25
+                icon: "delete_forever"
+                text: qsTr("Delete")
+                onClicked: {
+                    if (root.existing.enabled && VPN.connected)
+                        VPN.disconnect();
+                    VPN.deleteProvider(root.existing.index);
+                    root.nState.closeSubPage();
+                }
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
 
             TextButton {
                 isRound: true
