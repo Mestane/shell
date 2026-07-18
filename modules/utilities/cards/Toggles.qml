@@ -29,7 +29,7 @@ StyledRect {
             }
 
             if (item.id === "vpn") {
-                return GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false);
+                return GlobalConfig.utilities.vpn.selectedProvider.length > 0;
             }
 
             seenIds.add(item.id);

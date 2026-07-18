@@ -291,7 +291,7 @@ PageBase {
                 id: provider
 
                 required property VPN.Provider modelData
-                readonly property bool isSelected: modelData.enabled
+                readonly property bool isSelected: modelData.id === VPN.selectedProvider
                 readonly property bool isConnected: isSelected && VPN.connected
 
                 anchors.left: providerList.list.contentItem.left

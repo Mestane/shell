@@ -47,7 +47,7 @@ PageBase {
         };
 
         if (editing) {
-            const needsReload = existing.enabled && VPN.connected && (existing.name !== name || existing.iface !== data.interface || !arrEq(existing.connectCmd, data.connectCmd) || !arrEq(existing.disconnectCmd, data.disconnectCmd));
+            const needsReload = existing.id === VPN.selectedProvider && VPN.connected && (existing.name !== name || existing.iface !== data.interface || !arrEq(existing.connectCmd, data.connectCmd) || !arrEq(existing.disconnectCmd, data.disconnectCmd));
             if (needsReload)
                 VPN.disconnect();
             VPN.updateProvider(editIndex, data);
@@ -184,7 +184,7 @@ PageBase {
                 icon: "delete_forever"
                 text: qsTr("Delete")
                 onClicked: {
-                    if (root.existing.enabled && VPN.connected)
+                    if (root.existing.id === VPN.selectedProvider && VPN.connected)
                         VPN.disconnect();
                     VPN.deleteProvider(root.existing.index);
                     root.nState.closeSubPage();

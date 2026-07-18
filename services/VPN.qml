@@ -23,7 +23,10 @@ Singleton {
     readonly property bool connecting: connectProc.running || connectPending
     readonly property bool disconnecting: disconnectProc.running || disconnectPending
 
-    readonly property bool enabled: GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false)
+    // Internal id of the currently selected provider (persisted). Only one
+    // provider can be selected at a time; empty means none. Keyed by id rather
+    // than name so the selection survives renames.
+    readonly property string selectedProvider: GlobalConfig.utilities.vpn.selectedProvider
 
     // Live connection stats, refreshed on demand by the UI via refreshStats().
     property double connectedSince: 0
@@ -32,16 +35,19 @@ Singleton {
     property int pingMs: -1
     property string serverLocation: ""
 
-    // Tracks an in-flight provider switch that must wait for disconnect.
-    property int pendingSwitchIndex: -1
+    // Tracks an in-flight provider switch (by id) that must wait for disconnect.
+    property string pendingSwitchProvider: ""
 
     // To track whether connect/disconnect procs actually ran
     property bool connectExited
     property bool disconnectExited
 
     readonly property var providerInput: {
-        const enabledProvider = GlobalConfig.utilities.vpn.provider.find(p => typeof p === "object" ? (p.enabled === true) : false);
-        return enabledProvider || "wireguard";
+        const sel = root.selectedProvider;
+        if (sel.length === 0)
+            return "wireguard";
+        const match = GlobalConfig.utilities.vpn.provider.find(p => typeof p === "object" && p.id === sel);
+        return match || "wireguard";
     }
 
     // The single point where every configured provider - a built-in name, a
@@ -96,12 +102,12 @@ Singleton {
             const isObject = typeof p === "object";
             out.push({
                 index: i,
+                id: isObject ? (p.id || "") : "",
                 name: isObject ? (p.name || "custom") : String(p),
                 displayName: isObject ? (p.displayName || p.name || String(p)) : String(p),
                 interface: isObject ? (p.interface || "") : "",
                 connectCmd: isObject && p.connectCmd ? p.connectCmd : [],
                 disconnectCmd: isObject && p.disconnectCmd ? p.disconnectCmd : [],
-                enabled: isObject ? (p.enabled === true) : false,
                 isObject: isObject
             });
         }
@@ -141,13 +147,19 @@ Singleton {
         }
     }
 
+    // Generate a stable, opaque internal id for a provider entry.
+    function generateId(): string {
+        return `vpn-${Date.now().toString(36)}-${Math.floor(Math.random() * 0x1000000).toString(36)}`;
+    }
+
     // Rebuild a provider object for persistence, preserving optional commands.
-    function buildProviderObject(data: var, enabled: bool): var {
+    // `id` is the provider's stable internal id.
+    function buildProviderObject(id: string, data: var): var {
         const obj = {
+            id: id,
             name: data.name,
             displayName: data.displayName,
-            interface: data.interface,
-            enabled: enabled
+            interface: data.interface
         };
         if (data.connectCmd && data.connectCmd.length > 0)
             obj.connectCmd = data.connectCmd;
@@ -161,31 +173,33 @@ Singleton {
         GlobalConfig.utilities.vpn.provider = providers;
     }
 
+    // Resolve the stable internal id of the provider entry at `index`.
+    function providerIdAt(index: int): string {
+        const entry = GlobalConfig.utilities.vpn.provider[index];
+        return (entry && typeof entry === "object") ? (entry.id || "") : "";
+    }
+
     // Add a new provider. data: { name, displayName, interface, connectCmd[],
-    // disconnectCmd[] }. Newly added providers are disabled by default.
+    // disconnectCmd[] }. Newly added providers are not selected by default.
     function addProvider(data: var): void {
         const current = GlobalConfig.utilities.vpn.provider.slice();
-        current.push(buildProviderObject(data, false));
+        current.push(buildProviderObject(root.generateId(), data));
         writeProviders(current);
     }
 
-    // Update an existing provider (by index), keeping its enabled state.
+    // Update an existing provider (by index), preserving its internal id so the
+    // selection sticks even when the name changes.
     function updateProvider(index: int, data: var): void {
         const current = GlobalConfig.utilities.vpn.provider;
+        const id = root.providerIdAt(index) || root.generateId();
         const result = [];
-        for (let i = 0; i < current.length; i++) {
-            const p = current[i];
-            if (i === index) {
-                const wasEnabled = typeof p === "object" ? (p.enabled === true) : false;
-                result.push(buildProviderObject(data, wasEnabled));
-            } else {
-                result.push(p);
-            }
-        }
+        for (let i = 0; i < current.length; i++)
+            result.push(i === index ? buildProviderObject(id, data) : current[i]);
         writeProviders(result);
     }
 
-    // Delete a provider by index.
+    // Delete a provider by index. ensureSelection() re-homes the selection to
+    // the first remaining provider if the deleted one was selected.
     function deleteProvider(index: int): void {
         const current = GlobalConfig.utilities.vpn.provider;
         const result = [];
@@ -195,28 +209,34 @@ Singleton {
         writeProviders(result);
     }
 
-    // Make the provider at `index` the active (enabled) one, disabling others.
-    // If a VPN is currently connected, disconnect first, switch, then reconnect.
+    // Make the provider at `index` the selected one. If a VPN is currently
+    // connected, disconnect first, switch, then reconnect.
     function setActiveProvider(index: int): void {
+        const id = root.providerIdAt(index);
+        if (id.length === 0)
+            return;
         if (root.connected) {
-            root.pendingSwitchIndex = index;
+            root.pendingSwitchProvider = id;
             root.disconnect();
         } else {
-            applyActiveProvider(index);
+            applySelectedProvider(id);
         }
     }
 
-    function applyActiveProvider(index: int): void {
-        const current = GlobalConfig.utilities.vpn.provider;
-        const result = [];
-        for (let i = 0; i < current.length; i++) {
-            const p = current[i];
-            if (typeof p === "object")
-                result.push(buildProviderObject(p, i === index));
-            else
-                result.push(p);
-        }
-        writeProviders(result);
+    function applySelectedProvider(id: string): void {
+        GlobalConfig.utilities.vpn.selectedProvider = id;
+    }
+
+    // Guarantee there is always a valid selection while any provider exists: if
+    // the stored id matches no configured provider, fall back to the first one
+    // (or clear it when the list is empty).
+    function ensureSelection(): void {
+        const configs = root.providerConfigs;
+        if (configs.some(p => p.id === root.selectedProvider))
+            return;
+        const next = configs.length > 0 ? configs[0].id : "";
+        if (next !== root.selectedProvider)
+            GlobalConfig.utilities.vpn.selectedProvider = next;
     }
 
     function connect(): void {
@@ -257,7 +277,7 @@ Singleton {
     }
 
     function checkStatus(): void {
-        if (root.enabled) {
+        if (root.selectedProvider.length > 0) {
             statusProc.running = true;
         }
     }
@@ -527,10 +547,10 @@ Singleton {
             pingMs = -1;
         }
 
-        if (!connected && pendingSwitchIndex >= 0) {
-            const idx = pendingSwitchIndex;
-            pendingSwitchIndex = -1;
-            applyActiveProvider(idx);
+        if (!connected && pendingSwitchProvider.length > 0) {
+            const id = pendingSwitchProvider;
+            pendingSwitchProvider = "";
+            applySelectedProvider(id);
             Qt.callLater(() => root.connect());
         }
     }
@@ -541,9 +561,12 @@ Singleton {
             registerProc.exec(active.registerCmd);
     }
 
-    onProviderConfigsChanged: root.syncProviders()
+    onProviderConfigsChanged: {
+        root.syncProviders();
+        root.ensureSelection();
+    }
 
-    onProviderNameChanged: {
+    onSelectedProviderChanged: {
         status = {
             connected: false,
             state: "disconnected",
@@ -561,9 +584,46 @@ Singleton {
         statusCheckTimer.start();
     }
 
+    // Ensure every provider entry is an object carrying a stable internal id,
+    // and fold any legacy per-provider `enabled` flag into the single selection.
+    // Runs once at startup and rewrites the config only if something changed.
+    function migrateProviders(): void {
+        const list = GlobalConfig.utilities.vpn.provider;
+        const result = [];
+        let selectedId = root.selectedProvider;
+        let changed = false;
+
+        for (const p of list) {
+            const isObject = typeof p === "object";
+            const obj = isObject ? Object.assign({}, p) : {
+                name: String(p)
+            };
+            if (!isObject)
+                changed = true;
+            if (!obj.id) {
+                obj.id = root.generateId();
+                changed = true;
+            }
+            if (obj.enabled === true && selectedId.length === 0)
+                selectedId = obj.id;
+            if ("enabled" in obj) {
+                delete obj.enabled;
+                changed = true;
+            }
+            result.push(obj);
+        }
+
+        if (selectedId !== root.selectedProvider)
+            GlobalConfig.utilities.vpn.selectedProvider = selectedId;
+        if (changed)
+            writeProviders(result);
+    }
+
     Component.onCompleted: {
+        root.migrateProviders();
+        root.ensureSelection();
         root.syncProviders();
-        if (root.enabled)
+        if (root.selectedProvider.length > 0)
             statusCheckTimer.start();
     }
 
@@ -632,7 +692,7 @@ Singleton {
     Process {
         id: nmMonitor
 
-        running: root.enabled
+        running: root.selectedProvider.length > 0
         command: ["nmcli", "monitor"]
         stdout: SplitParser {
             onRead: statusCheckTimer.restart()
@@ -852,12 +912,12 @@ Singleton {
     component Provider: QtObject {
         required property var lastIpcObject
         readonly property int index: lastIpcObject.index
+        readonly property string id: lastIpcObject.id
         readonly property string name: lastIpcObject.name
         readonly property string displayName: lastIpcObject.displayName
         readonly property string iface: lastIpcObject.interface
         readonly property var connectCmd: lastIpcObject.connectCmd
         readonly property var disconnectCmd: lastIpcObject.disconnectCmd
-        readonly property bool enabled: lastIpcObject.enabled
         readonly property bool isObject: lastIpcObject.isObject
     }
 
