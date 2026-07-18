@@ -18,8 +18,11 @@ Singleton {
             server: ""
         })
 
-    readonly property bool connecting: connectProc.running
-    readonly property bool disconnecting: disconnectProc.running
+    property bool connectPending: false
+    property bool disconnectPending: false
+    readonly property bool connecting: connectProc.running || connectPending
+    readonly property bool disconnecting: disconnectProc.running || disconnectPending
+
     readonly property bool enabled: GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false)
 
     // Live connection stats, refreshed on demand by the UI via refreshStats().
@@ -221,13 +224,17 @@ Singleton {
             emitStatusToast(status);
             return;
         }
-        if (!connected && !connecting)
+        if (!connected && !connecting) {
+            connectPending = true;
             connectProc.exec(active.connectCmd);
+        }
     }
 
     function disconnect(): void {
-        if (connected && !connecting)
+        if (connected && !connecting) {
+            disconnectPending = true;
             disconnectProc.exec(active.disconnectCmd);
+        }
     }
 
     function toggle(): void {
@@ -235,6 +242,7 @@ Singleton {
     }
 
     function reportConnectFailure(reason: string): void {
+        connectPending = false;
         connected = false;
         connectedChanged(); // Force bindings to reeval (mainly for switches)
         if (GlobalConfig.utilities.toasts.vpnChanged)
@@ -242,6 +250,7 @@ Singleton {
     }
 
     function reportDisconnectFailure(reason: string): void {
+        disconnectPending = false;
         connectedChanged(); // Force bindings to reeval (mainly for switches)
         if (GlobalConfig.utilities.toasts.vpnChanged)
             Toaster.toast(qsTr("VPN disconnection failed"), reason, "vpn_key_alert");
@@ -465,6 +474,10 @@ Singleton {
         status = newStatus;
         root.connected = newStatus.connected;
 
+        // A fresh status is authoritative; drop any in-flight connect/disconnect wait.
+        root.connectPending = false;
+        root.disconnectPending = false;
+
         // Surface a server parsed straight out of the status output; providers
         // with a dedicated server command fill this via refreshStats() instead.
         if (newStatus.connected && newStatus.server)
@@ -539,6 +552,8 @@ Singleton {
             server: ""
         };
         root.connected = false;
+        root.connectPending = false;
+        root.disconnectPending = false;
         root.serverLocation = "";
         root.bytesIn = "";
         root.bytesOut = "";
@@ -721,6 +736,7 @@ Singleton {
                 if (authUrl) {
                     root.updateStatus(root.createAuthStatus(authUrl));
                 } else if (error.includes("already exists")) {
+                    root.connectPending = false;
                     root.connected = true;
                 }
             }
