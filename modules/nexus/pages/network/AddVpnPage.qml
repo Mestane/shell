@@ -18,7 +18,7 @@ PageBase {
     readonly property VPN.Provider existing: editing ? (VPN.providers[editIndex] ?? null) : null
 
     function splitCmd(arr: var): string {
-        return (arr && arr.length > 0) ? arr.join(" ") : "";
+        return arr?.join(" ") ?? "";
     }
 
     function joinCmd(str: string): var {
