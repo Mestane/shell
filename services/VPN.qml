@@ -914,7 +914,7 @@ Singleton {
     component Provider: QtObject {
         required property var lastIpcObject
         readonly property int index: lastIpcObject.index
-        readonly property string id: lastIpcObject.id
+        readonly property string providerId: lastIpcObject.id
         readonly property string name: lastIpcObject.name
         readonly property string displayName: lastIpcObject.displayName
         readonly property string iface: lastIpcObject.interface
