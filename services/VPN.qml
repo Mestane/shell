@@ -42,6 +42,9 @@ Singleton {
     property bool connectExited
     property bool disconnectExited
 
+    // For auto connect on init from config
+    property bool autoConnectPending
+
     readonly property var providerInput: {
         const sel = root.selectedProvider;
         if (sel.length === 0)
@@ -506,6 +509,13 @@ Singleton {
         if (oldState !== newStatus.state) {
             emitStatusToast(newStatus);
         }
+
+        // Auto connect if config was enabled on init
+        if (root.autoConnectPending) {
+            root.autoConnectPending = false;
+            if (!newStatus.connected)
+                root.connect();
+        }
     }
 
     function emitStatusToast(statusObj: var): void {
@@ -582,6 +592,10 @@ Singleton {
             pingMs = -1;
         }
 
+        // Update config flag, but not on provider switch
+        if (pendingSwitchProvider.length === 0 && GlobalConfig.utilities.vpn.enabled !== connected)
+            GlobalConfig.utilities.vpn.enabled = connected;
+
         if (!connected && pendingSwitchProvider.length > 0) {
             const id = pendingSwitchProvider;
             pendingSwitchProvider = "";
@@ -625,8 +639,10 @@ Singleton {
         root.migrateProviders();
         root.ensureSelection();
         root.syncProviders();
-        if (root.selectedProvider.length > 0)
+        if (root.selectedProvider.length > 0) {
+            root.autoConnectPending = GlobalConfig.utilities.vpn.enabled;
             statusCheckTimer.start();
+        }
     }
 
     // ── Provider adapters ───────────────────────────────────────────────────
