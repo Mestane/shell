@@ -291,18 +291,18 @@ PageBase {
                 id: provider
 
                 required property VPN.Provider modelData
-                readonly property bool isActive: modelData.enabled
-                readonly property bool isConnected: isActive && VPN.connected
+                readonly property bool isSelected: modelData.enabled
+                readonly property bool isConnected: isSelected && VPN.connected
 
                 anchors.left: providerList.list.contentItem.left
                 anchors.right: providerList.list.contentItem.right
                 implicitHeight: providerLayout.implicitHeight + providerLayout.anchors.margins * 2
 
                 StateLayer {
-                    disabled: provider.isActive
+                    disabled: provider.isSelected
                     radius: Tokens.rounding.extraSmall
                     onClicked: {
-                        if (!provider.isActive)
+                        if (!provider.isSelected)
                             VPN.setActiveProvider(provider.modelData.index);
                     }
                 }
@@ -320,15 +320,15 @@ PageBase {
                         implicitWidth: implicitHeight
                         implicitHeight: providerIcon.implicitHeight + Tokens.padding.small * 2
                         radius: Tokens.rounding.full
-                        color: provider.isConnected ? Colours.palette.m3primaryContainer : provider.isActive ? Colours.palette.m3secondaryContainer : Colours.palette.m3surfaceContainerHighest
+                        color: provider.isConnected ? Colours.palette.m3primaryContainer : provider.isSelected ? Colours.palette.m3secondaryContainer : Colours.palette.m3surfaceContainerHighest
 
                         MaterialIcon {
                             id: providerIcon
 
                             anchors.centerIn: parent
-                            text: provider.isConnected || provider.isActive ? "vpn_key" : "vpn_key_off"
+                            text: provider.isConnected || provider.isSelected ? "vpn_key" : "vpn_key_off"
                             fill: provider.isConnected ? 1 : 0
-                            color: provider.isConnected ? Colours.palette.m3onPrimaryContainer : provider.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
+                            color: provider.isConnected ? Colours.palette.m3onPrimaryContainer : provider.isSelected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
                             fontStyle: Tokens.font.icon.medium
                             animate: true
                         }
@@ -348,8 +348,8 @@ PageBase {
                         StyledText {
                             Layout.fillWidth: true
                             text: {
-                                if (!provider.isActive)
-                                    return qsTr("Tap to activate");
+                                if (!provider.isSelected)
+                                    return qsTr("Tap to select");
                                 if (VPN.connecting)
                                     return qsTr("Connecting...");
                                 if (VPN.disconnecting)
@@ -362,11 +362,11 @@ PageBase {
                                 case "error":
                                     return VPN.status.reason || qsTr("An error occurred");
                                 default:
-                                    return qsTr("Active");
+                                    return qsTr("Selected");
                                 }
                             }
                             color: {
-                                if (!provider.isActive)
+                                if (!provider.isSelected)
                                     return Colours.palette.m3onSurfaceVariant;
                                 switch (VPN.status.state) {
                                 case "connected":
