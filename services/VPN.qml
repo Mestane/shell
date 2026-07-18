@@ -550,8 +550,10 @@ Singleton {
         if (!connected && pendingSwitchProvider.length > 0) {
             const id = pendingSwitchProvider;
             pendingSwitchProvider = "";
-            applySelectedProvider(id);
-            Qt.callLater(() => root.connect());
+            Qt.callLater(() => {
+                applySelectedProvider(id);
+                root.connect();
+            });
         }
     }
 
