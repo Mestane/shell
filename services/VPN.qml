@@ -534,6 +534,41 @@ Singleton {
         }
     }
 
+    // Ensure every provider entry is an object carrying a stable internal id,
+    // and fold any legacy per-provider `enabled` flag into the single selection.
+    // Runs once at startup and rewrites the config only if something changed.
+    function migrateProviders(): void {
+        const list = GlobalConfig.utilities.vpn.provider;
+        const result = [];
+        let selectedId = root.selectedProvider;
+        let changed = false;
+
+        for (const p of list) {
+            const isObject = typeof p === "object";
+            const obj = isObject ? Object.assign({}, p) : {
+                name: String(p)
+            };
+            if (!isObject)
+                changed = true;
+            if (!obj.id) {
+                obj.id = root.generateId();
+                changed = true;
+            }
+            if (obj.enabled === true && selectedId.length === 0)
+                selectedId = obj.id;
+            if ("enabled" in obj) {
+                delete obj.enabled;
+                changed = true;
+            }
+            result.push(obj);
+        }
+
+        if (selectedId !== root.selectedProvider)
+            GlobalConfig.utilities.vpn.selectedProvider = selectedId;
+        if (changed)
+            writeProviders(result);
+    }
+
     onConnectedChanged: {
         // Stamp / clear the connection start time and the per-connection stats.
         if (connected) {
@@ -584,41 +619,6 @@ Singleton {
         root.bytesOut = "";
         root.pingMs = -1;
         statusCheckTimer.start();
-    }
-
-    // Ensure every provider entry is an object carrying a stable internal id,
-    // and fold any legacy per-provider `enabled` flag into the single selection.
-    // Runs once at startup and rewrites the config only if something changed.
-    function migrateProviders(): void {
-        const list = GlobalConfig.utilities.vpn.provider;
-        const result = [];
-        let selectedId = root.selectedProvider;
-        let changed = false;
-
-        for (const p of list) {
-            const isObject = typeof p === "object";
-            const obj = isObject ? Object.assign({}, p) : {
-                name: String(p)
-            };
-            if (!isObject)
-                changed = true;
-            if (!obj.id) {
-                obj.id = root.generateId();
-                changed = true;
-            }
-            if (obj.enabled === true && selectedId.length === 0)
-                selectedId = obj.id;
-            if ("enabled" in obj) {
-                delete obj.enabled;
-                changed = true;
-            }
-            result.push(obj);
-        }
-
-        if (selectedId !== root.selectedProvider)
-            GlobalConfig.utilities.vpn.selectedProvider = selectedId;
-        if (changed)
-            writeProviders(result);
     }
 
     Component.onCompleted: {
