@@ -290,7 +290,7 @@ PageBase {
             delegate: Item {
                 id: provider
 
-                required property VPN.Provider modelData
+                required property var modelData // QML types are annoying (causes null errors on destruction if typed correctly)
                 readonly property bool isSelected: modelData.providerId === VPN.selectedProvider
                 readonly property bool isConnected: isSelected && VPN.connected
 
