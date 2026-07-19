@@ -62,7 +62,7 @@ PageBase {
             settingAnchor: "taskbar-workspaces"
             label: qsTr("Workspaces")
             status: qsTr("Indicators, window icons")
-            onClicked: root.nState.openSubPage(5)
+            onClicked: root.nState.openSubPage(6)
         }
 
         NavRow {
@@ -70,7 +70,7 @@ PageBase {
             settingAnchor: "taskbar-active-window"
             label: qsTr("Active window")
             status: qsTr("Title display, popout")
-            onClicked: root.nState.openSubPage(6)
+            onClicked: root.nState.openSubPage(7)
         }
 
         NavRow {
@@ -78,7 +78,7 @@ PageBase {
             settingAnchor: "taskbar-tray"
             label: qsTr("Tray")
             status: qsTr("System tray icons")
-            onClicked: root.nState.openSubPage(7)
+            onClicked: root.nState.openSubPage(8)
         }
 
         NavRow {
@@ -86,7 +86,7 @@ PageBase {
             settingAnchor: "taskbar-status-icons"
             label: qsTr("Status icons")
             status: qsTr("Visible indicators")
-            onClicked: root.nState.openSubPage(8)
+            onClicked: root.nState.openSubPage(9)
         }
 
         NavRow {
@@ -95,7 +95,7 @@ PageBase {
             settingAnchor: "taskbar-clock"
             label: qsTr("Clock")
             status: qsTr("Date, icon, background")
-            onClicked: root.nState.openSubPage(9)
+            onClicked: root.nState.openSubPage(10)
         }
 
         // Scroll actions
