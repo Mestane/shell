@@ -95,13 +95,56 @@ Item {
     FadeImage {
         id: image
 
+        // Players fill metadata progressively (see Players.qml), so trackArtUrl
+        // goes briefly empty between tracks, and some hand the cover out more
+        // than once for a single track - YouTube Music does it for songs (a
+        // first URL, then another) while videos only ever produce one, which is
+        // why only songs flashed. FadeImage animates a full fade-out/in per
+        // source change, so either of those turned one track change into two
+        // crossfades: the cover appeared, then immediately reloaded.
+        //
+        // A blank is held briefly, so the next track's art usually replaces the
+        // outgoing one directly; a blank that outlasts the delay is a genuine
+        // "no art" and still clears. A second URL arriving for the track that's
+        // already showing swaps without the crossfade - it's the same artwork,
+        // so there's nothing to animate between.
+        readonly property string artUrl: Players.getArtUrl(Players.active)
+        // Keyed on the title alone: artist and album land later than the title
+        // does, and including them would make this look like another track
+        // change partway through the current one.
+        readonly property string trackKey: Players.active?.trackTitle ?? ""
+        property string settledArtUrl
+        property string settledKey
+
         anchors.fill: parent
 
-        source: Players.getArtUrl(Players.active)
+        source: settledArtUrl
+
+        Component.onCompleted: {
+            settledArtUrl = artUrl;
+            settledKey = trackKey;
+        }
+        onArtUrlChanged: {
+            if (!artUrl) {
+                blankArtDelay.restart();
+                return;
+            }
+            blankArtDelay.stop();
+            animateSourceChanges = trackKey !== settledKey;
+            settledKey = trackKey;
+            settledArtUrl = artUrl;
+        }
 
         layer.enabled: true
         layer.effect: Mask {
             maskSource: shapeWrapper
+        }
+
+        Timer {
+            id: blankArtDelay
+
+            interval: 1000
+            onTriggered: image.settledArtUrl = ""
         }
     }
 }

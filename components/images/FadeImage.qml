@@ -8,6 +8,10 @@ Image {
     property bool hadPrevious
     property bool fadingOut
     property bool preventInit
+    // Lets a consumer swap the source without the crossfade, for when the new
+    // URL carries the same content as the old (a different size of the same
+    // cover, say) and animating it would just look like the image reloading.
+    property bool animateSourceChanges: true
     property int fadeOutAnim: Anim.FastEffects
     property int fadeInAnim: Anim.DefaultEffects
     property int fadeInLargeAnim: Anim.StandardLarge
@@ -41,6 +45,8 @@ Image {
     }
 
     Behavior on source {
+        enabled: root.animateSourceChanges
+
         SequentialAnimation {
             ScriptAction {
                 script: opacityInAnim.stop()

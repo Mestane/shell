@@ -17,14 +17,32 @@ Item {
     // Funny binding hack to make lyrics update
     readonly property var _: {
         const p = Players.active;
-        if (p)
-            Lyrics.setTrack(p.trackArtist, p.trackTitle, p.trackAlbum, p.length);
-        else
+        if (!p) {
             Lyrics.clearTrack();
+            return;
+        }
+
+        // Read all of these up front so they stay binding dependencies even
+        // when the guard below bails out early.
+        const artist = p.trackArtist;
+        const title = p.trackTitle;
+        const album = p.trackAlbum;
+        const length = p.length;
+
+        // Players fill metadata progressively (see Players.qml), so both of
+        // these are briefly empty while switching tracks. Passing that on
+        // would send doLoad() down its "no track" branch, which drops the
+        // lines and clears loading together - the pane flashed "No lyrics
+        // found" for an instant before the new track's metadata landed. Wait
+        // for something usable instead, the same way maybeToastNowPlaying()
+        // waits before announcing a track.
+        if (!title && !artist)
+            return;
+
+        Lyrics.setTrack(artist, title, album, length);
     }
 
     readonly property real fadeAmount: 0.1
-    property bool flag
     property list<string> lyricList: Lyrics.lyrics
 
     layer.enabled: true
@@ -63,7 +81,6 @@ Item {
     }
 
     state: {
-        flag; // For some reason it doesn't update sometimes, so use this to force an update
         if (Lyrics.hasLyrics)
             return "hasLyrics";
         if (Lyrics.loading)
@@ -152,12 +169,19 @@ Item {
         }
     ]
 
-    Connections {
-        function onHasLyricsChanged() {
-            root.flag = !root.flag;
-        }
-
-        target: Lyrics
+    // The highlight follows Players.active.position, which is an interpolated
+    // value - it only moves when something emits positionChanged(). The media
+    // UI does that on a shared timer at mediaUpdateInterval (500ms by
+    // default), which is coarse for lyrics: a line lands up to half a second
+    // late, and lines closer together than one tick all arrive at once, so the
+    // highlight sat still and then jumped several lines. Refresh faster while
+    // lyrics are actually on screen. Position is interpolated locally, so this
+    // re-evaluates bindings rather than adding any D-Bus traffic.
+    Timer {
+        running: root.visible && Lyrics.hasLyrics && (Players.active?.isPlaying ?? false)
+        interval: 100
+        repeat: true
+        onTriggered: Players.active?.positionChanged()
     }
 
     Loader {
@@ -255,6 +279,15 @@ Item {
 
         spacing: Tokens.spacing.small
         opacity: 0
+        // Opacity alone doesn't stop input: at 0 this list still scrolled and
+        // its delegates still took clicks (seeking to whichever line was
+        // invisibly under the cursor) and showed a pointing-hand cursor,
+        // including while "Loading lyrics..." or "No lyrics found" was showing
+        // over it - the previous track's lines deliberately stay in the model
+        // so the fade-out has something to fade. Disabling rather than hiding
+        // keeps the list laid out, so delegate creation, positionViewAtIndex
+        // and the highlight range all still behave while it's fading.
+        enabled: opacity > 0
 
         delegate: StyledText {
             id: lyric
@@ -302,24 +335,6 @@ Item {
 
         Behavior on opacity {
             Anim {
-                type: Anim.SlowEffects
-            }
-        }
-    }
-
-    Behavior on lyricList {
-        SequentialAnimation {
-            Anim {
-                target: lyrics
-                property: "opacity"
-                to: 0
-                type: Anim.DefaultEffects
-            }
-            PropertyAction {}
-            Anim {
-                target: lyrics
-                property: "opacity"
-                to: 1
                 type: Anim.SlowEffects
             }
         }

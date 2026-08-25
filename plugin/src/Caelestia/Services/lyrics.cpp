@@ -21,6 +21,7 @@ using Qt::StringLiterals::operator""_ba;
 namespace {
 
 constexpr int kLoadDebounceMs = 50;
+constexpr int kNetworkTimeoutMs = 8000;
 constexpr qreal kIndexFudge = 0.1;
 
 [[nodiscard]] const QHash<QByteArray, QByteArray>& netEaseHeaders() {
@@ -305,6 +306,9 @@ void Lyrics::setLines(QVector<LyricLine> lines, LyricsBackend::Backend source) {
 
 void Lyrics::clearLines() {
     // Doesn't actually clear lines, set a flag instead so anims can run
+    if (!m_hasLyrics) {
+        return;
+    }
     m_hasLyrics = false;
     emit hasLyricsChanged();
 }
@@ -326,11 +330,26 @@ void Lyrics::appendCandidates(const QList<LyricCandidate>& add) {
 }
 
 void Lyrics::clearCandidates() {
-    if (m_candidates.isEmpty()) {
-        return;
+    // The selection has to be dropped along with the list it points into.
+    // Leaving it set means a later setSelectedCandidate() with an equal
+    // candidate hits its dedup early-return and does nothing - and since
+    // doLoad() has already called setLoading(true) by then, nothing would ever
+    // clear it again, leaving the spinner up forever with the previous track's
+    // lines still in place. That happens whenever doLoad() runs twice for one
+    // track that has a saved backend/id preference, which players trigger
+    // routinely by reporting metadata in stages (title first, then
+    // album/duration a moment later): the first pass selects the saved
+    // candidate, the second finds it already selected and stalls.
+    // LyricCandidate compares by backend + id only, so "equal" here means the
+    // same saved preference, not the same object.
+    if (!m_candidates.isEmpty()) {
+        m_candidates.clear();
+        emit lyricCandidatesChanged();
     }
-    m_candidates.clear();
-    emit lyricCandidatesChanged();
+    if (m_selected.isValid()) {
+        m_selected = LyricCandidate();
+        emit selectedCandidateChanged();
+    }
 }
 
 void Lyrics::scheduleLoad() {
@@ -772,6 +791,11 @@ QNetworkReply* Lyrics::getJson(const QUrl& url, const QHash<QByteArray, QByteArr
     req.setRawHeader("Pragma"_ba, "no-cache"_ba);
     req.setRawHeader("Connection"_ba, "close"_ba);
     req.setRawHeader("Accept"_ba, "application/json"_ba);
+    // Without this Qt waits indefinitely for a reply, so a backend that never
+    // responds (blocked, dropped connection) leaves loading stuck true - none
+    // of the finished/error handling below ever runs. Every lyrics request
+    // goes through here, so one timeout covers them all.
+    req.setTransferTimeout(kNetworkTimeoutMs);
     for (auto it = headers.constBegin(); it != headers.constEnd(); ++it) {
         req.setRawHeader(it.key(), it.value());
     }
