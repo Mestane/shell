@@ -73,8 +73,6 @@ PageBase {
             last: true
             icon: "apps"
             settingAnchor: "apps-all-apps"
-            label: qsTr("All apps")
-            status: qsTr("Browse installed apps, set favourites and hidden")
             text: qsTr("All apps")
             subtext: qsTr("Browse installed apps, set favourites and hidden")
             onClicked: root.nState.openSubPage(1)

@@ -47,10 +47,6 @@ PageBase {
 
             z: 1
             first: true
-            settingAnchor: "bar-si-speakers"
-            text: qsTr("Speakers")
-            checked: Config.bar.status.showAudio
-            onToggled: GlobalConfig.bar.status.showAudio = checked
         }
 
         ToggleRow {
@@ -101,10 +97,6 @@ PageBase {
             text: qsTr("Caps lock")
             checked: Config.bar.status.showLockStatus
             onToggled: GlobalConfig.bar.status.showLockStatus = checked
-            values: Config.bar.statusIcons.values
-            onItemMoved: (from, to) => GlobalConfig.bar.statusIcons.move(from, to)
-            onItemRemoved: index => GlobalConfig.bar.statusIcons.remove(index)
-            onItemToggled: (index, checked) => GlobalConfig.bar.statusIcons.at(index).enabled = checked
         }
 
         DialogSelectButton {
