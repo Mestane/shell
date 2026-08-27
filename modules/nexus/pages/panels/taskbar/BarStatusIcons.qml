@@ -7,6 +7,16 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
+    readonly property var builtinIcons: ({
+            lockStatus: qsTr("Lock keys"),
+            kbLayout: qsTr("Keyboard layout"),
+            audio: qsTr("Speakers"),
+            microphone: qsTr("Microphone"),
+            network: qsTr("Network"),
+            bluetooth: qsTr("Bluetooth"),
+            battery: qsTr("Battery")
+        })
+
     title: qsTr("Status icons")
     isSubPage: true
 
@@ -22,7 +32,20 @@ PageBase {
             text: qsTr("Visible icons")
         }
 
-        ToggleRow {
+        ListEditor {
+            function labelFor(item: var): string {
+                const prettyName = root.builtinIcons[item.id];
+                if (prettyName)
+                    return prettyName;
+                const label = item.id.replace(/([A-Z])/g, " $1");
+                return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+            }
+
+            function toggledFor(item: var): bool {
+                return item.enabled;
+            }
+
+            z: 1
             first: true
             settingAnchor: "bar-si-speakers"
             text: qsTr("Speakers")
@@ -78,6 +101,38 @@ PageBase {
             text: qsTr("Caps lock")
             checked: Config.bar.status.showLockStatus
             onToggled: GlobalConfig.bar.status.showLockStatus = checked
+            values: Config.bar.statusIcons.values
+            onItemMoved: (from, to) => GlobalConfig.bar.statusIcons.move(from, to)
+            onItemRemoved: index => GlobalConfig.bar.statusIcons.remove(index)
+            onItemToggled: (index, checked) => GlobalConfig.bar.statusIcons.at(index).enabled = checked
+        }
+
+        DialogSelectButton {
+            id: addItemContainer
+
+            rootParent: root.flickable
+            icon: "add"
+            label: qsTr("Add entry")
+            header: qsTr("Add new entry")
+            acceptLabel: qsTr("Add")
+
+            model: {
+                const builtins = Object.keys(root.builtinIcons).map(k => ({
+                            id: k,
+                            label: root.builtinIcons[k]
+                        }));
+                return builtins;
+            }
+
+            onAccepted: {
+                if (!selectedItem) // Should never happen but just in case
+                    return;
+
+                GlobalConfig.bar.statusIcons.insert({
+                    id: selectedItem,
+                    enabled: true
+                });
+            }
         }
 
         // Behaviour
