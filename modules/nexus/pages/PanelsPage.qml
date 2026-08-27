@@ -19,6 +19,8 @@ PageBase {
             settingAnchor: "panels-dashboard"
             label: qsTr("Dashboard")
             status: Config.dashboard.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            text: qsTr("Dashboard")
+            subtext: Config.dashboard.enabled ? qsTr("Enabled") : qsTr("Disabled")
             onClicked: root.nState.openSubPage(1)
         }
 
@@ -27,6 +29,8 @@ PageBase {
             settingAnchor: "panels-taskbar"
             label: qsTr("Taskbar")
             status: Config.bar.persistent ? qsTr("Always visible") : Config.bar.showOnHover ? qsTr("Reveal on hover") : qsTr("Reveal on drag")
+            text: qsTr("Taskbar")
+            subtext: Config.bar.persistent ? qsTr("Always visible") : Config.bar.showOnHover ? qsTr("Reveal on hover") : qsTr("Reveal on drag")
             onClicked: root.nState.openSubPage(2)
         }
 
@@ -35,6 +39,8 @@ PageBase {
             settingAnchor: "panels-launcher"
             label: qsTr("Launcher")
             status: Config.launcher.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            text: qsTr("Launcher")
+            subtext: Config.launcher.enabled ? qsTr("Enabled") : qsTr("Disabled")
             onClicked: root.nState.openSubPage(3)
         }
 
@@ -43,14 +49,16 @@ PageBase {
             settingAnchor: "panels-sidebar"
             label: qsTr("Sidebar")
             status: Config.sidebar.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            text: qsTr("Sidebar")
+            subtext: Config.sidebar.enabled ? qsTr("Enabled") : qsTr("Disabled")
             onClicked: root.nState.openSubPage(4)
         }
 
         NavRow {
             last: true
             icon: "construction"
-            label: qsTr("Utilities")
-            status: Config.utilities.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            text: qsTr("Utilities")
+            subtext: Config.utilities.enabled ? qsTr("Enabled") : qsTr("Disabled")
             onClicked: root.nState.openSubPage(5)
         }
     }

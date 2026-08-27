@@ -62,6 +62,8 @@ PageBase {
             settingAnchor: "taskbar-workspaces"
             label: qsTr("Workspaces")
             status: qsTr("Indicators, window icons")
+            text: qsTr("Workspaces")
+            subtext: qsTr("Indicators, window icons")
             onClicked: root.nState.openSubPage(6)
         }
 
@@ -70,6 +72,8 @@ PageBase {
             settingAnchor: "taskbar-active-window"
             label: qsTr("Active window")
             status: qsTr("Title display, popout")
+            text: qsTr("Active window")
+            subtext: qsTr("Title display, popout")
             onClicked: root.nState.openSubPage(7)
         }
 
@@ -78,6 +82,8 @@ PageBase {
             settingAnchor: "taskbar-tray"
             label: qsTr("Tray")
             status: qsTr("System tray icons")
+            text: qsTr("Tray")
+            subtext: qsTr("System tray icons")
             onClicked: root.nState.openSubPage(8)
         }
 
@@ -86,6 +92,8 @@ PageBase {
             settingAnchor: "taskbar-status-icons"
             label: qsTr("Status icons")
             status: qsTr("Visible indicators")
+            text: qsTr("Status icons")
+            subtext: qsTr("Visible indicators")
             onClicked: root.nState.openSubPage(9)
         }
 
@@ -95,6 +103,8 @@ PageBase {
             settingAnchor: "taskbar-clock"
             label: qsTr("Clock")
             status: qsTr("Date, icon, background")
+            text: qsTr("Clock")
+            subtext: qsTr("Date, icon, background")
             onClicked: root.nState.openSubPage(10)
         }
 

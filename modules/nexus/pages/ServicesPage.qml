@@ -90,6 +90,8 @@ PageBase {
             settingAnchor: "services-notifications"
             label: qsTr("Notifications")
             status: qsTr("Notifications, toasts, timeouts")
+            text: qsTr("Notifications")
+            subtext: qsTr("Notifications, toasts, timeouts")
             onClicked: root.nState.openSubPage(1)
         }
 
