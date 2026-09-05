@@ -11,8 +11,8 @@ namespace {
 
 Q_LOGGING_CATEGORY(logNmWalker, "caelestia.services.nmwalker", QtWarningMsg);
 
-constexpr const char* kService = "org.freedesktop.NetworkManager";
-constexpr const char* kPropsIface = "org.freedesktop.DBus.Properties";
+constexpr const char* k_service = "org.freedesktop.NetworkManager";
+constexpr const char* k_propsIface = "org.freedesktop.DBus.Properties";
 
 } // namespace
 
@@ -25,13 +25,8 @@ NmWalker::NmWalker(QString rootPath, QObject* parent)
     }
 
     // NetworkManager may not be up yet, or may restart under us.
-    bus->connect(
-        QStringLiteral("org.freedesktop.DBus"),
-        QStringLiteral("/org/freedesktop/DBus"),
-        QStringLiteral("org.freedesktop.DBus"),
-        QStringLiteral("NameOwnerChanged"),
-        QStringLiteral("sss"),
-        this,
+    bus->connect(QStringLiteral("org.freedesktop.DBus"), QStringLiteral("/org/freedesktop/DBus"),
+        QStringLiteral("org.freedesktop.DBus"), QStringLiteral("NameOwnerChanged"), QStringLiteral("sss"), this,
         SLOT(handleNameOwnerChanged(QString, QString, QString)));
 
     watchObject(m_rootPath);
@@ -73,12 +68,8 @@ void NmWalker::watchObject(const QString& path) {
         return;
     }
 
-    if (bus->connect(
-            QString::fromUtf8(kService),
-            path,
-            QString::fromUtf8(kPropsIface),
-            QStringLiteral("PropertiesChanged"),
-            this,
+    if (bus->connect(QString::fromUtf8(k_service), path, QString::fromUtf8(k_propsIface),
+            QStringLiteral("PropertiesChanged"), this,
             SLOT(handlePropertiesChanged(QString, QVariantMap, QStringList)))) {
         m_watched.insert(path);
     }
@@ -97,7 +88,7 @@ void NmWalker::handlePropertiesChanged(
 void NmWalker::handleNameOwnerChanged(const QString& name, const QString& oldOwner, const QString& newOwner) {
     Q_UNUSED(oldOwner);
 
-    if (name != QString::fromUtf8(kService)) {
+    if (name != QString::fromUtf8(k_service)) {
         return;
     }
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "networkwalker.hpp"
-
 #include <qhash.h>
 #include <qobject.h>
 #include <qqmlintegration.h>
@@ -11,6 +9,8 @@
 #include <qvariant.h>
 
 #include <cstdint>
+
+#include "networkwalker.hpp"
 
 namespace caelestia::services {
 
@@ -107,7 +107,6 @@ public:
 
     [[nodiscard]] QQmlListProperty<NmConnection> profiles();
 
-
 protected:
     void readRoot() override;
     [[nodiscard]] bool triggersRefresh(const QString& iface) const override;
@@ -119,7 +118,10 @@ private:
     // not: it must stay out of the walk's pending count and seen set, or it
     // will drive the count to zero underneath a walk in progress and prune
     // profiles the walk hasn't reached yet.
-    enum class Read : std::uint8_t { Walk, Detached };
+    enum class Read : std::uint8_t {
+        Walk,
+        Detached
+    };
 
     void readProfile(const QString& path, Read read);
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "networkwalker.hpp"
-
 #include <qhash.h>
 #include <qobject.h>
 #include <qqmlintegration.h>
@@ -12,6 +10,7 @@
 #include <qvariant.h>
 
 #include "config/enums.hpp"
+#include "networkwalker.hpp"
 
 namespace caelestia::services {
 
@@ -102,8 +101,8 @@ class NmDevice : public QObject {
     // This is what `nmcli device status` reported in its CONNECTION column.
     Q_PROPERTY(QString connection READ connection NOTIFY changed)
     // Only ever populated for wifi devices; empty for everything else.
-    Q_PROPERTY(QQmlListProperty<caelestia::services::NmAccessPoint> accessPoints READ accessPoints NOTIFY
-            accessPointsChanged)
+    Q_PROPERTY(
+        QQmlListProperty<caelestia::services::NmAccessPoint> accessPoints READ accessPoints NOTIFY accessPointsChanged)
     // Whether the link has a carrier, i.e. a cable is plugged in. Wired
     // devices only; false for everything else.
     Q_PROPERTY(bool carrier READ carrier NOTIFY changed)
@@ -207,7 +206,6 @@ public:
     [[nodiscard]] QQmlListProperty<NmDevice> devices();
     [[nodiscard]] bool wirelessEnabled() const;
 
-
 protected:
     void readRoot() override;
     [[nodiscard]] bool triggersRefresh(const QString& iface) const override;
@@ -222,14 +220,10 @@ private:
     void readIp4Config(const QString& devicePath, const QString& configPath);
     void readAccessPoint(const QString& devicePath, const QString& accessPointPath);
 
-
-
     bool m_wirelessEnabled = false;
 
     QList<NmDevice*> m_devices;
     QHash<QString, NmDevice*> m_byPath;
-
-
 };
 
 } // namespace caelestia::services

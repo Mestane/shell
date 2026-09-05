@@ -17,17 +17,17 @@ namespace {
 
 Q_LOGGING_CATEGORY(logNetworkProfiles, "caelestia.services.networkprofiles", QtWarningMsg);
 
-constexpr const char* kService = "org.freedesktop.NetworkManager";
-constexpr const char* kSettingsPath = "/org/freedesktop/NetworkManager/Settings";
-constexpr const char* kSettingsIface = "org.freedesktop.NetworkManager.Settings";
-constexpr const char* kConnectionIface = "org.freedesktop.NetworkManager.Settings.Connection";
-constexpr const char* kPropsIface = "org.freedesktop.DBus.Properties";
+constexpr const char* k_service = "org.freedesktop.NetworkManager";
+constexpr const char* k_settingsPath = "/org/freedesktop/NetworkManager/Settings";
+constexpr const char* k_settingsIface = "org.freedesktop.NetworkManager.Settings";
+constexpr const char* k_connectionIface = "org.freedesktop.NetworkManager.Settings.Connection";
+constexpr const char* k_propsIface = "org.freedesktop.DBus.Properties";
 
 // Setting group names, as NetworkManager keys them in GetSettings.
-constexpr const char* kGroupConnection = "connection";
-constexpr const char* kGroupWireless = "802-11-wireless";
-constexpr const char* kGroupWirelessSecurity = "802-11-wireless-security";
-constexpr const char* kGroupIpv4 = "ipv4";
+constexpr const char* k_groupConnection = "connection";
+constexpr const char* k_groupWireless = "802-11-wireless";
+constexpr const char* k_groupWirelessSecurity = "802-11-wireless-security";
+constexpr const char* k_groupIpv4 = "ipv4";
 
 // An `ay` inside a variant arrives as a byte array on most paths, but as a
 // nested argument on some, so both are worth handling.
@@ -61,10 +61,10 @@ QStringList packedDnsToStrings(const QVariant& value) {
     dns.reserve(packed.size());
     for (const auto address : std::as_const(packed)) {
         dns.append(QStringLiteral("%1.%2.%3.%4")
-                       .arg(address & 0xff)
-                       .arg((address >> 8) & 0xff)
-                       .arg((address >> 16) & 0xff)
-                       .arg((address >> 24) & 0xff));
+                .arg(address & 0xff)
+                .arg((address >> 8) & 0xff)
+                .arg((address >> 16) & 0xff)
+                .arg((address >> 24) & 0xff));
     }
     return dns;
 }
@@ -124,10 +124,10 @@ bool NmConnection::ipv4IgnoreAutoDns() const {
 }
 
 void NmConnection::update(const QMap<QString, QVariantMap>& settings) {
-    const auto connection = settings.value(QString::fromUtf8(kGroupConnection));
-    const auto wireless = settings.value(QString::fromUtf8(kGroupWireless));
-    const auto security = settings.value(QString::fromUtf8(kGroupWirelessSecurity));
-    const auto ipv4 = settings.value(QString::fromUtf8(kGroupIpv4));
+    const auto connection = settings.value(QString::fromUtf8(k_groupConnection));
+    const auto wireless = settings.value(QString::fromUtf8(k_groupWireless));
+    const auto security = settings.value(QString::fromUtf8(k_groupWirelessSecurity));
+    const auto ipv4 = settings.value(QString::fromUtf8(k_groupIpv4));
 
     const auto id = connection.value(QStringLiteral("id")).toString();
     const auto uuid = connection.value(QStringLiteral("uuid")).toString();
@@ -157,8 +157,8 @@ void NmConnection::update(const QMap<QString, QVariantMap>& settings) {
     // dns-data is what NetworkManager publishes now; dns is the deprecated
     // packed form, still sent by older daemons.
     const auto dnsData = ipv4.find(QStringLiteral("dns-data"));
-    const auto ipv4Dns = dnsData == ipv4.end() ? packedDnsToStrings(ipv4.value(QStringLiteral("dns")))
-                                               : dnsData.value().toStringList();
+    const auto ipv4Dns =
+        dnsData == ipv4.end() ? packedDnsToStrings(ipv4.value(QStringLiteral("dns"))) : dnsData.value().toStringList();
 
     if (id == m_id && uuid == m_uuid && type == m_type && ssid == m_ssid && keyMgmt == m_keyMgmt &&
         autoconnect == m_autoconnect && ipv4Method == m_ipv4Method && ipv4Address == m_ipv4Address &&
@@ -187,13 +187,8 @@ void NmConnection::watch() {
         return;
     }
 
-    bus.connect(
-        QString::fromUtf8(kService),
-        m_path,
-        QString::fromUtf8(kConnectionIface),
-        QStringLiteral("Updated"),
-        this,
-        SLOT(handleUpdated()));
+    bus.connect(QString::fromUtf8(k_service), m_path, QString::fromUtf8(k_connectionIface), QStringLiteral("Updated"),
+        this, SLOT(handleUpdated()));
 }
 
 void NmConnection::handleUpdated() {
@@ -201,7 +196,7 @@ void NmConnection::handleUpdated() {
 }
 
 NetworkProfiles::NetworkProfiles(QObject* parent)
-    : NmWalker(QString::fromUtf8(kSettingsPath), parent) {
+    : NmWalker(QString::fromUtf8(k_settingsPath), parent) {
     // GetSettings returns a{sa{sv}}, which needs registering before QtDBus will
     // demarshal it into a nested map.
     qDBusRegisterMetaType<QMap<QString, QVariantMap>>();
@@ -210,7 +205,7 @@ NetworkProfiles::NetworkProfiles(QObject* parent)
 // Profiles re-read themselves when edited, so this only needs to catch
 // profiles being added or removed.
 bool NetworkProfiles::triggersRefresh(const QString& iface) const {
-    return iface == QString::fromUtf8(kSettingsIface);
+    return iface == QString::fromUtf8(k_settingsIface);
 }
 
 void NetworkProfiles::clearItems() {
@@ -223,7 +218,7 @@ void NetworkProfiles::clearItems() {
 
 // Anything not seen by this walk is gone.
 void NetworkProfiles::pruneUnseen() {
-    for (int i = m_profiles.size() - 1; i >= 0; i--) {
+    for (qsizetype i = m_profiles.size() - 1; i >= 0; i--) {
         auto* profile = m_profiles.at(i);
         if (!seen().contains(profile->path())) {
             m_byPath.remove(profile->path());
@@ -245,12 +240,9 @@ void NetworkProfiles::readRoot() {
         return;
     }
 
-    auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService),
-        QString::fromUtf8(kSettingsPath),
-        QString::fromUtf8(kPropsIface),
-        QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kSettingsIface);
+    auto msg = QDBusMessage::createMethodCall(QString::fromUtf8(k_service), QString::fromUtf8(k_settingsPath),
+        QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_settingsIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -283,7 +275,7 @@ void NetworkProfiles::readProfile(const QString& path, Read read) {
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), path, QString::fromUtf8(kConnectionIface), QStringLiteral("GetSettings"));
+        QString::fromUtf8(k_service), path, QString::fromUtf8(k_connectionIface), QStringLiteral("GetSettings"));
 
     const auto walk = read == Read::Walk;
     if (walk) {

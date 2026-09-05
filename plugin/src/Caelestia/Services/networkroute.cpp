@@ -15,16 +15,16 @@ namespace {
 
 Q_LOGGING_CATEGORY(logNetworkRoute, "caelestia.services.networkroute", QtWarningMsg);
 
-constexpr const char* kService = "org.freedesktop.NetworkManager";
-constexpr const char* kManagerPath = "/org/freedesktop/NetworkManager";
-constexpr const char* kManagerIface = "org.freedesktop.NetworkManager";
-constexpr const char* kActiveIface = "org.freedesktop.NetworkManager.Connection.Active";
-constexpr const char* kDeviceIface = "org.freedesktop.NetworkManager.Device";
-constexpr const char* kPropsIface = "org.freedesktop.DBus.Properties";
+constexpr const char* k_service = "org.freedesktop.NetworkManager";
+constexpr const char* k_managerPath = "/org/freedesktop/NetworkManager";
+constexpr const char* k_managerIface = "org.freedesktop.NetworkManager";
+constexpr const char* k_activeIface = "org.freedesktop.NetworkManager.Connection.Active";
+constexpr const char* k_deviceIface = "org.freedesktop.NetworkManager.Device";
+constexpr const char* k_propsIface = "org.freedesktop.DBus.Properties";
 
 // From NMDeviceType; only the two we classify are named.
-constexpr uint kDeviceTypeEthernet = 1;
-constexpr uint kDeviceTypeWifi = 2;
+constexpr uint k_deviceTypeEthernet = 1;
+constexpr uint k_deviceTypeWifi = 2;
 
 } // namespace
 
@@ -40,16 +40,11 @@ NetworkRoute::NetworkRoute(QObject* parent)
     }
 
     // NetworkManager may not be up yet, or may restart under us.
-    bus->connect(
-        QStringLiteral("org.freedesktop.DBus"),
-        QStringLiteral("/org/freedesktop/DBus"),
-        QStringLiteral("org.freedesktop.DBus"),
-        QStringLiteral("NameOwnerChanged"),
-        QStringLiteral("sss"),
-        this,
+    bus->connect(QStringLiteral("org.freedesktop.DBus"), QStringLiteral("/org/freedesktop/DBus"),
+        QStringLiteral("org.freedesktop.DBus"), QStringLiteral("NameOwnerChanged"), QStringLiteral("sss"), this,
         SLOT(handleNameOwnerChanged(QString, QString, QString)));
 
-    watchObject(QString::fromUtf8(kManagerPath));
+    watchObject(QString::fromUtf8(k_managerPath));
     scheduleRefresh();
 }
 
@@ -70,7 +65,8 @@ Transport NetworkRoute::ipv6Transport() const {
 }
 
 bool NetworkRoute::mixed() const {
-    return m_current.ipv4 != config::NetworkTransport::None && m_current.ipv6 != config::NetworkTransport::None && m_current.ipv4 != m_current.ipv6;
+    return m_current.ipv4 != config::NetworkTransport::None && m_current.ipv6 != config::NetworkTransport::None &&
+           m_current.ipv4 != m_current.ipv6;
 }
 
 QString NetworkRoute::primaryInterface() const {
@@ -88,9 +84,12 @@ std::optional<QDBusConnection> NetworkRoute::systemBus() {
 
 Transport NetworkRoute::transportForDeviceType(uint deviceType) {
     switch (deviceType) {
-    case kDeviceTypeEthernet: return config::NetworkTransport::Ethernet;
-    case kDeviceTypeWifi: return config::NetworkTransport::Wifi;
-    default: return config::NetworkTransport::Other;
+    case k_deviceTypeEthernet:
+        return config::NetworkTransport::Ethernet;
+    case k_deviceTypeWifi:
+        return config::NetworkTransport::Wifi;
+    default:
+        return config::NetworkTransport::Other;
     }
 }
 
@@ -107,12 +106,8 @@ void NetworkRoute::watchObject(const QString& path) {
         return;
     }
 
-    if (bus->connect(
-            QString::fromUtf8(kService),
-            path,
-            QString::fromUtf8(kPropsIface),
-            QStringLiteral("PropertiesChanged"),
-            this,
+    if (bus->connect(QString::fromUtf8(k_service), path, QString::fromUtf8(k_propsIface),
+            QStringLiteral("PropertiesChanged"), this,
             SLOT(handlePropertiesChanged(QString, QVariantMap, QStringList)))) {
         m_watched.insert(path);
     }
@@ -123,8 +118,8 @@ void NetworkRoute::handlePropertiesChanged(
     Q_UNUSED(properties);
     Q_UNUSED(invalidated);
 
-    if (iface == QString::fromUtf8(kManagerIface) || iface == QString::fromUtf8(kActiveIface)
-        || iface == QString::fromUtf8(kDeviceIface)) {
+    if (iface == QString::fromUtf8(k_managerIface) || iface == QString::fromUtf8(k_activeIface) ||
+        iface == QString::fromUtf8(k_deviceIface)) {
         scheduleRefresh();
     }
 }
@@ -132,7 +127,7 @@ void NetworkRoute::handlePropertiesChanged(
 void NetworkRoute::handleNameOwnerChanged(const QString& name, const QString& oldOwner, const QString& newOwner) {
     Q_UNUSED(oldOwner);
 
-    if (name != QString::fromUtf8(kService)) {
+    if (name != QString::fromUtf8(k_service)) {
         return;
     }
 
@@ -147,7 +142,7 @@ void NetworkRoute::handleNameOwnerChanged(const QString& name, const QString& ol
 
     // Fresh objects on the new owner, so the old subscriptions are worthless.
     m_watched.clear();
-    watchObject(QString::fromUtf8(kManagerPath));
+    watchObject(QString::fromUtf8(k_managerPath));
     scheduleRefresh();
 }
 
@@ -229,12 +224,9 @@ void NetworkRoute::readManager() {
         return;
     }
 
-    auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService),
-        QString::fromUtf8(kManagerPath),
-        QString::fromUtf8(kPropsIface),
-        QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kManagerIface);
+    auto msg = QDBusMessage::createMethodCall(QString::fromUtf8(k_service), QString::fromUtf8(k_managerPath),
+        QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_managerIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -274,8 +266,8 @@ void NetworkRoute::readActiveConnection(const QString& path, bool isPrimary) {
     watchObject(path);
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), path, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kActiveIface);
+        QString::fromUtf8(k_service), path, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_activeIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -319,8 +311,8 @@ void NetworkRoute::readDevice(const QString& connPath, const QString& devicePath
     watchObject(devicePath);
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), devicePath, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kDeviceIface);
+        QString::fromUtf8(k_service), devicePath, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_deviceIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);

@@ -16,52 +16,52 @@ namespace {
 
 Q_LOGGING_CATEGORY(logNetworkManager, "caelestia.services.networkmanager", QtWarningMsg);
 
-constexpr const char* kService = "org.freedesktop.NetworkManager";
-constexpr const char* kManagerPath = "/org/freedesktop/NetworkManager";
-constexpr const char* kManagerIface = "org.freedesktop.NetworkManager";
-constexpr const char* kDeviceIface = "org.freedesktop.NetworkManager.Device";
-constexpr const char* kActiveIface = "org.freedesktop.NetworkManager.Connection.Active";
-constexpr const char* kWiredIface = "org.freedesktop.NetworkManager.Device.Wired";
-constexpr const char* kWirelessIface = "org.freedesktop.NetworkManager.Device.Wireless";
-constexpr const char* kApIface = "org.freedesktop.NetworkManager.AccessPoint";
-constexpr const char* kIp4Iface = "org.freedesktop.NetworkManager.IP4Config";
-constexpr const char* kPropsIface = "org.freedesktop.DBus.Properties";
+constexpr const char* k_service = "org.freedesktop.NetworkManager";
+constexpr const char* k_managerPath = "/org/freedesktop/NetworkManager";
+constexpr const char* k_managerIface = "org.freedesktop.NetworkManager";
+constexpr const char* k_deviceIface = "org.freedesktop.NetworkManager.Device";
+constexpr const char* k_activeIface = "org.freedesktop.NetworkManager.Connection.Active";
+constexpr const char* k_wiredIface = "org.freedesktop.NetworkManager.Device.Wired";
+constexpr const char* k_wirelessIface = "org.freedesktop.NetworkManager.Device.Wireless";
+constexpr const char* k_apIface = "org.freedesktop.NetworkManager.AccessPoint";
+constexpr const char* k_ip4Iface = "org.freedesktop.NetworkManager.IP4Config";
+constexpr const char* k_propsIface = "org.freedesktop.DBus.Properties";
 
 // From NMDeviceType; only the two we classify are named.
-constexpr uint kDeviceTypeEthernet = 1;
-constexpr uint kDeviceTypeWifi = 2;
+constexpr uint k_deviceTypeEthernet = 1;
+constexpr uint k_deviceTypeWifi = 2;
 
 // NM_DEVICE_STATE_ACTIVATED
-constexpr uint kStateActivated = 100;
+constexpr uint k_stateActivated = 100;
 
 // From NM80211ApFlags and NM80211ApSecurityFlags.
-constexpr uint kApFlagPrivacy = 0x1;
-constexpr uint kApSecKeyMgmt8021X = 0x200;
-constexpr uint kApSecKeyMgmtSae = 0x400;
-constexpr uint kApSecKeyMgmtOwe = 0x800;
-constexpr uint kApSecKeyMgmtOweTm = 0x1000;
+constexpr uint k_apFlagPrivacy = 0x1;
+constexpr uint k_apSecKeyMgmt8021X = 0x200;
+constexpr uint k_apSecKeyMgmtSae = 0x400;
+constexpr uint k_apSecKeyMgmtOwe = 0x800;
+constexpr uint k_apSecKeyMgmtOweTm = 0x1000;
 
 // Builds the label nmcli printed in its SECURITY column, so the string the UI
 // shows doesn't change now that it comes from dbus rather than parsed output.
 QString securityLabel(uint flags, uint wpaFlags, uint rsnFlags) {
     if (wpaFlags == 0 && rsnFlags == 0) {
-        return (flags & kApFlagPrivacy) != 0 ? QStringLiteral("WEP") : QString();
+        return (flags & k_apFlagPrivacy) != 0 ? QStringLiteral("WEP") : QString();
     }
 
     QStringList parts;
     if (wpaFlags != 0) {
         parts << QStringLiteral("WPA1");
     }
-    if ((rsnFlags & ~(kApSecKeyMgmtSae | kApSecKeyMgmtOwe | kApSecKeyMgmtOweTm)) != 0) {
+    if ((rsnFlags & ~(k_apSecKeyMgmtSae | k_apSecKeyMgmtOwe | k_apSecKeyMgmtOweTm)) != 0) {
         parts << QStringLiteral("WPA2");
     }
-    if ((rsnFlags & kApSecKeyMgmtSae) != 0) {
+    if ((rsnFlags & k_apSecKeyMgmtSae) != 0) {
         parts << QStringLiteral("WPA3");
     }
-    if ((rsnFlags & (kApSecKeyMgmtOwe | kApSecKeyMgmtOweTm)) != 0) {
+    if ((rsnFlags & (k_apSecKeyMgmtOwe | k_apSecKeyMgmtOweTm)) != 0) {
         parts << QStringLiteral("OWE");
     }
-    if (((wpaFlags | rsnFlags) & kApSecKeyMgmt8021X) != 0) {
+    if (((wpaFlags | rsnFlags) & k_apSecKeyMgmt8021X) != 0) {
         parts << QStringLiteral("802.1X");
     }
 
@@ -70,9 +70,12 @@ QString securityLabel(uint flags, uint wpaFlags, uint rsnFlags) {
 
 Transport transportForDeviceType(uint deviceType) {
     switch (deviceType) {
-    case kDeviceTypeEthernet: return config::NetworkTransport::Ethernet;
-    case kDeviceTypeWifi: return config::NetworkTransport::Wifi;
-    default: return config::NetworkTransport::Other;
+    case k_deviceTypeEthernet:
+        return config::NetworkTransport::Ethernet;
+    case k_deviceTypeWifi:
+        return config::NetworkTransport::Wifi;
+    default:
+        return config::NetworkTransport::Other;
     }
 }
 
@@ -175,20 +178,15 @@ void NmAccessPoint::watch() {
         return;
     }
 
-    bus.connect(
-        QString::fromUtf8(kService),
-        m_path,
-        QString::fromUtf8(kPropsIface),
-        QStringLiteral("PropertiesChanged"),
-        this,
-        SLOT(handlePropertiesChanged(QString, QVariantMap, QStringList)));
+    bus.connect(QString::fromUtf8(k_service), m_path, QString::fromUtf8(k_propsIface),
+        QStringLiteral("PropertiesChanged"), this, SLOT(handlePropertiesChanged(QString, QVariantMap, QStringList)));
 }
 
 void NmAccessPoint::handlePropertiesChanged(
     const QString& iface, const QVariantMap& properties, const QStringList& invalidated) {
     Q_UNUSED(invalidated);
 
-    if (iface == QString::fromUtf8(kApIface)) {
+    if (iface == QString::fromUtf8(k_apIface)) {
         update(properties);
     }
 }
@@ -214,7 +212,7 @@ uint NmDevice::state() const {
 }
 
 bool NmDevice::connected() const {
-    return m_state == kStateActivated;
+    return m_state == k_stateActivated;
 }
 
 QString NmDevice::connection() const {
@@ -315,7 +313,7 @@ void NmDevice::addAccessPoint(NmAccessPoint* accessPoint) {
 bool NmDevice::retainAccessPoints(const QSet<QString>& keep) {
     bool removed = false;
 
-    for (int i = m_accessPoints.size() - 1; i >= 0; i--) {
+    for (qsizetype i = m_accessPoints.size() - 1; i >= 0; i--) {
         auto* accessPoint = m_accessPoints.at(i);
         if (!keep.contains(accessPoint->path())) {
             m_apByPath.remove(accessPoint->path());
@@ -350,15 +348,15 @@ void NmDevice::update(const QVariantMap& props) {
 }
 
 NetworkManager::NetworkManager(QObject* parent)
-    : NmWalker(QString::fromUtf8(kManagerPath), parent) {}
+    : NmWalker(QString::fromUtf8(k_managerPath), parent) {}
 
 // Access points and the profile name track themselves, so this only needs to
 // catch the tree moving: devices appearing, changing state, or swapping their
 // wired link, wireless membership or ip config.
 bool NetworkManager::triggersRefresh(const QString& iface) const {
-    return iface == QString::fromUtf8(kManagerIface) || iface == QString::fromUtf8(kDeviceIface) ||
-        iface == QString::fromUtf8(kWiredIface) || iface == QString::fromUtf8(kWirelessIface) ||
-        iface == QString::fromUtf8(kIp4Iface);
+    return iface == QString::fromUtf8(k_managerIface) || iface == QString::fromUtf8(k_deviceIface) ||
+           iface == QString::fromUtf8(k_wiredIface) || iface == QString::fromUtf8(k_wirelessIface) ||
+           iface == QString::fromUtf8(k_ip4Iface);
 }
 
 void NetworkManager::clearItems() {
@@ -371,7 +369,7 @@ void NetworkManager::clearItems() {
 
 // Anything not seen by this walk is gone.
 void NetworkManager::pruneUnseen() {
-    for (int i = m_devices.size() - 1; i >= 0; i--) {
+    for (qsizetype i = m_devices.size() - 1; i >= 0; i--) {
         auto* device = m_devices.at(i);
         if (!seen().contains(device->path())) {
             m_byPath.remove(device->path());
@@ -397,12 +395,9 @@ void NetworkManager::readRoot() {
         return;
     }
 
-    auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService),
-        QString::fromUtf8(kManagerPath),
-        QString::fromUtf8(kPropsIface),
-        QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kManagerIface);
+    auto msg = QDBusMessage::createMethodCall(QString::fromUtf8(k_service), QString::fromUtf8(k_managerPath),
+        QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_managerIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -445,8 +440,8 @@ void NetworkManager::readDevice(const QString& path) {
     watchObject(path);
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), path, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kDeviceIface);
+        QString::fromUtf8(k_service), path, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_deviceIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -506,8 +501,8 @@ void NetworkManager::readConnection(const QString& devicePath, const QString& co
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), connectionPath, QString::fromUtf8(kPropsIface), QStringLiteral("Get"));
-    msg << QString::fromUtf8(kActiveIface) << QStringLiteral("Id");
+        QString::fromUtf8(k_service), connectionPath, QString::fromUtf8(k_propsIface), QStringLiteral("Get"));
+    msg << QString::fromUtf8(k_activeIface) << QStringLiteral("Id");
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -538,8 +533,8 @@ void NetworkManager::readWired(const QString& devicePath) {
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), devicePath, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kWiredIface);
+        QString::fromUtf8(k_service), devicePath, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_wiredIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -571,8 +566,8 @@ void NetworkManager::readWireless(const QString& devicePath) {
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), devicePath, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kWirelessIface);
+        QString::fromUtf8(k_service), devicePath, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_wirelessIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -630,15 +625,12 @@ void NetworkManager::readAccessPoint(const QString& devicePath, const QString& a
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), accessPointPath, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kApIface);
+        QString::fromUtf8(k_service), accessPointPath, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_apIface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
-    connect(
-        watcher,
-        &QDBusPendingCallWatcher::finished,
-        this,
+    connect(watcher, &QDBusPendingCallWatcher::finished, this,
         [this, devicePath, accessPointPath](QDBusPendingCallWatcher* call) {
             call->deleteLater();
 
@@ -672,8 +664,8 @@ void NetworkManager::readIp4Config(const QString& devicePath, const QString& con
     }
 
     auto msg = QDBusMessage::createMethodCall(
-        QString::fromUtf8(kService), configPath, QString::fromUtf8(kPropsIface), QStringLiteral("GetAll"));
-    msg << QString::fromUtf8(kIp4Iface);
+        QString::fromUtf8(k_service), configPath, QString::fromUtf8(k_propsIface), QStringLiteral("GetAll"));
+    msg << QString::fromUtf8(k_ip4Iface);
 
     step(1);
     auto* watcher = new QDBusPendingCallWatcher(bus->asyncCall(msg), this);
@@ -685,8 +677,7 @@ void NetworkManager::readIp4Config(const QString& devicePath, const QString& con
         if (reply.isError() || device == nullptr) {
             if (reply.isError()) {
                 // Addresses come and go with the link; that's expected.
-                qCDebug(logNetworkManager) << "Skipping ip4 config for" << devicePath << ":"
-                                           << reply.error().message();
+                qCDebug(logNetworkManager) << "Skipping ip4 config for" << devicePath << ":" << reply.error().message();
             }
             step(-1);
             return;
