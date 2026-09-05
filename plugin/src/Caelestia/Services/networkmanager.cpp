@@ -423,12 +423,13 @@ void NetworkManager::readRoot() {
         QList<QDBusObjectPath> paths;
         devices >> paths;
 
-        for (const auto& path : paths) {
+        for (const auto& path : std::as_const(paths)) {
             readDevice(path.path());
         }
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readDevice(const QString& path) {
@@ -492,6 +493,7 @@ void NetworkManager::readDevice(const QString& path) {
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readConnection(const QString& devicePath, const QString& connectionPath) {
@@ -524,6 +526,7 @@ void NetworkManager::readConnection(const QString& devicePath, const QString& co
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readWired(const QString& devicePath) {
@@ -557,6 +560,7 @@ void NetworkManager::readWired(const QString& devicePath) {
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readWireless(const QString& devicePath) {
@@ -599,7 +603,7 @@ void NetworkManager::readWireless(const QString& devicePath) {
         }
 
         QSet<QString> seen;
-        for (const auto& path : paths) {
+        for (const auto& path : std::as_const(paths)) {
             seen.insert(path.path());
 
             auto* accessPoint = device->accessPoint(path.path());
@@ -616,6 +620,7 @@ void NetworkManager::readWireless(const QString& devicePath) {
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readAccessPoint(const QString& devicePath, const QString& accessPointPath) {
@@ -655,6 +660,7 @@ void NetworkManager::readAccessPoint(const QString& devicePath, const QString& a
 
             step(-1);
         });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkManager::readIp4Config(const QString& devicePath, const QString& configPath) {
@@ -713,6 +719,7 @@ void NetworkManager::readIp4Config(const QString& devicePath, const QString& con
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 } // namespace caelestia::services

@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Caelestia.Services
+import qs.services
 
 // Saved connection profiles, split out of Nmcli along their own boundary.
 //

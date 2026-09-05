@@ -260,12 +260,13 @@ void NetworkProfiles::readRoot() {
         QList<QDBusObjectPath> paths;
         connections >> paths;
 
-        for (const auto& path : paths) {
+        for (const auto& path : std::as_const(paths)) {
             readProfile(path.path(), Read::Walk);
         }
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkProfiles::readProfile(const QString& path, Read read) {
@@ -327,6 +328,7 @@ void NetworkProfiles::readProfile(const QString& path, Read read) {
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 } // namespace caelestia::services

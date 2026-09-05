@@ -9,6 +9,8 @@
 #include <qloggingcategory.h>
 #include <qtimer.h>
 
+#include <utility>
+
 namespace caelestia::services {
 
 namespace {
@@ -247,12 +249,13 @@ void NetworkRoute::readManager() {
         QList<QDBusObjectPath> paths;
         actives >> paths;
 
-        for (const auto& path : paths) {
+        for (const auto& path : std::as_const(paths)) {
             readActiveConnection(path.path(), path.path() == m_primaryConnection);
         }
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkRoute::readActiveConnection(const QString& path, bool isPrimary) {
@@ -300,6 +303,7 @@ void NetworkRoute::readActiveConnection(const QString& path, bool isPrimary) {
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 void NetworkRoute::readDevice(const QString& connPath, const QString& devicePath) {
@@ -332,6 +336,7 @@ void NetworkRoute::readDevice(const QString& connPath, const QString& devicePath
 
         step(-1);
     });
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) watcher is parented and self-deletes
 }
 
 } // namespace caelestia::services

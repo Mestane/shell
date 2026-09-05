@@ -30,6 +30,7 @@ Singleton {
             property var callback: null
             property string error: ""
 
+            // qmllint disable incompatible-type
             environment: ({
                     LANG: "C.UTF-8",
                     LC_ALL: "C.UTF-8"

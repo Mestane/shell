@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Caelestia.Services
 import Caelestia.Config
+import qs.services
 
 // Wired networking, split out of Nmcli along its own boundary.
 //
