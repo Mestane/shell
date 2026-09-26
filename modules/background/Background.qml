@@ -227,7 +227,6 @@ Variants {
         Loader {
             id: widgetsLoader
 
-            readonly property string pos: Config.background.desktopWidgets.position
             readonly property real reveal: insets.revealFor(Config.background.desktopWidgets.hideWithWindows)
 
             // Unloaded outright while hidden behind windows: the cards keep timers and system readings running,
@@ -235,19 +234,13 @@ Variants {
             active: Config.background.desktopWidgets.enabled && reveal > 0
             visible: reveal > 0
             opacity: reveal
-            scale: 0.94 + 0.06 * reveal
-            transformOrigin: pos.endsWith("right") ? Item.Right : Item.Left
-            transform: Translate {
-                x: (widgetsLoader.pos.endsWith("right") ? 1 : -1) * 32 * (1 - widgetsLoader.reveal)
-            }
+            scale: 0.97 + 0.03 * reveal
 
-            // Plain x/y bindings rather than anchors, so changing the position live can't leave stale anchors
-            readonly property real marginLeft: Tokens.padding.extraLargeIncreased + insets.barLeft
-            readonly property real marginRight: Tokens.padding.extraLargeIncreased + insets.barRight
-            readonly property real marginTop: Tokens.padding.extraLargeIncreased + insets.barTop
-            readonly property real marginBottom: Tokens.padding.extraLargeIncreased + insets.barBottom
-            x: pos.endsWith("right") ? parent.width - width - marginRight : marginLeft
-            y: pos.startsWith("bottom") ? parent.height - height - marginBottom : marginTop
+            // The widgets' snapping grid spans the whole screen, so their cells mean the same thing everywhere
+            x: 0
+            y: 0
+            width: parent.width
+            height: parent.height
 
             sourceComponent: DesktopWidgets {
                 wallpaper: behindClock

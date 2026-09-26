@@ -10,24 +10,24 @@ import Caelestia.Services
 import qs.components
 import qs.components.controls
 import qs.services
+import "../../utils/widgetgrid.js" as WidgetGrid
 
-// Grid of glass widget cards. Which cards show, their order and the column count come from
-// background.desktopWidgets; rows stretch their cards to an even height.
-GridLayout {
+// Glass widget cards laid out on a snapping grid that covers the desktop. Which cards show and the cell each one
+// sits in come from background.desktopWidgets; cards that haven't been placed by hand flow in from a corner.
+Item {
     id: root
 
     required property Item wallpaper
 
-    readonly property int cardWidth: 320
     readonly property var widgetConfig: Config.background.desktopWidgets
-
-    columns: Math.max(1, widgetConfig.columns)
-    rowSpacing: Tokens.spacing.medium
-    columnSpacing: Tokens.spacing.medium
+    readonly property int gridCols: Math.floor(width / WidgetGrid.unit)
+    readonly property int gridRows: Math.floor(height / WidgetGrid.unit)
+    readonly property var placements: WidgetGrid.place(widgetConfig.entries.values, gridCols, gridRows, widgetConfig.columns, widgetConfig.position)
 
     Repeater {
         model: ScriptModel {
-            values: root.widgetConfig.entries.values.filter(e => e.enabled)
+            objectProp: "id"
+            values: root.placements.filter(p => p.enabled)
         }
 
         DelegateChooser {
@@ -60,18 +60,17 @@ GridLayout {
         }
     }
 
-    // Shared placement of every card inside the grid
+    // Shared placement of every card on the grid; a card fills its footprint, or grows past it if its content needs to
     component GridCard: DesktopCard {
         // Handed to every delegate by the Repeater/DelegateChooser
         required property var modelData
         required property int index
 
         wallpaper: root.wallpaper
-        implicitWidth: root.cardWidth
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.preferredWidth: root.cardWidth
-        Layout.alignment: Qt.AlignTop
+        x: modelData.col * WidgetGrid.unit
+        y: modelData.row * WidgetGrid.unit
+        width: modelData.w * WidgetGrid.unit - WidgetGrid.gap
+        height: Math.max(implicitHeight, modelData.h * WidgetGrid.unit - WidgetGrid.gap)
     }
 
     // --- Calendar: month grid ---
@@ -428,11 +427,12 @@ GridLayout {
         }
     }
 
-    // --- Battery (laptops only): charge, state, rate and time remaining ---
+    // --- Battery: charge, state, rate and time remaining on a laptop; the GPU's power draw on a desktop ---
     component BatteryCard: GridCard {
         id: bat
 
         readonly property var dev: UPower.displayDevice
+        readonly property bool laptop: dev.isLaptopBattery
         readonly property real pct: dev.percentage
         readonly property bool full: dev.state === UPowerDeviceState.FullyCharged
         readonly property bool charging: dev.state === UPowerDeviceState.Charging || full
@@ -448,12 +448,50 @@ GridLayout {
             return h > 0 ? Tr.tr("%1 h %2 min").arg(h).arg(m) : Tr.tr("%1 min").arg(m);
         }
 
-        visible: dev.isLaptopBattery
-        title: Tr.tr("Battery")
-        icon: charging ? "battery_charging_full" : "battery_full"
+        visible: laptop || Gpu.power > 0
+        title: laptop ? Tr.tr("Battery") : Tr.tr("Power draw")
+        icon: !laptop ? "bolt" : charging ? "battery_charging_full" : "battery_full"
+
+        ServiceRef {
+            service: Gpu
+        }
 
         RowLayout {
             Layout.fillWidth: true
+            visible: !bat.laptop
+            spacing: Tokens.spacing.medium
+
+            StyledText {
+                text: `${Math.round(Gpu.power)} W`
+                color: Colours.palette.m3onSurface
+                font: Tokens.font.headline.builders.medium.weight(Font.DemiBold).build()
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                StyledText {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    text: Tr.tr("Graphics card")
+                    color: Colours.palette.m3onSurfaceVariant
+                    font: Tokens.font.label.medium
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    text: Gpu.name
+                    color: Colours.palette.m3outline
+                    font: Tokens.font.label.small
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: bat.laptop
             spacing: Tokens.spacing.medium
 
             StyledText {
@@ -490,7 +528,7 @@ GridLayout {
 
         RowLayout {
             Layout.fillWidth: true
-            visible: (bat.rate > 0 && !bat.full) || bat.seconds >= 60
+            visible: bat.laptop && ((bat.rate > 0 && !bat.full) || bat.seconds >= 60)
             spacing: Tokens.spacing.small
 
             MaterialIcon {

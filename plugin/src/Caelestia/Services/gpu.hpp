@@ -21,6 +21,8 @@ class Gpu : public TickingService {
     Q_PROPERTY(bool detecting READ detecting NOTIFY detectingChanged)
     Q_PROPERTY(qreal percentage READ percentage NOTIFY percentageChanged)
     Q_PROPERTY(qreal temperature READ temperature NOTIFY temperatureChanged)
+    // Board power draw in watts; 0 when the GPU can't report it
+    Q_PROPERTY(qreal power READ power NOTIFY powerChanged)
 
 public:
     explicit Gpu(QObject* parent = nullptr);
@@ -30,6 +32,7 @@ public:
     [[nodiscard]] bool detecting() const;
     [[nodiscard]] qreal percentage() const;
     [[nodiscard]] qreal temperature() const;
+    [[nodiscard]] qreal power() const;
 
 signals:
     void typeChanged();
@@ -37,6 +40,7 @@ signals:
     void detectingChanged();
     void percentageChanged();
     void temperatureChanged();
+    void powerChanged();
 
 protected:
     void tick() override;
@@ -74,6 +78,7 @@ private:
     bool m_detecting = false;
     qreal m_percentage = 0.0;
     qreal m_temperature = 0.0;
+    qreal m_power = 0.0;
 
     // /sys/class/drm card busy files, enumerated once at construction (the card
     // set is static at runtime) and reused by resolution and the tick path.

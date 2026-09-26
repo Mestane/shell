@@ -175,6 +175,10 @@ qreal Gpu::temperature() const {
     return m_temperature;
 }
 
+qreal Gpu::power() const {
+    return m_power;
+}
+
 void Gpu::setType(GpuType value) {
     if (value == m_type) {
         return;
@@ -334,7 +338,7 @@ void Gpu::startNvidiaUsage() {
     m_nvidiaQuerying = true;
     const int generation = m_generation;
     runProcess(u"nvidia-smi"_s,
-        { u"--query-gpu=utilization.gpu,temperature.gpu"_s, u"--format=csv,noheader,nounits"_s },
+        { u"--query-gpu=utilization.gpu,temperature.gpu,power.draw"_s, u"--format=csv,noheader,nounits"_s },
         [this, generation](const QByteArray& out) {
             m_nvidiaQuerying = false;
 
@@ -359,6 +363,15 @@ void Gpu::startNvidiaUsage() {
                 m_temperature = temp;
                 emit temperatureChanged();
             }
+
+            // Absent or "[N/A]" on boards that don't report power
+            bool ok3 = false;
+            const qreal power = parts.size() > 2 ? parts.at(2).trimmed().toDouble(&ok3) : 0.0;
+            const qreal newPower = ok3 ? power : 0.0;
+            if (std::abs(newPower - m_power) > 0.05) {
+                m_power = newPower;
+                emit powerChanged();
+            }
         });
 }
 
@@ -379,6 +392,10 @@ void Gpu::resetUsage() {
     if (std::abs(m_temperature) > 0.05) {
         m_temperature = 0.0;
         emit temperatureChanged();
+    }
+    if (std::abs(m_power) > 0.05) {
+        m_power = 0.0;
+        emit powerChanged();
     }
 }
 

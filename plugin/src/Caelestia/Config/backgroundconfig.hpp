@@ -60,6 +60,17 @@ class DesktopIcons : public settings::ObjectNode {
     CONFIG_PROPERTY(bool, hideWithWindows, true)
 };
 
+class DesktopWidgetEntry : public settings::ObjectNode {
+    CONFIG_NODE(DesktopWidgetEntry, settings::ObjectNode)
+
+    CONFIG_PROPERTY(QString, id, {})
+    CONFIG_PROPERTY(bool, enabled, true)
+    // Top-left cell on the desktop grid. -1 until the widget is placed by hand, when it flows into the default layout
+    CONFIG_PROPERTY(int, col, -1)
+    CONFIG_PROPERTY(int, row, -1)
+};
+CONFIG_LIST_TYPE(DesktopWidgetEntry, DesktopWidgetList)
+
 class DesktopWidgets : public settings::ObjectNode {
     CONFIG_NODE(DesktopWidgets, settings::ObjectNode)
 
@@ -67,8 +78,8 @@ class DesktopWidgets : public settings::ObjectNode {
     CONFIG_PROPERTY(QString, position, u"top-right"_s)
     // Number of columns in the widget grid; the widgets flow into it in the order given below
     CONFIG_PROPERTY(int, columns, 2)
-    // Which widgets show and in what order (ids: calendar, weather, pomodoro, resources, media, battery)
-    CONFIG_LIST(EntryList, entries,
+    // Which widgets show and where (ids: calendar, weather, pomodoro, resources, media, battery)
+    CONFIG_LIST(DesktopWidgetList, entries,
         DEFAULT_ARG({
             LIST_ENTRY(calendar, true),
             LIST_ENTRY(weather, true),

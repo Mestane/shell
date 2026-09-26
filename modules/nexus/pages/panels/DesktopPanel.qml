@@ -249,6 +249,7 @@ PageBase {
         }
 
         StepperRow {
+            last: true
             label: Tr.tr("Card opacity")
             subtext: Tr.tr("How opaque the card backgrounds are (%)")
             value: Math.round(root.widgetsConfig.opacity * 100)
@@ -258,45 +259,52 @@ PageBase {
             onMoved: v => GlobalConfig.background.desktopWidgets.opacity = Math.round(v) / 100
         }
 
-        SelectRow {
-            last: true
-            label: Tr.tr("Position")
-            menuItems: root.positionItems
-            active: root.positionItem(root.widgetsConfig.position)
-            onSelected: item => GlobalConfig.background.desktopWidgets.position = item.value
-        }
-
         SectionHeader {
-            text: Tr.tr("Widget grid")
-        }
-
-        StepperRow {
-            first: true
-            last: true
-            label: Tr.tr("Columns")
-            subtext: Tr.tr("How many columns the widgets are arranged in; rows stretch to an even height")
-            value: root.widgetsConfig.columns
-            from: 1
-            to: 4
-            stepSize: 1
-            onMoved: v => GlobalConfig.background.desktopWidgets.columns = Math.round(v)
-        }
-
-        SectionHeader {
-            text: Tr.tr("Widget layout (drag to rearrange)")
+            text: Tr.tr("Widget layout")
         }
 
         WidgetGridEditor {
             Layout.topMargin: Tokens.spacing.small
-            Layout.bottomMargin: Tokens.spacing.small
             entries: root.widgetsConfig.entries.values
             columns: root.widgetsConfig.columns
+            position: root.widgetsConfig.position
             names: root.widgetNames
-            onMoved: (from, to) => GlobalConfig.background.desktopWidgets.entries.move(from, to)
+            screenWidth: root.nState.screen?.width ?? 1920
+            screenHeight: root.nState.screen?.height ?? 1080
+            onPlaced: placements => {
+                const list = GlobalConfig.background.desktopWidgets.entries;
+                placements.forEach((p, i) => {
+                    if (!p.enabled)
+                        return;
+                    list.at(i).col = p.col;
+                    list.at(i).row = p.row;
+                });
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            text: Tr.tr("Drag a widget to move it; it snaps to the grid and can go anywhere it doesn't overlap another.")
+            color: Colours.palette.m3outline
+            font: Tokens.font.label.small
+        }
+
+        TextButton {
+            Layout.alignment: Qt.AlignRight
+            text: Tr.tr("Reset layout")
+            type: TextButton.Tonal
+            onClicked: {
+                const list = GlobalConfig.background.desktopWidgets.entries;
+                for (let i = 0; i < root.widgetsConfig.entries.values.length; i++) {
+                    list.at(i).col = -1;
+                    list.at(i).row = -1;
+                }
+            }
         }
 
         SectionHeader {
-            text: Tr.tr("Widget order (drag to reorder)")
+            text: Tr.tr("Widgets")
         }
 
         ListEditor {
