@@ -29,12 +29,6 @@ Item {
             void [e.enabled, e.col, e.row];
         return WidgetGrid.place(entries, gridCols, gridRows, widgetConfig.columns, widgetConfig.position);
     }
-    // Just the ids of the cards that are on. A card looks up its own cell in `placements`, so moving one never
-    // recreates the cards, and turning one off removes exactly that card
-    readonly property var shownIds: placements.filter(p => p.enabled).map(p => ({
-                id: p.id
-            }))
-
     function slotFor(id: string): var {
         return placements.find(p => p.id === id) ?? ({
                 col: 0,
@@ -44,14 +38,47 @@ Item {
             });
     }
 
-    Repeater {
-        model: ScriptModel {
-            objectProp: "id"
-            values: root.shownIds
+    // Brings the list of cards in line with the widgets that are on: a card that is turned off is removed, one that
+    // is turned on is added, and the rest are left alone. Every card looks up its own cell in `placements`, so
+    // moving one never recreates any. (A list rebuilt from scratch on each change hands cards to the wrong widget
+    // when one in the middle disappears.)
+    function syncShown(): void {
+        const want = placements.filter(p => p.enabled).map(p => p.id);
+        for (let i = shownModel.count - 1; i >= 0; i--) {
+            if (!want.includes(shownModel.get(i).widgetId))
+                shownModel.remove(i);
         }
+        want.forEach((id, i) => {
+            if (i < shownModel.count && shownModel.get(i).widgetId === id)
+                return;
+            let from = -1;
+            for (let k = i + 1; k < shownModel.count; k++) {
+                if (shownModel.get(k).widgetId === id) {
+                    from = k;
+                    break;
+                }
+            }
+            if (from >= 0)
+                shownModel.move(from, i, 1);
+            else
+                shownModel.insert(i, {
+                    widgetId: id
+                });
+        });
+    }
+
+    onPlacementsChanged: syncShown()
+    Component.onCompleted: syncShown()
+
+    ListModel {
+        id: shownModel
+    }
+
+    Repeater {
+        model: shownModel
 
         DelegateChooser {
-            role: "id"
+            role: "widgetId"
 
             DelegateChoice {
                 roleValue: "calendar"
@@ -83,10 +110,10 @@ Item {
     // Shared placement of every card on the grid; a card fills its footprint, or grows past it if its content needs to
     component GridCard: DesktopCard {
         // Handed to every delegate by the Repeater/DelegateChooser
-        required property var modelData
+        required property string widgetId
         required property int index
 
-        readonly property var slot: root.slotFor(modelData.id)
+        readonly property var slot: root.slotFor(widgetId)
 
         wallpaper: root.wallpaper
         x: slot.col * WidgetGrid.unit

@@ -49,7 +49,7 @@ Item {
 
                 Layout.fillWidth: true
                 ButtonGroup.group: sinks
-                checked: Audio.sink?.id === modelData.id
+                checked: Audio.outputDevice?.id === modelData.id
                 onClicked: Audio.setAudioSink(modelData)
                 text: modelData.description
             }
