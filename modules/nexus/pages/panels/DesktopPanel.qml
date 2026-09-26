@@ -200,6 +200,7 @@ PageBase {
 
         DialogSelectButton {
             rootParent: root.flickable
+            first: appList.count === 0
             icon: "add"
             label: Tr.tr("Add application")
             header: Tr.tr("Add an application")

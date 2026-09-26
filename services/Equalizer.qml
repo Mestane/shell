@@ -149,6 +149,38 @@ Singleton {
         return Pipewire.nodes.values.find(node => !node.isStream && node.isSink && node.name === name) ?? null;
     }
 
+    // The chain's playback node, whose output has to be pointed at a real device (see routeOutput)
+    readonly property PwNode outputNode: Pipewire.nodes.values.find(n => n.name === root.outputName) ?? null
+    // The device the user last picked, while it is plugged in
+    readonly property PwNode routeTarget: root.sinkByName(root.previousSink)
+
+    // Sends the chain's output to the device the user picked. PipeWire would otherwise hand it to whichever real
+    // output ranks highest, which is not necessarily the one chosen. Only ever writes the target of the chain's own
+    // output node (a subject id above zero, since zero is the whole default-devices table)
+    function routeOutput(): void {
+        if (!root.enabled || !root.available || root.outputNode === null || root.routeTarget === null)
+            return;
+
+        const id = root.outputNode.id;
+        if (!(id > 0))
+            return;
+
+        routeProc.exec(["pw-metadata", `${id}`, "target.object", root.routeTarget.name]);
+    }
+
+    // A device was picked while the equalizer is on: the chain stays the default output and its output moves to the
+    // device. False when the equalizer is off, so the caller changes the default itself.
+    function chooseOutput(node: PwNode): bool {
+        if (!root.enabled || !root.available || !node || root.isInternalNode(node))
+            return false;
+
+        root.previousSink = node.name;
+        if (Pipewire.defaultAudioSink !== root.node)
+            Pipewire.preferredDefaultAudioSink = root.node;
+        root.routeOutput();
+        return true;
+    }
+
     // First real output in the graph, used when the device to restore is gone (unplugged, renamed)
     function firstSink(): PwNode {
         return Pipewire.nodes.values.find(node => !node.isStream && node.isSink && !root.isInternalNode(node)) ?? null;
@@ -162,18 +194,22 @@ Singleton {
     // fight over the default sink (pactl and the shell each undoing what the other just did is
     // what leaves the output pointing at a sink that is not an output at all). It also only runs
     // when that switch changes, never on a timer, so a device picked in the settings stays picked.
-    function syncRouting(): void {
+    function syncRouting(adoptCurrent: bool): void {
         if (root.enabled) {
             // The chain can only take the default once it is loaded, and until then there is
             // nothing to route through
             if (!root.available)
                 return;
 
+            // The device in use becomes the one to hand the sound to when the switch was just turned on, or when
+            // the one picked last is not around. Otherwise the pick from an earlier session stands: after a
+            // restart the default is briefly whichever device ranks highest, which says nothing about the choice
             const current = Pipewire.defaultAudioSink;
-            if (current !== null && !root.isInternalNode(current))
+            if (current !== null && !root.isInternalNode(current) && (adoptCurrent || root.routeTarget === null))
                 root.previousSink = current.name;
 
             Pipewire.preferredDefaultAudioSink = root.node;
+            root.routeOutput();
             return;
         }
 
@@ -207,7 +243,7 @@ Singleton {
     }
 
     onEnabledChanged: {
-        root.syncRouting();
+        root.syncRouting(true);
         if (root.enabled)
             applyTimer.restart();
     }
@@ -215,16 +251,19 @@ Singleton {
     // The chain appearing is the point at which audio can start going through it; a chain that has
     // gone away cannot be the default output, so whatever it was holding has to come back
     onAvailableChanged: {
-        root.syncRouting();
+        root.syncRouting(false);
         if (root.enabled && root.available)
             applyTimer.restart();
     }
 
     // Node lookups come up empty until the shell has finished its first sync with PipeWire, in
     // which case this does nothing and the connection below settles the routing instead
-    Component.onCompleted: root.syncRouting()
+    Component.onCompleted: root.syncRouting(false)
 
     onPreviousSinkChanged: saveTimer.restart()
+
+    onOutputNodeChanged: root.routeOutput()
+    onRouteTargetChanged: root.routeOutput()
 
     onGainsChanged: saveTimer.restart()
     onPresetChanged: saveTimer.restart()
@@ -234,7 +273,7 @@ Singleton {
     // the filter chain
     Connections {
         function onReadyChanged(): void {
-            root.syncRouting();
+            root.syncRouting(false);
         }
 
         target: Pipewire
@@ -257,7 +296,7 @@ Singleton {
 
                 // The device to hand the output back to is only known now, so a restore that
                 // happened before this loaded can be corrected
-                root.syncRouting();
+                root.syncRouting(false);
             } catch (e) {
                 // Nothing saved yet, or unreadable: the defaults stand
             }
@@ -266,6 +305,10 @@ Singleton {
 
     Process {
         id: applyProc
+    }
+
+    Process {
+        id: routeProc
     }
 
     // Dragging a band fires a lot of small changes; one call per settle is plenty

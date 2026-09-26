@@ -19,6 +19,8 @@ Item {
     required property string header
     required property Component content
     required property string acceptLabel
+    // Set when nothing sits above the button, so its top corners are rounded like its bottom ones
+    property bool first
     property bool acceptAllowed: true
     property bool separateContent
     property int horizontalContentMargin
@@ -135,7 +137,7 @@ Item {
             group: blobGroup
             opacity: blobGroup.color.a
 
-            radius: Tokens.rounding.extraSmall
+            radius: root.first ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
             bottomLeftRadius: Tokens.rounding.extraLarge
             bottomRightRadius: Tokens.rounding.extraLarge
         }
@@ -152,6 +154,7 @@ Item {
             height: Math.min(implicitHeight, parent.height) // Clamp to parent height due to overshoot anim
             color: "transparent"
 
+            first: root.first
             last: true
             icon: root.icon
             text: root.label

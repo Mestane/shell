@@ -9,11 +9,16 @@ import Caelestia.Config
 import Caelestia.I18n
 import Caelestia.Services
 import qs.services
+import qs.utils
 
 Singleton {
     id: root
 
     property string previousSinkName: ""
+    // The output the user picked last, and whether it has been put back yet this start
+    property string lastOutput
+    property bool outputStateLoaded
+    property bool outputRestored
     property string previousSourceName: ""
 
     property list<PwNode> sinks: []
@@ -65,14 +70,46 @@ Singleton {
         setSourceVolume(sourceVolume - (amount || GlobalConfig.services.audioIncrement));
     }
 
+    // Makes a device the output: through the equalizer when it is on, otherwise as the default sink itself
+    function applyOutput(node: PwNode): void {
+        if (Equalizer.chooseOutput(node))
+            return;
+
+        Pipewire.preferredDefaultAudioSink = node;
+    }
+
+    // What the user picks is remembered, so it is still the output after the shell restarts
     function setAudioSink(newSink: PwNode): void {
-        // The device already in use: nothing to change. This matters while the equalizer is on, because the radio
-        // buttons in the bar popout report a click on the device they show as selected as soon as it is set, and
-        // acting on that would take the default output back from the equalizer
+        if (!newSink)
+            return;
+
+        if (newSink.name !== lastOutput) {
+            lastOutput = newSink.name;
+            outputSaveTimer.restart();
+        }
+
+        // The device already in use: nothing more to change. This matters while the equalizer is on, because the
+        // radio buttons in the bar popout report a click on the device they show as selected as soon as it is set,
+        // and acting on that would take the default output back from the equalizer
         if (newSink === outputDevice)
             return;
 
-        Pipewire.preferredDefaultAudioSink = newSink;
+        applyOutput(newSink);
+    }
+
+    // Puts the output the user last picked back once the device is there (and the equalizer, if it is on, is ready).
+    // Only once per start, so a device chosen afterwards by other means is not overridden
+    function restoreOutput(): void {
+        if (outputRestored || !outputStateLoaded)
+            return;
+
+        const node = sinks.find(s => s.name === lastOutput);
+        if (!node || (Equalizer.enabled && !Equalizer.available))
+            return;
+
+        outputRestored = true;
+        if (node !== outputDevice)
+            applyOutput(node);
     }
 
     function setAudioSource(newSource: PwNode): void {
@@ -144,6 +181,8 @@ Singleton {
         root.streams = newStreams;
     }
 
+    onSinksChanged: restoreOutput()
+
     onSinkChanged: {
         if (!sink?.ready)
             return;
@@ -182,6 +221,42 @@ Singleton {
         }
 
         target: Pipewire.nodes
+    }
+
+    Connections {
+        function onAvailableChanged(): void {
+            root.restoreOutput();
+        }
+
+        target: Equalizer
+    }
+
+    FileView {
+        id: outputState
+
+        path: `${Paths.state}/audio-output.json`
+        printErrors: false
+        onLoaded: {
+            try {
+                const data = JSON.parse(text());
+                if (typeof data.output === "string")
+                    root.lastOutput = data.output;
+            } catch (e) {
+                // Nothing saved yet, or unreadable: nothing to put back
+            }
+            root.outputStateLoaded = true;
+            root.restoreOutput();
+        }
+        onLoadFailed: root.outputStateLoaded = true
+    }
+
+    Timer {
+        id: outputSaveTimer
+
+        interval: 500
+        onTriggered: outputState.setText(JSON.stringify({
+            output: root.lastOutput
+        }))
     }
 
     // Always track the current defaults so volume/mute bind even if the lists
