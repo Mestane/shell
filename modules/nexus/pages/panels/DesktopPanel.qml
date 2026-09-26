@@ -283,6 +283,19 @@ PageBase {
         }
 
         SectionHeader {
+            text: Tr.tr("Widget layout (drag to rearrange)")
+        }
+
+        WidgetGridEditor {
+            Layout.topMargin: Tokens.spacing.small
+            Layout.bottomMargin: Tokens.spacing.small
+            entries: root.widgetsConfig.entries.values
+            columns: root.widgetsConfig.columns
+            names: root.widgetNames
+            onMoved: (from, to) => GlobalConfig.background.desktopWidgets.entries.move(from, to)
+        }
+
+        SectionHeader {
             text: Tr.tr("Widget order (drag to reorder)")
         }
 
