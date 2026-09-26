@@ -65,9 +65,13 @@ class DesktopWidgetEntry : public settings::ObjectNode {
 
     CONFIG_PROPERTY(QString, id, {})
     CONFIG_PROPERTY(bool, enabled, true)
-    // Top-left cell on the desktop grid. -1 until the widget is placed by hand, when it flows into the default layout
+    // Cell on the desktop grid, counted from the top. -1 until the widget is placed by hand, when it flows into the
+    // default layout
     CONFIG_PROPERTY(int, col, -1)
     CONFIG_PROPERTY(int, row, -1)
+    // Whether col counts from the right edge (to the widget's right side) rather than the left, so a widget placed on
+    // the right of one screen stays on the right of a wider one
+    CONFIG_PROPERTY(bool, right, false)
 };
 CONFIG_LIST_TYPE(DesktopWidgetEntry, DesktopWidgetList)
 

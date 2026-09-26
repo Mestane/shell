@@ -26,7 +26,7 @@ Item {
     readonly property var placements: {
         const entries = widgetConfig.entries.values;
         for (const e of entries)
-            void [e.enabled, e.col, e.row];
+            void [e.enabled, e.col, e.row, e.right];
         return WidgetGrid.place(entries, gridCols, gridRows, widgetConfig.columns, widgetConfig.position);
     }
     function slotFor(id: string): var {

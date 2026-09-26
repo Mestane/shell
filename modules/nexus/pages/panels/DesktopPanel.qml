@@ -279,6 +279,7 @@ PageBase {
                         return;
                     list.at(i).col = p.col;
                     list.at(i).row = p.row;
+                    list.at(i).right = p.right;
                 });
             }
         }
@@ -300,6 +301,7 @@ PageBase {
                 for (let i = 0; i < root.widgetsConfig.entries.values.length; i++) {
                     list.at(i).col = -1;
                     list.at(i).row = -1;
+                    list.at(i).right = false;
                 }
             }
         }

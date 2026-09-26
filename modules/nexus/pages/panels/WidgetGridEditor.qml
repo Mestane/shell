@@ -23,7 +23,8 @@ Item {
     // The page's scroller, held still while a widget is dragged so the page doesn't scroll with it
     property Flickable scroller
 
-    // Where every widget ends up, parallel to `entries`, after a drop. Only widgets that are turned on have a cell.
+    // What to store for every widget after a drop, parallel to `entries` ({ enabled, col, row, right }). Only widgets
+    // that are turned on have a cell.
     signal placed(var placements)
 
     readonly property var icons: ({
@@ -44,7 +45,7 @@ Item {
     // Every node's enabled/col/row is read here so the layout is worked out again whenever one changes
     readonly property var placements: {
         for (const e of entries)
-            void [e.enabled, e.col, e.row];
+            void [e.enabled, e.col, e.row, e.right];
         return WidgetGrid.place(entries, gridCols, gridRows, columns, position);
     }
 
@@ -224,14 +225,23 @@ Item {
                 return;
 
             // Pin every widget where it is now, so nothing else shifts when the layout stops flowing
-            const out = root.placements.map(q => ({
+            const cells = root.placements.map(q => ({
                         enabled: q.enabled,
+                        w: q.w,
                         col: q.col,
                         row: q.row
                     }));
-            out[i].col = col;
-            out[i].row = row;
-            root.placed(out);
+            cells[i].col = col;
+            cells[i].row = row;
+            root.placed(cells.map(q => {
+                const a = WidgetGrid.anchor(q.col, q.w, root.gridCols);
+                return {
+                    enabled: q.enabled,
+                    col: a.col,
+                    right: a.right,
+                    row: q.row
+                };
+            }));
         }
     }
 }

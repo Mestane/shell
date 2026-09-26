@@ -24,7 +24,8 @@ function heightOf(id) {
     return heights[id] ?? 5;
 }
 
-// Where each widget sits, parallel to `entries` ([{ id, enabled, col, row }]). Widgets that have been placed keep
+// Where each widget sits, parallel to `entries` ([{ id, enabled, col, row, right }]); `col` counts from the right edge
+// when `right` is set, so the result is in the screen's own columns whatever its width. Widgets that have been placed keep
 // their cell (kept on screen). Any other widget, and any placed one whose cell another has taken since (say it was
 // turned off, something moved in, and it was turned back on), flows into the first free space in `columns` columns
 // from the `position` corner, so no two widgets ever overlap.
@@ -32,13 +33,14 @@ function place(entries, gridCols, gridRows, columns, position) {
     const out = entries.map(e => {
         const placed = e.col >= 0 && e.row >= 0;
         const h = heightOf(e.id);
+        const col = e.right ? gridCols - cardCells - e.col : e.col;
         return {
             id: e.id,
             enabled: e.enabled,
             placed: placed,
             w: cardCells,
             h: h,
-            col: placed ? Math.max(0, Math.min(e.col, gridCols - cardCells)) : 0,
+            col: placed ? Math.max(0, Math.min(col, gridCols - cardCells)) : 0,
             row: placed ? Math.max(0, Math.min(e.row, gridRows - h)) : 0
         };
     });
@@ -116,6 +118,16 @@ function freeRow(rects, col, w, h, gridRows, fromBottom) {
         }
     }
     return -1;
+}
+
+// What to store for a widget that ended up at column `col`: counted from whichever edge it is nearer, so it keeps to
+// that side on screens of other widths
+function anchor(col, w, gridCols) {
+    const right = col + w / 2 > gridCols / 2;
+    return {
+        right: right,
+        col: right ? gridCols - w - col : col
+    };
 }
 
 // Does a w x h widget at (col, row) overlap any enabled widget other than the one at `skip`?
