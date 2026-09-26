@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Caelestia.Config
-import qs.services
 import qs.modules.bar as Bar
 
 Region {
@@ -63,20 +62,6 @@ Region {
         panel: root.panels.utilities
         y: root.win.height - height
         height: panel.height * (1 - root.panels.utilities.offsetScale) + root.bar.insetBottom
-    }
-
-    // The desktop's app shortcuts sit under this window, which otherwise takes every click on the desktop. The area
-    // left open is the box round the shortcuts, not the whole column they are laid out in.
-    Region {
-        readonly property Item loader: ShellState.componentsFor(root.win.screen)?.background?.desktopIcons ?? null
-        readonly property Item flow: loader?.item ?? null
-        readonly property bool shown: loader !== null && flow !== null && loader.visible
-
-        x: shown ? loader.x + flow.childrenRect.x : 0
-        y: shown ? loader.y + flow.childrenRect.y : 0
-        width: shown ? flow.childrenRect.width : 0
-        height: shown ? flow.childrenRect.height : 0
-        intersection: Intersection.Subtract
     }
 
     // While a popout is open its input area is its final one, not the one it is animating through, so the pointer

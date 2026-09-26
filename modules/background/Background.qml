@@ -16,9 +16,6 @@ Variants {
 
         required property ShellScreen modelData
 
-        // The desktop's app shortcuts, so the drawers window above can leave their area clickable
-        readonly property Item desktopIcons: iconsLoader
-
         screen: modelData
         name: "background"
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
