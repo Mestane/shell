@@ -21,6 +21,9 @@ Singleton {
     property list<PwNode> streams: []
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
+    // The output device actually in use. While the equalizer is on the default sink is its filter chain, which is
+    // not offered as a device, so this is the real one the chain hands the sound on to
+    readonly property PwNode outputDevice: Equalizer.isInternalNode(sink) ? Equalizer.sinkByName(Equalizer.previousSink) : sink
     readonly property PwNode source: Pipewire.defaultAudioSource
 
     readonly property bool muted: !!sink?.audio?.muted
@@ -74,7 +77,7 @@ Singleton {
         if (sinks.length === 0)
             return;
 
-        const currentIndex = sinks.findIndex(s => s === sink);
+        const currentIndex = sinks.findIndex(s => s === outputDevice);
         const nextIndex = (currentIndex + 1) % sinks.length;
         setAudioSink(sinks[nextIndex]);
     }

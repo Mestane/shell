@@ -35,6 +35,8 @@ Item {
 
     readonly property real factor: width / Math.max(1, screenWidth)
     readonly property real cell: WidgetGrid.unit * factor
+    // Space left round each tile so neighbours don't touch
+    readonly property real inset: 2
     readonly property int gridCols: Math.floor(screenWidth / WidgetGrid.unit)
     readonly property int gridRows: Math.floor(screenHeight / WidgetGrid.unit)
     readonly property var placements: WidgetGrid.place(entries, gridCols, gridRows, columns, position)
@@ -113,10 +115,10 @@ Item {
         readonly property var held: root.heldIndex >= 0 ? root.placements[root.heldIndex] : null
 
         visible: held !== null
-        x: root.dropCol * root.cell
-        y: root.dropRow * root.cell
-        width: (held?.w ?? 0) * root.cell
-        height: (held?.h ?? 0) * root.cell
+        x: root.dropCol * root.cell + root.inset
+        y: root.dropRow * root.cell + root.inset
+        width: (held?.w ?? 0) * root.cell - root.inset * 2
+        height: (held?.h ?? 0) * root.cell - root.inset * 2
         radius: Tokens.rounding.small
         color: root.dropValid ? Colours.palette.m3primary : Colours.palette.m3error
         opacity: 0.25
@@ -134,11 +136,11 @@ Item {
             readonly property bool held: root.heldIndex === index
 
             visible: modelData.enabled
-            x: held ? root.pointer.x - root.grab.x : modelData.col * root.cell
-            y: held ? root.pointer.y - root.grab.y : modelData.row * root.cell
+            x: (held ? root.pointer.x - root.grab.x : modelData.col * root.cell) + root.inset
+            y: (held ? root.pointer.y - root.grab.y : modelData.row * root.cell) + root.inset
             z: held ? 1 : 0
-            width: modelData.w * root.cell
-            height: modelData.h * root.cell
+            width: modelData.w * root.cell - root.inset * 2
+            height: modelData.h * root.cell - root.inset * 2
             radius: Tokens.rounding.small
             color: held ? Colours.palette.m3primaryContainer : Colours.palette.m3surfaceContainerHigh
             border.width: 1
@@ -170,6 +172,8 @@ Item {
 
     MouseArea {
         anchors.fill: parent
+        // Without this the page scrolls along with a drag instead of the widget moving
+        preventStealing: true
         cursorShape: root.heldIndex >= 0 ? Qt.ClosedHandCursor : Qt.ArrowCursor
 
         onPressed: mouse => {

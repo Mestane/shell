@@ -39,7 +39,7 @@ PageBase {
 
         AudioDeviceList {
             nodes: Audio.sinks
-            currentId: Audio.sink?.id ?? -1
+            currentId: Audio.outputDevice?.id ?? -1
             iconName: "speaker"
             placeholderIcon: "speaker"
             placeholderText: Tr.trCtx("No output devices", "no audio outputs")
