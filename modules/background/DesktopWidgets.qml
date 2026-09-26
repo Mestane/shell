@@ -22,12 +22,32 @@ Item {
     readonly property var widgetConfig: Config.background.desktopWidgets
     readonly property int gridCols: Math.floor(width / WidgetGrid.unit)
     readonly property int gridRows: Math.floor(height / WidgetGrid.unit)
-    readonly property var placements: WidgetGrid.place(widgetConfig.entries.values, gridCols, gridRows, widgetConfig.columns, widgetConfig.position)
+    // Every node's enabled/col/row is read here so the layout is worked out again whenever one changes
+    readonly property var placements: {
+        const entries = widgetConfig.entries.values;
+        for (const e of entries)
+            void [e.enabled, e.col, e.row];
+        return WidgetGrid.place(entries, gridCols, gridRows, widgetConfig.columns, widgetConfig.position);
+    }
+    // Just the ids of the cards that are on. A card looks up its own cell in `placements`, so moving one never
+    // recreates the cards, and turning one off removes exactly that card
+    readonly property var shownIds: placements.filter(p => p.enabled).map(p => ({
+                id: p.id
+            }))
+
+    function slotFor(id: string): var {
+        return placements.find(p => p.id === id) ?? ({
+                col: 0,
+                row: 0,
+                w: WidgetGrid.cardCells,
+                h: 5
+            });
+    }
 
     Repeater {
         model: ScriptModel {
             objectProp: "id"
-            values: root.placements.filter(p => p.enabled)
+            values: root.shownIds
         }
 
         DelegateChooser {
@@ -66,11 +86,13 @@ Item {
         required property var modelData
         required property int index
 
+        readonly property var slot: root.slotFor(modelData.id)
+
         wallpaper: root.wallpaper
-        x: modelData.col * WidgetGrid.unit
-        y: modelData.row * WidgetGrid.unit
-        width: modelData.w * WidgetGrid.unit - WidgetGrid.gap
-        height: Math.max(implicitHeight, modelData.h * WidgetGrid.unit - WidgetGrid.gap)
+        x: slot.col * WidgetGrid.unit
+        y: slot.row * WidgetGrid.unit
+        width: slot.w * WidgetGrid.unit - WidgetGrid.gap
+        height: Math.max(implicitHeight, slot.h * WidgetGrid.unit - WidgetGrid.gap)
     }
 
     // --- Calendar: month grid ---

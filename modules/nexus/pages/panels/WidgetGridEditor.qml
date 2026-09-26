@@ -20,6 +20,8 @@ Item {
     required property var names
     property real screenWidth: 1920
     property real screenHeight: 1080
+    // The page's scroller, held still while a widget is dragged so the page doesn't scroll with it
+    property Flickable scroller
 
     // Where every widget ends up, parallel to `entries`, after a drop. Only widgets that are turned on have a cell.
     signal placed(var placements)
@@ -35,11 +37,16 @@ Item {
 
     readonly property real factor: width / Math.max(1, screenWidth)
     readonly property real cell: WidgetGrid.unit * factor
-    // Space left round each tile so neighbours don't touch
-    readonly property real inset: 2
+    // Half the desktop's gap between cards, so the tiles are spaced like the real ones
+    readonly property real inset: WidgetGrid.gap * factor / 2
     readonly property int gridCols: Math.floor(screenWidth / WidgetGrid.unit)
     readonly property int gridRows: Math.floor(screenHeight / WidgetGrid.unit)
-    readonly property var placements: WidgetGrid.place(entries, gridCols, gridRows, columns, position)
+    // Every node's enabled/col/row is read here so the layout is worked out again whenever one changes
+    readonly property var placements: {
+        for (const e of entries)
+            void [e.enabled, e.col, e.row];
+        return WidgetGrid.place(entries, gridCols, gridRows, columns, position);
+    }
 
     // The widget being dragged, where the pointer is, and the cell it would drop into
     property int heldIndex: -1
@@ -70,6 +77,13 @@ Item {
 
     Behavior on implicitHeight {
         Anim {}
+    }
+
+    Binding {
+        target: root.scroller
+        property: "interactive"
+        value: false
+        when: root.heldIndex >= 0 && root.scroller !== null
     }
 
     StyledRect {

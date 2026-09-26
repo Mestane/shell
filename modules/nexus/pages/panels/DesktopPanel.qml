@@ -269,6 +269,7 @@ PageBase {
             columns: root.widgetsConfig.columns
             position: root.widgetsConfig.position
             names: root.widgetNames
+            scroller: root.flickable
             screenWidth: root.nState.screen?.width ?? 1920
             screenHeight: root.nState.screen?.height ?? 1080
             onPlaced: placements => {
