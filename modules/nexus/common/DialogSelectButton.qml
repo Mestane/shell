@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
+import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.containers
@@ -64,13 +66,29 @@ DialogRowButton {
                     onClicked: root.selectedItem = root.keyFor(item.modelData)
                 }
 
+                // Items that come with an icon name (an application's, say) show it before the label
+                IconImage {
+                    id: itemIcon
+
+                    readonly property string name: item.modelData.icon ?? ""
+
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: Tokens.padding.large
+                    visible: name !== ""
+                    asynchronous: true
+                    implicitSize: 28
+                    source: visible ? Quickshell.iconPath(name, "image-missing") : ""
+                }
+
                 StyledText {
                     id: label
 
-                    anchors.left: parent.left
+                    anchors.left: itemIcon.visible ? itemIcon.right : parent.left
                     anchors.right: item.selected ? checkIcon.left : parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.margins: Tokens.padding.large
+                    anchors.leftMargin: itemIcon.visible ? Tokens.spacing.medium : anchors.margins
                     anchors.rightMargin: item.selected ? Tokens.spacing.medium : anchors.margins
 
                     text: root.labelFor(item.modelData)

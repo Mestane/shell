@@ -208,7 +208,8 @@ PageBase {
 
             model: [...DesktopEntries.applications.values].sort((a, b) => a.name.localeCompare(b.name)).map(a => ({
                         id: a.id,
-                        label: a.name
+                        label: a.name,
+                        icon: a.icon
                     }))
 
             onAccepted: {
