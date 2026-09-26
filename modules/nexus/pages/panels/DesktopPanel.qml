@@ -202,7 +202,7 @@ PageBase {
             rootParent: root.flickable
             icon: "add"
             label: Tr.tr("Add application")
-            header: Tr.tr("Add an application to the desktop")
+            header: Tr.tr("Add an application")
             acceptLabel: Tr.trCtx("Add", "button")
 
             model: [...DesktopEntries.applications.values].sort((a, b) => a.name.localeCompare(b.name)).map(a => ({

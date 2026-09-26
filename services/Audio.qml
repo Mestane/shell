@@ -66,6 +66,12 @@ Singleton {
     }
 
     function setAudioSink(newSink: PwNode): void {
+        // The device already in use: nothing to change. This matters while the equalizer is on, because the radio
+        // buttons in the bar popout report a click on the device they show as selected as soon as it is set, and
+        // acting on that would take the default output back from the equalizer
+        if (newSink === outputDevice)
+            return;
+
         Pipewire.preferredDefaultAudioSink = newSink;
     }
 
