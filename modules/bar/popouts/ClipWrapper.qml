@@ -32,6 +32,7 @@ Item {
     // Attached to the far edge of the panel area (next to a right/bottom bar); computed rather than
     // anchored, since an x/y binding would override an anchor
     readonly property bool rightAttached: onRight && !content.isDetached
+
     readonly property bool bottomAttached: onBottom && !content.isDetached
 
     // Position along the bar's long axis, following the hovered icon and clamped to the panel area
@@ -46,7 +47,9 @@ Item {
     // Where the popout will end up once its animations finish. Hit-testing uses these, not the animated x/y/size:
     // otherwise the pointer is "outside" a popout that is still growing or sliding, and moving onto it closes it.
     readonly property real targetW: content.nonAnimWidth
+
     readonly property real targetH: content.nonAnimHeight
+
     readonly property real targetX: {
         if (content.isDetached)
             return (parent.width - targetW) / 2;
@@ -54,6 +57,7 @@ Item {
             return parent.width - targetW;
         return vertical ? 0 : alongPos(targetW, parent.width);
     }
+
     readonly property real targetY: {
         if (content.isDetached)
             return (parent.height - targetH) / 2;

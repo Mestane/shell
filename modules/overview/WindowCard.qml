@@ -36,23 +36,33 @@ StyledRect {
     signal grabbed(real grabX, real grabY)
 
     readonly property var ipc: root.client?.lastIpcObject
+
     readonly property bool hovered: stateLayer.containsMouse
     // Clamped to the tile, so a fullscreen window (which also covers the bar's reserved
     // area) or one dragged partly off the monitor is trimmed rather than spilling out of it
+
     readonly property real edgeLeft: Math.max(0, Math.round(root.offsetX + ((root.ipc?.at?.[0] ?? 0) - root.originX) * root.fit))
+
     readonly property real edgeTop: Math.max(0, Math.round(root.offsetY + ((root.ipc?.at?.[1] ?? 0) - root.originY) * root.fit))
+
     readonly property real edgeRight: Math.min(root.tileWidth, Math.round(root.offsetX + ((root.ipc?.at?.[0] ?? 0) + (root.ipc?.size?.[0] ?? 0) - root.originX) * root.fit))
+
     readonly property real edgeBottom: Math.min(root.tileHeight, Math.round(root.offsetY + ((root.ipc?.at?.[1] ?? 0) + (root.ipc?.size?.[1] ?? 0) - root.originY) * root.fit))
     // Only capture while the overview is up, so nothing is recorded otherwise
+
     readonly property var captureSource: root.screenState.overview ? root.client?.wayland ?? null : null
     // Kept in proportion to the window it sits on, so it does not swamp a small one
+
     readonly property real iconSize: Math.round(Math.min(44, Math.min(root.width, root.height) * 0.22))
     // Below this a window has no room for an icon without covering the whole preview
+
     readonly property bool showIcon: root.iconSize >= 12
     // The icon is looked up and resolved here rather than through Icons.getAppIcon,
     // which hands the icon theme a fallback name and always ends up rendering that
     // fallback instead of the app's own icon
+
     readonly property string appIconName: DesktopEntries.heuristicLookup(root.ipc?.class ?? "")?.icon ?? ""
+
     readonly property string appIcon: root.appIconName !== "" && Quickshell.hasThemeIcon(root.appIconName) ? Quickshell.iconPath(root.appIconName) : ""
 
     x: root.edgeLeft

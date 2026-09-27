@@ -1,11 +1,11 @@
 pragma ComponentBehavior: Bound
 
+import "../../../../utils/widgetgrid.js" as WidgetGrid
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.services
-import "../../../../utils/widgetgrid.js" as WidgetGrid
 
 // A miniature of the screen with the desktop widgets on it. Drag a widget and it snaps to the desktop's grid;
 // it can go anywhere it doesn't overlap another widget.
@@ -37,12 +37,17 @@ Item {
         })
 
     readonly property real factor: width / Math.max(1, screenWidth)
+
     readonly property real cell: WidgetGrid.unit * factor
     // Half the desktop's gap between cards, so the tiles are spaced like the real ones
+
     readonly property real inset: WidgetGrid.gap * factor / 2
+
     readonly property int gridCols: Math.floor(screenWidth / WidgetGrid.unit)
+
     readonly property int gridRows: Math.floor(screenHeight / WidgetGrid.unit)
     // Every node's enabled/col/row is read here so the layout is worked out again whenever one changes
+
     readonly property var placements: {
         for (const e of entries)
             void [e.enabled, e.col, e.row, e.right];
@@ -51,10 +56,15 @@ Item {
 
     // The widget being dragged, where the pointer is, and the cell it would drop into
     property int heldIndex: -1
+
     property point pointer
+
     property point grab
+
     property int dropCol
+
     property int dropRow
+
     property bool dropValid
 
     function updateDrop(): void {

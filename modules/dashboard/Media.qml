@@ -90,6 +90,7 @@ Item {
     // The player and the drawer both grow the tab rather than eating into each other, so the
     // controls keep the height they have while the drawer is closed and the drawer stays below
     // whatever the player is showing
+
     implicitHeight: Tokens.sizes.dashboard.mediaTabHeight + (root.drawerOpen ? root.drawerHeight + root.drawerGap : 0) + Math.max(0, root.playerHeight - root.playerRoom)
 
     BackgroundShapes {

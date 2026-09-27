@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
-import QtQuick
 import "geometry.js" as Geometry
+import QtQuick
 import Quickshell
 import Caelestia.Config
 import qs.components
@@ -49,6 +49,7 @@ StyledClippingRect {
     readonly property var workspace: Hypr.workspaces.values.find(w => w.id === root.wsId) ?? null
     // A plain array of toplevels. The Repeater below cannot take a `list<HyprlandToplevel>`
     // directly, it has to be handed something it can turn into model data.
+
     readonly property var windows: {
         const windows = [];
         const list = Hypr.toplevelsForWs(root.wsId, GlobalConfig.bar.workspaces.ignoredTags);
@@ -60,6 +61,7 @@ StyledClippingRect {
         return windows;
     }
     readonly property bool occupied: root.windows.length > 0
+
     readonly property string wsLabel: {
         const name = root.workspace?.name;
         return name && name !== String(root.wsId) ? name : String(root.wsId);
@@ -71,10 +73,15 @@ StyledClippingRect {
     // letterboxed rather than stretched, and on a matching monitor it fills the tile.
     readonly property var usable: Geometry.usableRect(root.workspace?.monitor?.lastIpcObject)
     // The tile's content is inset by its border, so window geometry has to match
+
     readonly property real contentWidth: root.cardWidth - root.border.width * 2
+
     readonly property real contentHeight: root.cardHeight - root.border.width * 2
+
     readonly property real fit: root.usable ? Math.min(root.contentWidth / root.usable.width, root.contentHeight / root.usable.height) : 0
+
     readonly property real offsetX: root.usable ? (root.contentWidth - root.usable.width * root.fit) / 2 : 0
+
     readonly property real offsetY: root.usable ? (root.contentHeight - root.usable.height * root.fit) / 2 : 0
 
     implicitWidth: root.cardWidth
@@ -114,8 +121,11 @@ StyledClippingRect {
     }
     radius: Tokens.rounding.large
     // Occupied workspaces read brighter than the empty ones, which stay dark
+
     color: root.occupied ? Colours.tPalette.m3surfaceContainerHighest : Colours.tPalette.m3surfaceContainerLowest
+
     border.width: root.active ? 2 : 1
+
     border.color: root.borderColour
 
     // Animated through a plain property: ClippingRectangle's border is an alias into an

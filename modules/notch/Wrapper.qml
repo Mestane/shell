@@ -51,7 +51,7 @@ Item {
     // Whether the notch is standing in for the clock, so the bar can drop its own
     readonly property bool showsClock: Config.notch.enabled && wanted && Config.notch.showClock
 
-    // The brief pill after a track change, 
+    // The brief pill after a track change,
     readonly property bool trackActive: root.playing && shown
 
     readonly property bool shouldBeActive: Config.notch.enabled && (persistent || trackActive) && !screenState.dashboard && !screenState.launcher
@@ -81,9 +81,13 @@ Item {
     readonly property var barRef: ShellState.componentsFor(screen)?.bar
     // 1 once the workspace is empty, 0 with windows: one animated value owned by the drawers window, shared with the
     // bar's cut-away so the notch, the bar and the content all move on the same curve
+
     property real morph: 1
+
     readonly property real inBarProg: barRef ? 1 - morph : 0
+
     readonly property bool morphing: inBarProg > 0.001 && inBarProg < 0.999
+
     readonly property bool onVerticalBar: !!barRef && barRef.vertical
 
     // Where it rests inside the bar band, centred across the band's thickness (horizontal bars)
@@ -91,9 +95,12 @@ Item {
 
     // Where it hangs (or rests, in the bar) in the panel area's coordinates
     readonly property real hangX: Config.notch.align === PanelAlign.Start ? 0 : Config.notch.align === PanelAlign.End ? parent.width - width : (parent.width - width) / 2
+
     readonly property real hangY: (-height - 5) * offsetScale
     // Centre of the bar band on a vertical bar: across its thickness, and halfway along the screen
+
     readonly property real barCx: !barRef ? 0 : barRef.onLeft ? -barRef.insetLeft / 2 : parent.width + barRef.insetRight / 2
+
     readonly property real barCy: !barRef ? 0 : (parent.height + barRef.insetBottom - barRef.insetTop) / 2
 
     // The background blob's own y: on a vertical bar it retreats up out of sight instead of following the (rotated)
@@ -102,12 +109,18 @@ Item {
 
     visible: offsetScale < 1
     // Plain bindings rather than anchors, so the position can change live
+
     x: onVerticalBar ? (hangX + width / 2) * (1 - inBarProg) + barCx * inBarProg - width / 2 : hangX
+
     y: onVerticalBar ? (hangY + height / 2) * (1 - inBarProg) + barCy * inBarProg - height / 2 : hangY * (1 - inBarProg) + barY * inBarProg
     // The turn happens half way, while the content is faded out
+
     rotation: onVerticalBar && inBarProg > 0.5 ? (barRef.onLeft ? -90 : 90) : 0
+
     implicitWidth: content.implicitWidth
+
     implicitHeight: content.implicitHeight
+
     opacity: 1 - offsetScale
 
     Behavior on offsetScale {

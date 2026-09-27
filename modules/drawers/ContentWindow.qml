@@ -43,6 +43,7 @@ StyledWindow {
     // Vertical offset for a panel hanging from the top or bottom edge: while the bar's middle is cut away the
     // frame is thinner there, so a panel sitting in that stretch moves back towards the screen edge to stay
     // attached to it. A panel over one of the bar's ends (or overlapping them) stays where it is.
+
     function shiftFor(panel: Item, atTop: bool): real {
         if (!(atTop ? bar.onTop : bar.onBottom))
             return 0;
@@ -55,14 +56,21 @@ StyledWindow {
     }
 
     readonly property real dashboardShift: shiftFor(panels.dashboard, panels.dashboard.atTop)
+
     readonly property real launcherShift: shiftFor(panels.launcher, panels.launcher.atTop)
+
     readonly property real notchShift: shiftFor(panels.notch, true)
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
+
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
+
     readonly property real borderThickness: contentItem.Config.border.thickness * (1 - fsTransitionProg)
+
     readonly property real borderRounding: contentItem.Config.border.rounding * (1 - fsTransitionProg)
+
     readonly property real shadowOpacity: 0.7 * (1 - fsTransitionProg)
+
     readonly property real borderLayoutThickness: hasFullscreen ? 0 : contentItem.Config.border.thickness
 
     property color surfaceColour: Colours.tPalette.m3surface
@@ -386,6 +394,7 @@ StyledWindow {
             ]
             notch.morph: root.notchMorph
             notch.transform: Translate {
+
                 y: root.notchShift
             }
             session.transform: Matrix4x4 {
@@ -456,6 +465,7 @@ StyledWindow {
         y: panel.y + bar.insetTop
         // A closed panel has no shape at all: it is parked just past the screen edge, which with a thin frame is
         // invisible but with a tall bar puts it inside the bar, where it shows up as a faint box the size of the panel
+
         readonly property bool closed: (panel.offsetScale ?? 0) >= 0.999
         implicitWidth: closed ? 0 : panel.width
         implicitHeight: closed ? 0 : panel.height

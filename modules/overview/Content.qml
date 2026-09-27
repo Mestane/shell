@@ -322,6 +322,7 @@ Item {
     }
 
     Keys.onEscapePressed: root.close()
+
     Keys.onPressed: event => {
         event.accepted = true;
 
@@ -601,7 +602,6 @@ Item {
                 }
             }
         }
-
     }
 
     // The app being dragged, as its icon in a disc under the pointer. It pops in as the drag

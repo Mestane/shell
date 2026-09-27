@@ -194,6 +194,7 @@ Item {
         // it sits in the corner.
         readonly property real gap: Tokens.padding.medium
         // When it shares a top corner it goes below the popups; a bottom corner it holds itself
+
         fromTop: root.toastsTop
         x: root.toastsWithStack ? (root.stackLeft ? sidebar.x + sidebar.width + gap : sidebar.x - width - gap) : (root.toastsLeft ? gap : parent.width - width - gap)
         y: root.toastsTop ? (root.notifsToastsShared ? notifications.y + notifications.height + (notifications.height > 0 ? gap : 0) : gap) : (root.toastsWithStack && !sidebar.visible ? utilities.y : parent.height) - Math.max(0, height) - gap

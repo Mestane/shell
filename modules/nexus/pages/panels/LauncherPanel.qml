@@ -102,7 +102,7 @@ PageBase {
         }
 
         SelectRow {
-            
+
             last: true
             label: Tr.tr("Alignment")
             subtext: Tr.tr("Where along that edge the panel sits")
@@ -198,6 +198,5 @@ PageBase {
             checked: GlobalConfig.launcher.useFuzzy.wallpapers
             onToggled: GlobalConfig.launcher.useFuzzy.wallpapers = checked
         }
-
     }
 }

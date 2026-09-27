@@ -156,10 +156,13 @@ CustomMouseArea {
     }
 
     anchors.fill: parent
+
     acceptedButtons: fullscreen ? Qt.NoButton : Qt.AllButtons
+
     hoverEnabled: true
 
     onPressed: event => dragStart = Qt.point(event.x, event.y)
+
     onContainsMouseChanged: {
         if (!containsMouse) {
             root.inHotCorner = false;

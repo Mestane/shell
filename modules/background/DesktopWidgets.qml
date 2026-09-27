@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import "../../utils/widgetgrid.js" as WidgetGrid
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -10,7 +11,6 @@ import Caelestia.Services
 import qs.components
 import qs.components.controls
 import qs.services
-import "../../utils/widgetgrid.js" as WidgetGrid
 
 // Glass widget cards laid out on a snapping grid that covers the desktop. Which cards show and the cell each one
 // sits in come from background.desktopWidgets; cards that haven't been placed by hand flow in from a corner.
@@ -29,6 +29,7 @@ Item {
             void [e.enabled, e.col, e.row, e.right];
         return WidgetGrid.place(entries, gridCols, gridRows, widgetConfig.columns, widgetConfig.position);
     }
+
     function slotFor(id: string): var {
         return placements.find(p => p.id === id) ?? ({
                 col: 0,
@@ -349,7 +350,9 @@ Item {
         // restarts an animation on every tick keeps the whole desktop redrawing, and that was the shell's
         // biggest single power cost while idle.
         property real cpu
+
         property real memory
+
         property real disk
 
         Timer {

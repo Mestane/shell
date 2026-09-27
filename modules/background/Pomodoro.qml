@@ -12,7 +12,6 @@ import qs.services
 RowLayout {
     id: root
 
-
     spacing: Tokens.spacing.large
 
     CircularProgress {

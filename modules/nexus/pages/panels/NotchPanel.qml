@@ -138,6 +138,5 @@ PageBase {
             stepSize: 20
             onMoved: v => GlobalConfig.notch.maxTitleWidth = Math.round(v)
         }
-
     }
 }

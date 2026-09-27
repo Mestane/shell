@@ -51,9 +51,9 @@ private:
     QVariantMap m_tags;
     // The set the current/last scan was asked for, so repeats are free
     QStringList m_requested;
-    quint64 m_generation{0};
-    int m_scanned{0};
-    bool m_scanning{false};
+    quint64 m_generation{ 0 };
+    int m_scanned{ 0 };
+    bool m_scanning{ false };
 
     void setScanning(bool scanning);
     static QVariantMap read(const QStringList& paths);

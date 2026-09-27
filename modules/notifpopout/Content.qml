@@ -3,9 +3,9 @@ import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.components.controls
-import qs.modules.dashboard.media
-import qs.modules.sidebar as Sidebar
 import qs.services
+import qs.modules.sidebar as Sidebar
+import qs.modules.dashboard.media
 
 // Translucent on purpose: the blur comes from the compositor, which blurs
 // whatever is behind this layer window (see NotifPopout.qml for the rules).

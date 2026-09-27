@@ -47,7 +47,6 @@ Item {
             implicitSize: root.width
             shape: MaterialShape.Cookie12Sided
             color: Qt.alpha(root.fallbackColour, 1)
-
         }
 
         // One turn every 23.5 s, stepped at the shared decorative rate rather than animated at the screen's refresh

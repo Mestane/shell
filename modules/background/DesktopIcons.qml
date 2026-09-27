@@ -14,9 +14,7 @@ Flow {
 
     readonly property int iconSize: Config.background.desktopIcons.iconSize
     readonly property bool showLabels: Config.background.desktopIcons.showLabels
-    readonly property var entries: Config.background.desktopIcons.apps
-        .map(id => DesktopEntries.byId(id) ?? DesktopEntries.heuristicLookup(id))
-        .filter(e => !!e)
+    readonly property var entries: Config.background.desktopIcons.apps.map(id => DesktopEntries.byId(id) ?? DesktopEntries.heuristicLookup(id)).filter(e => !!e)
 
     flow: Flow.TopToBottom
     spacing: Tokens.spacing.large

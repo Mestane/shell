@@ -116,11 +116,14 @@ PageBase {
 
     // Which element is being dragged, and where its centre is (preview coordinates)
     property string dragId
+
     property point dragCentre
 
     readonly property string barSlot: currentSlot("bar")
+
     readonly property real barThickness: preview.height * 0.075
     // The part of the screen the bar doesn't cover
+
     readonly property var inner: {
         const t = barThickness;
         const w = preview.width;
@@ -311,7 +314,6 @@ PageBase {
             x = parts[0] === "left" ? r.x + inset : r.x + r.w - sz.width - inset;
             if (id === "sidebar" || id === "popout" || id === "notifs")
                 y = r.y + m;
-
         } else {
             const horizontal = parts[1];
             x = (horizontal === "start" || horizontal === "left") ? r.x + m : horizontal === "center" ? r.x + (r.w - sz.width) / 2 : r.x + r.w - sz.width - m;
@@ -468,9 +470,13 @@ PageBase {
                     }
 
                     x: rest.x + (dragging ? dragDX : 0)
+
                     y: rest.y + (dragging ? dragDY : 0)
+
                     width: rest.width
+
                     height: rest.height
+
                     z: dragging ? 100 : (active ? 20 + index + (elementId === "notch" ? 40 : elementId === "notifs" || elementId === "toasts" ? 15 : 0) : modelData.kind === "desktop" ? 2 : 5 + index + (elementId === "notch" ? 40 : 0))
 
                     Behavior on x {

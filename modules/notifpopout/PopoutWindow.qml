@@ -7,8 +7,8 @@ import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
 import qs.components.containers
-import qs.modules.sidebar as Sidebar
 import qs.services
+import qs.modules.sidebar as Sidebar
 
 // Its own layer window (namespace caelestia-notifpopout) so it can have blur
 // rules and a blur strength different from the shared drawers window.

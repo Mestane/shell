@@ -64,13 +64,23 @@ StyledListView {
         const queue = Music.queue;
 
         if (played.length > 0) {
-            list.push({ kind: "header", section: "played", text: Tr.tr("Played"), count: played.length });
+            list.push({
+                kind: "header",
+                section: "played",
+                text: Tr.tr("Played"),
+                count: played.length
+            });
             for (let i = 0; i < played.length; i++)
                 list.push(root.trackRow(played[i].path, "played", i, i, false));
         }
 
         if (Music.hasTrack) {
-            list.push({ kind: "header", section: "current", text: Tr.tr("Now playing"), count: 1 });
+            list.push({
+                kind: "header",
+                section: "current",
+                text: Tr.tr("Now playing"),
+                count: 1
+            });
             list.push(root.trackRow(Music.current.path, "current", 0, 0, true));
         }
 
@@ -79,7 +89,12 @@ StyledListView {
         // match the order it plays in
         if (Music.shuffle) {
             if (queue.length > 0) {
-                list.push({ kind: "header", section: "shuffled", text: Tr.tr("Queue"), count: queue.length });
+                list.push({
+                    kind: "header",
+                    section: "shuffled",
+                    text: Tr.tr("Queue"),
+                    count: queue.length
+                });
                 for (let i = 0; i < queue.length; i++)
                     list.push(root.trackRow(queue[i].path, "shuffled", i, i, false));
             }
@@ -92,19 +107,35 @@ StyledListView {
         const auto = [];
         for (let i = 0; i < queue.length; i++) {
             if (queue[i].origin === "user")
-                user.push({ path: queue[i].path, index: i });
+                user.push({
+                    path: queue[i].path,
+                    index: i
+                });
             else
-                auto.push({ path: queue[i].path, index: i });
+                auto.push({
+                    path: queue[i].path,
+                    index: i
+                });
         }
 
         if (user.length > 0) {
-            list.push({ kind: "header", section: "user", text: Tr.tr("Your queue"), count: user.length });
+            list.push({
+                kind: "header",
+                section: "user",
+                text: Tr.tr("Your queue"),
+                count: user.length
+            });
             for (let i = 0; i < user.length; i++)
                 list.push(root.trackRow(user[i].path, "user", user[i].index, i, false));
         }
 
         if (auto.length > 0) {
-            list.push({ kind: "header", section: "auto", text: Tr.tr("Auto queue"), count: auto.length });
+            list.push({
+                kind: "header",
+                section: "auto",
+                text: Tr.tr("Auto queue"),
+                count: auto.length
+            });
             for (let i = 0; i < auto.length; i++)
                 list.push(root.trackRow(auto[i].path, "auto", auto[i].index, i, false));
         }

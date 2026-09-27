@@ -42,6 +42,7 @@ Item {
     // Whether the visualiser moves at all: not while Power & battery has visualisers paused or animations off
     // Set by the wrapper: false for a standing pill on battery
     property bool allowLive: true
+
     readonly property bool live: allowLive && !PowerSaving.pauseVisualisers && PowerSaving.animations
 
     // What the bars show, refreshed at the shared decorative rate by the timer below. It used to be a binding on the
@@ -97,6 +98,7 @@ Item {
     }
 
     implicitWidth: layout.implicitWidth + (compact ? Tokens.padding.medium : Tokens.padding.large) * 2
+
     implicitHeight: layout.implicitHeight + (compact ? Tokens.padding.small : Tokens.padding.medium) * 2
 
     RowLayout {

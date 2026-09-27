@@ -256,7 +256,7 @@ QtObject {
                     AboutPage {}
                 }
             }
-        },
+        }
     ]
 
     readonly property Component placeholderComp: Component {

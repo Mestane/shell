@@ -212,8 +212,11 @@ Variants {
 
             // Plain x/y bindings rather than anchors, so changing the position live can't leave stale anchors
             readonly property real marginLeft: Tokens.padding.extraLargeIncreased + insets.barLeft
+
             readonly property real marginRight: Tokens.padding.extraLargeIncreased + insets.barRight
+
             readonly property real marginTop: Tokens.padding.extraLargeIncreased + insets.barTop
+
             readonly property real marginBottom: Tokens.padding.extraLargeIncreased + insets.barBottom
             x: pos.endsWith("right") ? parent.width - width - marginRight : marginLeft
             y: pos.startsWith("bottom") ? parent.height - height - marginBottom : marginTop

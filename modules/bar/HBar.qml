@@ -29,7 +29,9 @@ RowLayout {
     // Extent of the empty stretch between the first and last spacer, so the drawers can cut it out of the
     // frame on an empty workspace (x coordinates along the bar)
     property real middleStart
+
     property real middleEnd
+
     readonly property bool hasMiddle: middleEnd > middleStart
 
     function updateMiddle(): void {
@@ -194,6 +196,7 @@ RowLayout {
                 roleValue: "clock"
                 delegate: EntryWrapper {
                     shown: !root.clockHidden
+
                     HClock {
                         objectName: "taskbarClock"
                     }
@@ -247,7 +250,9 @@ RowLayout {
         }
 
         onXChanged: middleTimer.restart()
+
         onWidthChanged: middleTimer.restart()
+
         Component.onCompleted: middleTimer.restart()
 
         children: item

@@ -108,7 +108,7 @@ PageBase {
         }
 
         SelectRow {
-            
+
             last: true
             label: Tr.tr("Alignment")
             subtext: Tr.tr("Where along that edge the panel sits")
@@ -258,6 +258,5 @@ PageBase {
             stepSize: 5
             onMoved: v => GlobalConfig.dashboard.dragThreshold = v
         }
-
     }
 }

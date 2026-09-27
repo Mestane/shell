@@ -29,8 +29,11 @@ Item {
     // straight made every bar recompute (and the whole ring be rebuilt) on each analyser update and on every frame
     // of the cover's spin; the timer refreshes the levels at the shared decorative rate, and the edge distances only
     // when the cover has turned far enough for them to differ.
+
     property var levels: Array(barCount).fill(1e-2)
+
     property var edges: Array(barCount).fill(0)
+
     property real edgesAt: -1000
 
     function refreshEdges(): void {

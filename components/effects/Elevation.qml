@@ -8,6 +8,7 @@ RectangularShadow {
     visible: PowerSaving.shadows
 
     property int level
+
     property real dp: [0, 1, 3, 6, 8, 12][level]
 
     color: Qt.alpha(Colours.palette.m3shadow, 0.7)

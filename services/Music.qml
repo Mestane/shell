@@ -70,9 +70,13 @@ Singleton {
 
     // The folder currently being browsed
     readonly property list<FileSystemEntry> subDirs: browseDirs.entries
+
     readonly property list<FileSystemEntry> folderTracks: browseTracks.entries
+
     property string currentDir: rootDir
+
     readonly property bool atRoot: currentDir === rootDir
+
     readonly property string relativeDir: root.atRoot || !currentDir.startsWith(rootDir) ? "" : currentDir.slice(rootDir.length + 1)
 
     // Playback. The queue plays out top to bottom in the queue view: what has already played,
@@ -81,31 +85,45 @@ Singleton {
     // for something added to the queue by hand and "auto" for the rest of a context - so the
     // two halves of what is still to come can be shown and reordered apart from each other.
     property var played: []
+
     property var current: null
+
     property var queue: []
+
     property bool shuffle: false
     // The order the upcoming queue was in before shuffle was switched on, so switching it off
     // can put it back. Holds the very entries the queue held, so a song that has since been
     // added, moved or played out can be told apart from the ones the saved order knows about.
+
     property var unshuffledQueue: []
     // "off" | "all" | "one"
+
     property string repeatMode: "off"
+
     property real volume: 1
 
     // How much history is kept, so a queue left running doesn't pile it up forever
     readonly property int playedLimit: 100
 
     readonly property bool hasTrack: root.current !== null
+
     readonly property string currentFile: root.current?.path ?? ""
+
     readonly property string fileName: root.currentFile.slice(root.currentFile.lastIndexOf("/") + 1)
+
     readonly property bool playing: mediaPlayer.playbackState === MediaPlayer.PlayingState
+
     readonly property real position: mediaPlayer.position / 1000
+
     readonly property real duration: mediaPlayer.duration / 1000
 
     // metaData is read through this property so the bindings below track metaDataChanged
     readonly property var metaData: mediaPlayer.metaData
+
     readonly property string title: root.metaData?.stringValue(MediaMetaData.Title) || root.fileName
+
     readonly property string artist: root.metaData?.stringValue(MediaMetaData.ContributingArtist) || root.metaData?.stringValue(MediaMetaData.AlbumArtist) || ""
+
     readonly property string album: root.metaData?.stringValue(MediaMetaData.AlbumTitle) || ""
 
     // Cover art. Art embedded in the track wins, then a well known image next to it. The ffmpeg
@@ -113,7 +131,9 @@ Singleton {
     // hands it over as a QImage, which Image.source cannot take, so it goes through the image
     // cache first and what the UI points at is the path it was written to.
     readonly property string trackDir: root.currentFile ? root.currentFile.slice(0, root.currentFile.lastIndexOf("/")) : ""
+
     readonly property list<FileSystemEntry> trackImages: trackArt.entries
+
     readonly property string folderCover: {
         const preferred = ["cover", "folder", "front", "album", "albumart", "artwork"];
         const images = root.trackImages;
@@ -123,12 +143,14 @@ Singleton {
                     return images[j].path;
         return "";
     }
+
     readonly property string embeddedCover: {
         const art = root.metaData?.value(MediaMetaData.ThumbnailImage);
         return art ? IUtils.saveImageToCache(art) : "";
     }
     // yt-dlp leaves the downloaded thumbnail beside the track, because opus cannot hold one
     // (its container has no attached picture support, so --embed-thumbnail only converts it)
+
     readonly property string sidecarCover: {
         const dot = root.fileName.lastIndexOf(".");
         const stem = dot > 0 ? root.fileName.slice(0, dot) : root.fileName;
@@ -149,6 +171,7 @@ Singleton {
     }
     readonly property string coverPath: root.embeddedCover || root.sidecarCover || root.folderCover
     // Where the playhead is in the whole context, counting the history as already played
+
     readonly property string queueLabel: root.hasTrack ? `${root.played.length + 1}/${root.played.length + 1 + root.queue.length}` : ""
 
     // Every image under the music folder, so the library gallery can show covers for folders
@@ -172,6 +195,7 @@ Singleton {
         }
         return index;
     }
+
     readonly property var artByTrack: {
         const index = {};
         const images = root.artEntries;
@@ -182,6 +206,7 @@ Singleton {
         }
         return index;
     }
+
     readonly property var tracksByDir: {
         const index = {};
         const tracks = root.library;
@@ -328,7 +353,10 @@ Singleton {
             return;
 
         const at = Math.max(0, Math.min(index, paths.length - 1));
-        const entries = paths.map(path => ({ path: path, origin: "auto" }));
+        const entries = paths.map(path => ({
+                    path: path,
+                    origin: "auto"
+                }));
 
         // Shuffling deals the rest of the context out in a random order, which is the order it
         // plays in and the order the queue view shows. Everything the context put before the
@@ -364,7 +392,10 @@ Singleton {
         if (!paths || paths.length === 0)
             return;
 
-        const added = paths.map(path => ({ path: path, origin: "user" }));
+        const added = paths.map(path => ({
+                    path: path,
+                    origin: "user"
+                }));
         const queued = root.queue;
         let at = 0;
         while (at < queued.length && queued[at].origin === "user")

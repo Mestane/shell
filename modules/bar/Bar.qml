@@ -190,6 +190,7 @@ ColumnLayout {
                 roleValue: "clock"
                 delegate: EntryWrapper {
                     shown: !root.clockHidden
+
                     Clock {
                         objectName: "taskbarClock"
                     }
@@ -243,7 +244,9 @@ ColumnLayout {
         }
 
         onYChanged: middleTimer.restart()
+
         onHeightChanged: middleTimer.restart()
+
         Component.onCompleted: middleTimer.restart()
 
         children: item

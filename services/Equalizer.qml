@@ -152,6 +152,7 @@ Singleton {
     // The chain's playback node, whose output has to be pointed at a real device (see routeOutput)
     readonly property PwNode outputNode: Pipewire.nodes.values.find(n => n.name === root.outputName) ?? null
     // The device the user last picked, while it is plugged in
+
     readonly property PwNode routeTarget: root.sinkByName(root.previousSink)
 
     // Sends the chain's output to the device the user picked. PipeWire would otherwise hand it to whichever real
