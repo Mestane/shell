@@ -13,6 +13,7 @@ import "modules/overview"
 import "modules/lock"
 import QtQuick
 import Quickshell
+import Caelestia
 import qs.services
 
 ShellRoot {
@@ -25,6 +26,9 @@ ShellRoot {
         property: "shellRoot"
         value: root
     }
+
+    // Scales continuous (trackpad) scroll deltas for every scrollable in the shell
+    ScrollGain {}
 
     GSFLoader {}
     ServiceLoader {}

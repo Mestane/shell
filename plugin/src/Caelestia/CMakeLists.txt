@@ -5,6 +5,7 @@ qml_module(caelestia-core
         cutils.cpp
         qalculator.cpp
         requests.cpp
+        scrollgain.cpp
         toaster.cpp
         circularbuffer.cpp
     LIBRARIES
