@@ -161,11 +161,15 @@ StyledRect {
             StyledText {
                 id: activeText
 
+                // The chip exists before any mode has been used. An unset date is not falsy -
+                // it is an invalid Date that reads as true - and formatTime on it gives an empty
+                // string, so the start time is only used once there is a real one
+                readonly property var since: IdleInhibitor.enabledSince
+                readonly property bool hasSince: !isNaN(new Date(since).getTime())
+
                 anchors.centerIn: parent
-                // The chip exists before any mode has been used, and formatTime on the start time
-                // it doesn't have yet throws, so it stays empty until there is a time to show
                 // TRANSLATORS: %1 = a clock time, e.g. 14:30
-                text: IdleInhibitor.enabledSince ? Tr.tr("Active since %1").arg(Qt.formatTime(IdleInhibitor.enabledSince, Units.twelveHourClock ? "hh:mm a" : "hh:mm")) : ""
+                text: hasSince ? Tr.tr("Active since %1").arg(Qt.formatTime(since, Units.twelveHourClock ? "hh:mm a" : "hh:mm")) : ""
                 color: Colours.palette.m3onPrimary
                 font: Tokens.font.body.builders.small.size(Math.round(Tokens.font.body.small.pointSize * 0.9)).build()
             }
