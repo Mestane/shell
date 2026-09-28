@@ -61,9 +61,9 @@ Singleton {
         onTriggered: root.proc.running = true
     }
 
-    // Periodic polling fallback
+    // Slow fallback only: monitor changes arrive as Hyprland events, and every poll starts two hyprctl processes
     Timer {
-        interval: 2000
+        interval: 30000
         running: true
         repeat: true
         onTriggered: root.update()

@@ -24,10 +24,26 @@ int TickingService::updateInterval() const {
     return m_interval;
 }
 
+int TickingService::slowdown() const {
+    return m_slowdown;
+}
+
+void TickingService::setSlowdown(int factor) {
+    factor = qBound(1, factor, 20);
+    if (factor == m_slowdown) {
+        return;
+    }
+    m_slowdown = factor;
+    if (m_running && m_interval > 0) {
+        m_timer->start(m_interval * m_slowdown);
+    }
+    emit slowdownChanged();
+}
+
 void TickingService::start() {
     m_running = true;
     if (m_interval > 0) {
-        m_timer->start(m_interval);
+        m_timer->start(m_interval * m_slowdown);
     }
     tick();
 }
@@ -43,7 +59,7 @@ void TickingService::applyInterval(int ms) {
     }
     m_interval = ms;
     if (m_running) {
-        m_timer->start(m_interval);
+        m_timer->start(m_interval * m_slowdown);
     }
     emit updateIntervalChanged();
 }

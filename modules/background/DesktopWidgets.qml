@@ -356,7 +356,7 @@ Item {
         property real disk
 
         Timer {
-            interval: 3000
+            interval: 3000 * PowerSaving.pollSlowdown
             running: true
             repeat: true
             triggeredOnStart: true
