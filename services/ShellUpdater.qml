@@ -29,6 +29,10 @@ Singleton {
     property list<string> warnings: []
     property bool checked
 
+    // Branches available on origin, offered by the Update page's branch picker
+    property list<string> branches: []
+    property bool branchesLoading
+
     readonly property bool busy: state === "checking" || state === "installing"
 
     function reset(): void {
@@ -60,6 +64,19 @@ Singleton {
         checkProc.found = found;
         checkProc.command = ["bash", script, "check", repoPath, branch];
         checkProc.running = true;
+        fetchBranches();
+    }
+
+    // Refresh the list of branches offered by the Update page's picker
+    function fetchBranches(): void {
+        if (branchesProc.running)
+            return;
+
+        branchesLoading = true;
+        const found = [];
+        branchesProc.found = found;
+        branchesProc.command = ["bash", script, "branches", repoPath];
+        branchesProc.running = true;
     }
 
     // Restart the shell so it loads what was just installed; detached so it survives the shell it is restarting
@@ -102,6 +119,24 @@ Singleton {
             root.commits = found;
             root.checked = true;
             root.state = "idle";
+        }
+    }
+
+    Process {
+        id: branchesProc
+
+        property var found: []
+
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("BRANCH:"))
+                    branchesProc.found.push(line.slice(7));
+            }
+        }
+
+        onExited: (code, status) => {
+            root.branches = branchesProc.found;
+            root.branchesLoading = false;
         }
     }
 
