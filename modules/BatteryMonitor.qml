@@ -277,6 +277,9 @@ Scope {
     }
 
     function toastApplied(title: string, applied: list<string>): void {
+        if (root.reapplying)
+            return;
+
         if (GlobalConfig.utilities.toasts.lowPowerModeChanged && applied.length > 0)
             Toaster.toast(title, Tr.tr("Applied: %1").arg(applied.join(", ")), "battery_saver");
     }
@@ -365,6 +368,9 @@ Scope {
 
     // NOTE(fork): applies the settings for the current plug state once the battery is known,
     // so they hold after a shell restart instead of waiting for the next plug or unplug
+    // True while settings are put back after a config reload, so it doesn't repeat the toasts
+    property bool reapplying
+
     function applyCurrentState(): void {
         if (root.initialised || !root.powerManagementEnabled || !UPower.displayDevice.ready)
             return;
@@ -492,6 +498,28 @@ Scope {
 
         interval: 1500
         onTriggered: root.applyCurrentState()
+    }
+
+    // NOTE(fork): a Hyprland config reload (changing the wallpaper rewrites the colour files it sources) puts the
+    // monitor mode and the effect options back to what the config file says, e.g. 120Hz, so apply them again
+    Connections {
+        function onConfigReloaded(): void {
+            reapplyTimer.restart();
+        }
+
+        target: Hypr
+    }
+
+    Timer {
+        id: reapplyTimer
+
+        interval: 1000
+        onTriggered: {
+            root.reapplying = true;
+            root.initialised = false;
+            root.applyCurrentState();
+            root.reapplying = false;
+        }
     }
 
     Timer {
