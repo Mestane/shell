@@ -134,12 +134,20 @@ Singleton {
 
     readonly property list<FileSystemEntry> trackImages: trackArt.entries
 
+    // A file's name without its extension. FileSystemEntry.baseName cuts at the first dot, so
+    // "Vol. 1 - Song.m4a" and "Vol. 2 - Other.m4a" would both come out as "Vol", and art named
+    // after one track would be matched to the other.
+    function stemOf(name: string): string {
+        const dot = name.lastIndexOf(".");
+        return dot > 0 ? name.slice(0, dot) : name;
+    }
+
     readonly property string folderCover: {
         const preferred = ["cover", "folder", "front", "album", "albumart", "artwork"];
         const images = root.trackImages;
         for (let i = 0; i < preferred.length; i++)
             for (let j = 0; j < images.length; j++)
-                if (images[j].baseName.toLowerCase() === preferred[i])
+                if (root.stemOf(images[j].name).toLowerCase() === preferred[i])
                     return images[j].path;
         return "";
     }
@@ -152,8 +160,7 @@ Singleton {
     // (its container has no attached picture support, so --embed-thumbnail only converts it)
 
     readonly property string sidecarCover: {
-        const dot = root.fileName.lastIndexOf(".");
-        const stem = dot > 0 ? root.fileName.slice(0, dot) : root.fileName;
+        const stem = root.stemOf(root.fileName);
         if (!stem)
             return "";
 
@@ -162,7 +169,7 @@ Singleton {
         let bestSize = -1;
         for (let i = 0; i < images.length; i++) {
             // Both the original yt-dlp saved and the converted one can be there; take the larger
-            if (images[i].baseName !== stem || images[i].size <= bestSize)
+            if (root.stemOf(images[i].name) !== stem || images[i].size <= bestSize)
                 continue;
             best = images[i].path;
             bestSize = images[i].size;
@@ -200,9 +207,31 @@ Singleton {
         const index = {};
         const images = root.artEntries;
         for (let i = 0; i < images.length; i++) {
-            const key = `${images[i].parentDir}/${images[i].baseName}`;
+            const key = `${images[i].parentDir}/${root.stemOf(images[i].name)}`;
             if (!(key in index))
                 index[key] = images[i].path;
+        }
+        return index;
+    }
+
+    // Images that are not the art of one particular track, by folder. A folder of downloads has
+    // one image per song, and taking any of them as "the folder's cover" puts one song's picture
+    // on every track that has none of its own.
+    readonly property var looseArtByDir: {
+        const trackKeys = {};
+        const tracks = root.library;
+        for (let i = 0; i < tracks.length; i++)
+            trackKeys[`${tracks[i].parentDir}/${root.stemOf(tracks[i].name)}`] = true;
+
+        const index = {};
+        const images = root.artEntries;
+        for (let i = 0; i < images.length; i++) {
+            if (`${images[i].parentDir}/${root.stemOf(images[i].name)}` in trackKeys)
+                continue;
+            const dir = images[i].parentDir;
+            if (!(dir in index))
+                index[dir] = [];
+            index[dir].push(images[i]);
         }
         return index;
     }
@@ -220,7 +249,9 @@ Singleton {
     }
 
     // The best cover image inside a folder. A file named after `stem` is the art yt-dlp saved
-    // next to a track and wins over the folder's own cover, matching the now playing view.
+    // next to a track and wins over the folder's own cover, matching the now playing view. The
+    // folder's own cover is an image with a cover-like name, or failing that one that does not
+    // belong to a track.
     function coverFor(dir: string, stem: string): string {
         if (stem) {
             const art = root.artByTrack[`${dir}/${stem}`];
@@ -232,39 +263,44 @@ Singleton {
         const images = root.artByDir[dir] ?? [];
         let best = "";
         let bestRank = preferred.length;
-        let first = "";
         for (let i = 0; i < images.length; i++) {
-            const image = images[i];
-            if (!first)
-                first = image.path;
-
-            const rank = preferred.indexOf(image.baseName.toLowerCase());
+            const rank = preferred.indexOf(root.stemOf(images[i].name).toLowerCase());
             if (rank >= 0 && rank < bestRank) {
                 bestRank = rank;
-                best = image.path;
+                best = images[i].path;
             }
         }
-        return best || first;
+        return best || (root.looseArtByDir[dir]?.[0]?.path ?? "");
     }
 
-    // Covers to show on a folder tile: the folder's own cover, else the covers of its first
-    // tracks, which the gallery lays out as a collage as soon as there are four of them
-    function folderCoversFor(dir: string): var {
-        const own = root.coverFor(dir, "");
-        if (own)
-            return [own];
+    // What a folder tile shows: the folder's own image if it has one, otherwise the first few
+    // tracks anywhere under it, each with the art that sits beside it (the tile asks for the
+    // art inside the file itself, see MusicCovers). Kept per folder for as long as the library
+    // and its art are unchanged.
+    function previewFor(dir: string): var {
+        const key = `dir:${dir}`;
+        let preview = root.rowFacts[key];
+        if (preview !== undefined)
+            return preview;
 
-        const tracks = root.tracksByDir[dir] ?? [];
-        const collage = [];
-        for (let i = 0; i < tracks.length && collage.length < 4; i++) {
-            const art = root.artByTrack[`${dir}/${tracks[i].baseName}`];
-            if (art)
-                collage.push(art);
+        const tracks = [];
+        const prefix = `${dir}/`;
+        const entries = root.library;
+        for (let i = 0; i < entries.length && tracks.length < 4; i++) {
+            if (!entries[i].path.startsWith(prefix))
+                continue;
+            tracks.push({
+                path: entries[i].path,
+                fallback: root.artByTrack[`${entries[i].parentDir}/${root.stemOf(entries[i].name)}`] ?? ""
+            });
         }
 
-        if (collage.length === 0)
-            return [];
-        return collage.length >= 4 ? collage : collage.slice(0, 1);
+        preview = {
+            cover: root.coverFor(dir, ""),
+            tracks: tracks
+        };
+        root.rowFacts[key] = preview;
+        return preview;
     }
 
     // Every track by path, so a queued track - which is only a path - can be shown with the
@@ -302,7 +338,7 @@ Singleton {
             return facts;
 
         facts = {
-            title: MusicTags.titleOf(path) || entry.baseName,
+            title: MusicTags.titleOf(path) || root.stemOf(entry.name),
             artist: MusicTags.artistOf(path),
             cover: root.coverForTrack(entry)
         };
@@ -323,14 +359,11 @@ Singleton {
         return root.factsFor(entry).cover;
     }
 
-    // The one image to show beside a track: the track's own art, then whatever its folder has
+    // The art that sits beside a track on disk: an image named after it, then its folder's
+    // cover. Art inside the file itself is not here, it has to be read (see MusicCovers), and
+    // wins over this wherever it is found.
     function coverForTrack(entry: FileSystemEntry): string {
-        const own = root.coverFor(entry.parentDir, entry.baseName);
-        if (own)
-            return own;
-
-        const covers = root.folderCoversFor(entry.parentDir);
-        return covers.length > 0 ? covers[0] : "";
+        return root.coverFor(entry.parentDir, root.stemOf(entry.name));
     }
 
     // Reads every track's tags. Cheap to call as often as you like: asking for a set of files

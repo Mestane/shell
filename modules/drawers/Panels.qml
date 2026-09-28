@@ -7,6 +7,7 @@ import qs.modules.dashboard as Dashboard
 import qs.modules.launcher as Launcher
 import qs.modules.notch as Notch
 import qs.modules.notifications as Notifications
+import qs.modules.notifpopout as NotifPopout
 import qs.modules.osd as Osd
 import qs.modules.session as Session
 import qs.modules.sidebar as Sidebar
@@ -35,6 +36,7 @@ Item {
     readonly property alias utilities: utilities
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
+    readonly property alias notifPopout: notifPopout
 
     // Which side edge each group of panels opens from. Every panel has its own setting (right by default); with
     // the bar on the right and bar.mirrorPanels on, all of them flip to the opposite side.
@@ -212,5 +214,18 @@ Item {
         anchors.bottom: utilities.top
         anchors.right: parent.right
         anchors.topMargin: root.notifsWithStack && root.notifsTop ? -notifications.anchors.topMargin : 0
+    }
+
+    NotifPopout.Wrapper {
+        id: notifPopout
+
+        LayoutMirroring.enabled: root.notifPopoutLeft
+        LayoutMirroring.childrenInherit: true
+
+        screenState: root.screenState
+
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
     }
 }

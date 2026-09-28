@@ -5,7 +5,6 @@ import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.components.controls
-import qs.components.images
 import qs.services
 
 // NOTE(fork): one row of the media library list, either a folder or a track. The cover stays
@@ -38,7 +37,6 @@ Item {
 
     // The queue view puts section headers through this row too, with none of a song's fields,
     // so everything that reads one of them falls back to an empty value
-    readonly property bool showingCover: (root.item.cover ?? "") !== "" && image.status !== Image.Error
     // Only tracks can be queued, so a folder has nothing to tick
     readonly property bool selectable: root.selecting && root.item.kind === "track"
     // The row's own actions only apply to something that can be played on its own
@@ -83,20 +81,12 @@ Item {
                 radius: Tokens.rounding.small
                 color: Colours.tPalette.m3surfaceContainerHighest
 
-                FadeImage {
-                    id: image
-
+                CoverArt {
                     anchors.fill: parent
-                    visible: root.showingCover
-                    source: root.item.cover ?? ""
-                }
-
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    visible: !root.showingCover
-                    text: root.item.kind === "folder" ? "folder" : "music_note"
-                    color: Colours.palette.m3onSurfaceVariant
-                    fontStyle: Tokens.font.icon.medium
+                    path: root.item.coverPath ?? ""
+                    fallback: root.item.coverFallback ?? ""
+                    fallbackFirst: root.item.kind === "folder"
+                    icon: root.item.kind === "folder" ? "folder" : "music_note"
                 }
             }
 

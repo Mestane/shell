@@ -14,20 +14,21 @@ import qs.services
 // NOTE(fork): the media library. Browsing lists the folders under the music folder, one row
 // per folder or track, and every row carries that entry's cover art beside the name. Searching
 // reads titles, artists and albums over the whole library as well as paths, so an artist brings
-// up everything by them. Lists rather than a cover gallery, since what this mostly gets opened
-// in is the sidebar.
+// up everything by them. Shown as a list or as a grid of cover art, as chosen in the header.
 //
 // Selecting turns taps on tracks into a selection that can be added to the queue in one go,
 // and it survives opening a folder or searching, so a batch can be gathered up from several
 // places before it is queued.
 //
-// The queue button in the header swaps the whole pane over to what has been queued, in the
+// The mode bar at the top swaps the whole pane over to what has been queued, in the
 // order it will play, where songs can be moved around and taken back out.
 StyledClippingRect {
     id: root
 
     // Showing the queue rather than the library
     property bool onQueue
+    // Folders and tracks as a grid of cover art rather than rows
+    property bool gridMode: true
 
     readonly property string query: search.text.trim().toLowerCase()
     readonly property bool searching: root.query.length > 0
@@ -71,7 +72,7 @@ StyledClippingRect {
         return Tr.tr("No music here");
     }
     // Rows whichever list is showing, so the empty state covers both of them
-    readonly property int visibleRows: root.onQueue ? queue.rows.length : list.count
+    readonly property int visibleRows: root.onQueue ? queue.rows.length : root.items.length
 
     // What the list is showing, one plain object per row so the row doesn't have to care
     // whether it is looking at a folder or a track. The tags are only touched when a search
@@ -121,18 +122,23 @@ StyledClippingRect {
             name: Music.titleFor(entry),
             // Where a result lives, when it has no artist to show instead
             subtitle: Music.artistFor(entry) || (root.searching ? root.relativeDirOf(entry) : ""),
-            cover: Music.coverForEntry(entry),
+            coverPath: entry.path,
+            coverFallback: Music.coverForEntry(entry),
             path: entry.path,
             entry: entry
         };
     }
 
     function folderRow(entry: FileSystemEntry): var {
+        const preview = Music.previewFor(entry.path);
         return {
             kind: "folder",
             name: entry.name,
             subtitle: root.countLabel(Music.tracksByDir[entry.path]?.length ?? 0),
-            cover: Music.folderCoversFor(entry.path)[0] ?? "",
+            // The folder's own image, else the art of the first track in it
+            coverPath: preview.tracks[0]?.path ?? "",
+            coverFallback: preview.cover || (preview.tracks[0]?.fallback ?? ""),
+            preview: preview,
             entry: entry
         };
     }
@@ -292,65 +298,34 @@ StyledClippingRect {
         anchors.margins: Tokens.padding.medium
         visible: root.enabled && height > 0
 
-        RowLayout {
-            id: header
+        // Library or queue. The queue is what has been lined up to play, in the order it will,
+        // where songs can be moved around and taken back out.
+        SegmentedBar {
+            id: modeBar
 
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            spacing: Tokens.spacing.extraSmall
 
-            // Browsing only - the queue has no folders to climb out of
-            IconButton {
-                icon: "arrow_upward"
-                type: IconButton.Text
-                visible: !root.onQueue
-                disabled: root.atRoot && !root.searching
-                onClicked: root.goUp()
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                text: root.title
-                color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.body.medium
-                elide: Text.ElideMiddle
-            }
-
-            // Multi-select: tracks collect into a selection instead of playing, so a batch can
-            // be queued up in one go
-            IconButton {
-                icon: "checklist"
-                isToggle: true
-                visible: !root.onQueue
-                checked: root.selecting
-                type: root.selecting ? IconButton.Filled : IconButton.Tonal
-                onClicked: root.selecting = !root.selecting
-            }
-
-            IconButton {
-                icon: "home"
-                type: IconButton.Text
-                visible: !root.onQueue
-                disabled: root.atRoot && !root.searching
-                onClicked: root.goRoot()
-            }
-
-            // What has been queued, in the order it will play, where songs can be moved
-            // around and taken back out
-            IconButton {
-                icon: "queue_music"
-                isToggle: true
-                checked: root.onQueue
-                type: root.onQueue ? IconButton.Filled : IconButton.Tonal
-                onClicked: root.onQueue = !root.onQueue
-            }
+            model: [
+                {
+                    icon: "library_music",
+                    text: Tr.tr("Library")
+                },
+                {
+                    icon: "queue_music",
+                    text: Tr.tr("Queue"),
+                    badge: Music.queue.length
+                }
+            ]
+            currentIndex: root.onQueue ? 1 : 0
+            onActivated: index => root.onQueue = index === 1
         }
 
         SearchBar {
             id: search
 
-            anchors.top: header.bottom
+            anchors.top: modeBar.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.topMargin: Tokens.spacing.small
@@ -366,10 +341,72 @@ StyledClippingRect {
             bottomPadding: Tokens.padding.small
         }
 
+        // Where you are, and the ways of getting around it: home and up on the left, where the
+        // path is, and how the folder is shown and picking songs out of it on the right
+        RowLayout {
+            id: header
+
+            anchors.top: search.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: Tokens.spacing.small
+            spacing: Tokens.spacing.extraSmall
+            visible: !root.onQueue
+
+            IconButton {
+                icon: "home"
+                type: IconButton.Text
+                disabled: root.atRoot && !root.searching
+                onClicked: root.goRoot()
+            }
+
+            IconButton {
+                icon: "arrow_upward"
+                type: IconButton.Text
+                disabled: root.atRoot && !root.searching
+                onClicked: root.goUp()
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: Tokens.spacing.extraSmall
+                text: root.title
+                color: Colours.palette.m3onSurfaceVariant
+                font: Tokens.font.body.medium
+                elide: Text.ElideMiddle
+            }
+
+            SegmentedBar {
+                compact: true
+                segmentHeight: 28
+                model: [
+                    {
+                        icon: "view_list"
+                    },
+                    {
+                        icon: "grid_view"
+                    }
+                ]
+                currentIndex: root.gridMode ? 1 : 0
+                onActivated: index => root.gridMode = index === 1
+            }
+
+            // Multi-select: tracks collect into a selection instead of playing, so a batch can
+            // be queued up in one go
+            IconTextButton {
+                icon: "checklist"
+                text: Tr.tr("Select")
+                isToggle: true
+                checked: root.selecting
+                type: root.selecting ? IconTextButton.Filled : IconTextButton.Tonal
+                onClicked: root.selecting = !root.selecting
+            }
+        }
+
         Item {
             id: viewport
 
-            anchors.top: root.onQueue ? header.bottom : search.bottom
+            anchors.top: root.onQueue ? modeBar.bottom : header.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.topMargin: Tokens.spacing.medium
@@ -386,7 +423,7 @@ StyledClippingRect {
                 anchors.fill: parent
                 // Gutter for the scrollbar, so the rows don't sit under it
                 anchors.rightMargin: Tokens.padding.small
-                visible: !root.onQueue
+                visible: !root.onQueue && !root.gridMode
                 clip: true
                 spacing: Tokens.spacing.extraSmall / 2
 
@@ -394,7 +431,7 @@ StyledClippingRect {
                     flickable: list
                 }
 
-                model: root.items
+                model: root.gridMode ? [] : root.items
 
                 delegate: LibraryRow {
                     required property var modelData
@@ -415,7 +452,52 @@ StyledClippingRect {
                 }
             }
 
-            // The queue, once the header button swaps over to it
+            // The same entries as tiles of cover art. A folder with no picture of its own shows
+            // the first few tracks in it as a collage.
+            GridView {
+                id: grid
+
+                readonly property int columns: Math.max(2, Math.floor(width / 128))
+
+                anchors.fill: parent
+                anchors.rightMargin: Tokens.padding.small
+                visible: !root.onQueue && root.gridMode
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                cellWidth: Math.floor(width / columns)
+                cellHeight: cellWidth + 44
+                model: root.gridMode ? root.items : []
+                reuseItems: true
+
+                StyledScrollBar.vertical: StyledScrollBar {
+                    flickable: grid
+                }
+
+                delegate: Item {
+                    id: cell
+
+                    required property var modelData
+
+                    width: grid.cellWidth
+                    height: grid.cellHeight
+
+                    LibraryTile {
+                        anchors.fill: parent
+                        anchors.margins: Tokens.spacing.extraSmall
+
+                        item: cell.modelData
+                        current: cell.modelData.path === Music.currentFile
+                        playing: cell.modelData.path === Music.currentFile && Music.playing
+                        selecting: root.selecting
+                        selected: root.isSelected(cell.modelData)
+                        onClicked: root.activate(cell.modelData)
+                        onPlayClicked: root.playItem(cell.modelData)
+                        onEnqueueClicked: root.enqueueItem(cell.modelData)
+                    }
+                }
+            }
+
+            // The queue, once the mode bar swaps over to it
             QueueView {
                 id: queue
 

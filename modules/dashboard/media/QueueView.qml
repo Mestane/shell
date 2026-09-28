@@ -152,7 +152,8 @@ StyledListView {
             ordinal: ordinal,
             name: entry ? Music.titleFor(entry) : path.slice(path.lastIndexOf("/") + 1).replace(/\.[^.]+$/, ""),
             subtitle: entry ? Music.artistFor(entry) : "",
-            cover: entry ? Music.coverForEntry(entry) : "",
+            coverPath: path,
+            coverFallback: entry ? Music.coverForEntry(entry) : "",
             current: current,
             playing: current
         };

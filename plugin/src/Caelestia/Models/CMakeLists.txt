@@ -4,6 +4,7 @@ qml_module(caelestia-models
         filesystemmodel.cpp
         appdb.cpp
         musictags.cpp
+        musiccovers.cpp
     LIBRARIES
         Qt::Gui
         Qt::Concurrent
