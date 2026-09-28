@@ -78,7 +78,7 @@ MouseArea {
         b: root.attachTo
     }
 
-    Elevation {
+    Item {
         id: menu
 
         x: {
@@ -98,9 +98,8 @@ MouseArea {
             return item.mapToItem(root.parent, 0, off).y + root.effectiveMarginY;
         }
 
-        radius: Tokens.rounding.large
-        level: 2
-
+        width: implicitWidth
+        height: implicitHeight
         implicitWidth: Math.max(200, column.implicitWidth + column.anchors.margins * 2)
         implicitHeight: column.implicitHeight + column.anchors.margins * 2
 
@@ -113,6 +112,14 @@ MouseArea {
             }
         }
 
+        // Shadow only. Elevation hides itself when shadows are off in Power & battery, so the menu's
+        // own contents sit outside it and keep rendering either way.
+        Elevation {
+            anchors.fill: parent
+            radius: Tokens.rounding.large
+            level: 2
+        }
+
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
@@ -121,7 +128,7 @@ MouseArea {
 
         StyledRect {
             anchors.fill: parent
-            radius: parent.radius
+            radius: Tokens.rounding.large
             color: Colours.palette.m3surfaceContainerLow
 
             ColumnLayout {

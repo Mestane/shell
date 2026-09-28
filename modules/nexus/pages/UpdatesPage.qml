@@ -22,7 +22,10 @@ PageBase {
 
     title: Tr.tr("Updates")
 
-    Component.onCompleted: ShellUpdater.check()
+    Component.onCompleted: {
+        ShellUpdater.check();
+        ShellUpdater.fetchBranches();
+    }
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -285,15 +288,23 @@ PageBase {
 
                 title: Tr.tr("Select the shell's checkout folder")
                 folderMode: true
-                onAccepted: path => GlobalConfig.services.repoPath = path
+                onAccepted: path => {
+                    GlobalConfig.services.repoPath = path;
+                    ShellUpdater.fetchBranches(); // the new checkout has its own branches
+                }
             }
         }
 
-        TextFieldRow {
+        ComboBoxRow {
             last: true
             label: Tr.tr("Branch")
-            subtext: Tr.tr("The origin branch to check and pull")
+            subtext: ShellUpdater.branchesLoading ? Tr.tr("Loading branches...") : Tr.tr("The origin branch to check and pull; pick one or type your own")
             value: GlobalConfig.services.updateBranch
+            placeholderText: "main"
+            suggestions: ShellUpdater.branches
+            suggestionIcon: "call_split"
+            emptyText: ShellUpdater.branchesLoading ? Tr.tr("Loading branches...") : Tr.tr("No branches found")
+            onOpened: ShellUpdater.fetchBranches() // pick up branches pushed since the last check
             onEditingFinished: v => GlobalConfig.services.updateBranch = v.trim() || "main"
         }
     }

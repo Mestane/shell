@@ -4,6 +4,8 @@
 #
 #   shell-update.sh check   REPO BRANCH
 #       Fetches, then prints HEAD:, BRANCH:, DIRTY:, BEHIND: and up to 15 LOG: lines.
+#   shell-update.sh branches REPO
+#       Prints the branches available on origin, one BRANCH: line each, for the update page's picker.
 #   shell-update.sh install REPO BRANCH [stash]
 #       Pulls BRANCH from origin (optionally stashing local changes first and restoring them
 #       afterwards), rebuilds, and installs with pkexec. Prints STEP:, WARN:, ERROR: and DONE.
@@ -36,6 +38,15 @@ check)
     if dirty; then echo "DIRTY:1"; else echo "DIRTY:0"; fi
     echo "BEHIND:$(git rev-list --count "HEAD..origin/$branch" 2>/dev/null || echo 0)"
     git log --format='LOG:%h %s' -15 "HEAD..origin/$branch" 2>/dev/null
+    ;;
+branches)
+    # List the branches on origin, one BRANCH: line each. Ask the remote directly so newly pushed
+    # branches show up, and fall back to what the last fetch left behind when it cannot be reached.
+    if remotes=$(timeout 25 git ls-remote --heads origin 2>/dev/null) && [[ -n "$remotes" ]]; then
+        printf '%s\n' "$remotes" | sed -n 's|.*refs/heads/|BRANCH:|p'
+    else
+        git branch -r --format='%(refname:short)' 2>/dev/null | sed -n 's|^origin/||p' | grep -vx 'HEAD' | sed 's|^|BRANCH:|' || true
+    fi
     ;;
 install)
     stashed=0
