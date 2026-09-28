@@ -3,7 +3,9 @@
 # shell-update.sh - backend for the shell's Update page. Prints machine-readable lines.
 #
 #   shell-update.sh check   REPO BRANCH
-#       Fetches, then prints HEAD:, BRANCH:, DIRTY:, BEHIND: and up to 15 LOG: lines.
+#       Fetches, then prints HEAD:, BRANCH:, DIRTY:, BEHIND:, CURRENT:, LATEST: and up to 15 LOG: lines.
+#       CURRENT: and LATEST: are the commit dates of this checkout and of origin/BRANCH, which the
+#       Update page shows as the age of this build and of the newest one available.
 #   shell-update.sh branches REPO
 #       Prints the branches available on origin, one BRANCH: line each, for the update page's picker.
 #   shell-update.sh install REPO BRANCH [stash]
@@ -37,6 +39,8 @@ check)
     echo "BRANCH:$(git rev-parse --abbrev-ref HEAD)"
     if dirty; then echo "DIRTY:1"; else echo "DIRTY:0"; fi
     echo "BEHIND:$(git rev-list --count "HEAD..origin/$branch" 2>/dev/null || echo 0)"
+    echo "CURRENT:$(git log -1 --format=%cI HEAD 2>/dev/null)"
+    echo "LATEST:$(git log -1 --format=%cI "origin/$branch" 2>/dev/null)"
     git log --format='LOG:%h %s' -15 "HEAD..origin/$branch" 2>/dev/null
     ;;
 branches)

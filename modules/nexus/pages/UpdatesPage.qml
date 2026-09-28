@@ -20,6 +20,18 @@ PageBase {
 
     readonly property bool upToDate: ShellUpdater.checked && ShellUpdater.behind === 0
 
+    // The backend reports commit dates as ISO strings; show them as a plain local date
+    function formatDate(iso: string): string {
+        if (!iso)
+            return "";
+
+        const date = new Date(iso);
+        if (isNaN(date.getTime()))
+            return "";
+
+        return date.toLocaleDateString(Qt.locale(), "d MMM yyyy");
+    }
+
     title: Tr.tr("Updates")
 
     Component.onCompleted: {
@@ -111,6 +123,25 @@ PageBase {
                     }
                 }
             }
+        }
+
+        // How old this build is next to the newest update on the tracked branch
+        SectionHeader {
+            text: Tr.tr("Update dates")
+        }
+
+        InfoRow {
+            first: true
+            label: Tr.tr("Current update")
+            subtext: Tr.tr("The commit this build is on")
+            value: root.formatDate(ShellUpdater.currentDate) || "…"
+        }
+
+        InfoRow {
+            last: true
+            label: Tr.tr("Most recent update")
+            subtext: Tr.tr("The newest commit on %1").arg(ShellUpdater.branch)
+            value: root.formatDate(ShellUpdater.latestDate) || "…"
         }
 
         // Uncommitted changes: let the user choose

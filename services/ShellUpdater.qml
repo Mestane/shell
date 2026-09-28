@@ -22,6 +22,10 @@ Singleton {
     property string currentStep
     property string head
     property string localBranch
+    // Commit dates as ISO strings: the commit this checkout is on, and the newest one on the tracked
+    // branch. Shown by the Update page as the age of this build against the newest one available.
+    property string currentDate
+    property string latestDate
     property bool dirty
     property int behind
     property list<string> commits: []
@@ -98,6 +102,10 @@ Singleton {
                     root.head = value;
                 else if (key === "BRANCH")
                     root.localBranch = value;
+                else if (key === "CURRENT")
+                    root.currentDate = value;
+                else if (key === "LATEST")
+                    root.latestDate = value;
                 else if (key === "DIRTY")
                     root.dirty = value === "1";
                 else if (key === "BEHIND")
