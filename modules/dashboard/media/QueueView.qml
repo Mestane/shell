@@ -40,6 +40,9 @@ StyledListView {
     property string dragSection: ""
     property var dragIndices: []
     readonly property bool reordering: root.dragOrdinal >= 0
+    // Set when the queue comes on screen before its rows exist, so the first row to be found
+    // for the song playing gets it centred
+    property bool centrePending
 
     // Every song row is the same height, which is what lets a drag work out how far it has
     // been moved and where it would land
@@ -210,16 +213,38 @@ StyledListView {
         return 0;
     }
 
+    // Puts the song that is playing in the middle of the view. Deferred a moment, since the rows
+    // are built (and given their heights) only once the queue is on screen.
+    function centreCurrent(): void {
+        Qt.callLater(() => {
+            if (root.currentRow >= 0)
+                root.positionViewAtIndex(root.currentRow, ListView.Center);
+        });
+    }
+
     // Keeps the song that is playing in sight as the queue moves on: the history above it
-    // grows as songs finish, which would otherwise push it off the bottom
+    // grows as songs finish, which would otherwise push it off the bottom. Coming up on screen
+    // it is centred instead, and that has to wait for the rows, which appear a beat after.
     onCurrentRowChanged: {
-        if (root.currentRow >= 0)
+        if (root.currentRow < 0)
+            return;
+
+        if (root.centrePending) {
+            root.centrePending = false;
+            root.centreCurrent();
+        } else {
             root.positionViewAtIndex(root.currentRow, ListView.Contain);
+        }
     }
 
     onVisibleChanged: {
-        if (visible && root.currentRow >= 0)
-            root.positionViewAtIndex(root.currentRow, ListView.Contain);
+        if (!root.visible)
+            return;
+
+        if (root.currentRow >= 0)
+            root.centreCurrent();
+        else
+            root.centrePending = true;
     }
 
     clip: true
