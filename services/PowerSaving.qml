@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.UPower
 import Caelestia.Config
+import Caelestia.Services
 
 // Shell features to pause while the Power Saver profile is active, so battery saver saves more
 // than the CPU governor does. Controlled from Power & battery > Power Saver.
@@ -30,6 +31,15 @@ Singleton {
     // it drops to 15.
     readonly property int fps: onBattery ? 15 : 30
     readonly property int frameMs: Math.round(1000 / fps)
+
+    // How many times slower the system readings (CPU, memory, disk, GPU, network) are polled on battery
+    readonly property int pollSlowdown: onBattery ? 3 : 1
+
+    Binding { target: Cpu; property: "slowdown"; value: root.pollSlowdown }
+    Binding { target: Memory; property: "slowdown"; value: root.pollSlowdown }
+    Binding { target: Storage; property: "slowdown"; value: root.pollSlowdown }
+    Binding { target: Gpu; property: "slowdown"; value: root.pollSlowdown }
+    Binding { target: NetworkUsage; property: "slowdown"; value: root.pollSlowdown }
 
     property bool animations: true
     property bool blur: true
