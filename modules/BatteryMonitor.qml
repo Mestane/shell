@@ -277,9 +277,6 @@ Scope {
     }
 
     function toastApplied(title: string, applied: list<string>): void {
-        if (root.reapplying)
-            return;
-
         if (GlobalConfig.utilities.toasts.lowPowerModeChanged && applied.length > 0)
             Toaster.toast(title, Tr.tr("Applied: %1").arg(applied.join(", ")), "battery_saver");
     }
@@ -368,8 +365,27 @@ Scope {
 
     // NOTE(fork): applies the settings for the current plug state once the battery is known,
     // so they hold after a shell restart instead of waiting for the next plug or unplug
-    // True while settings are put back after a config reload, so it doesn't repeat the toasts
-    property bool reapplying
+    // NOTE(fork): puts back what is already in force (the current profile's behaviour, then the active battery
+    // threshold on top) after Hyprland resets it. It never changes the power profile and shows no toasts.
+    function reapplyCurrent(): void {
+        if (!root.powerManagementEnabled)
+            return;
+
+        const behaviour = root.behaviourFor(PowerProfiles.profile);
+        if (behaviour) {
+            root.applyActions({
+                setPowerProfile: "",
+                setRefreshRate: behaviour.setRefreshRate,
+                disableAnimations: behaviour.disableAnimations,
+                disableBlur: behaviour.disableBlur,
+                disableRounding: behaviour.disableRounding,
+                disableShadows: behaviour.disableShadows
+            }, -1);
+        }
+
+        if (UPower.onBattery && root.currentThresholdIndex >= 0)
+            root.applyActions(root.powerThresholds[root.currentThresholdIndex], -1);
+    }
 
     function applyCurrentState(): void {
         if (root.initialised || !root.powerManagementEnabled || !UPower.displayDevice.ready)
@@ -514,12 +530,7 @@ Scope {
         id: reapplyTimer
 
         interval: 1000
-        onTriggered: {
-            root.reapplying = true;
-            root.initialised = false;
-            root.applyCurrentState();
-            root.reapplying = false;
-        }
+        onTriggered: root.reapplyCurrent()
     }
 
     Timer {
