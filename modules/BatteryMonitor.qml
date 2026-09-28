@@ -151,6 +151,10 @@ Scope {
             if (!data)
                 continue;
 
+            // Already there: a mode change makes the screen flash, so leave it alone
+            if (Math.abs((data.refreshRate ?? 0) - Number(targetRate)) < 0.5)
+                continue;
+
             // NOTE(fork): lua Hyprland removed "keyword monitor"; use hl.monitor() there
             if (Hypr.usingLua)
                 Hypr.extras.message(`eval hl.monitor({ output = "${data.name}", mode = "${data.width}x${data.height}@${targetRate}", position = "${data.x}x${data.y}", scale = ${data.scale} });`);
@@ -392,10 +396,17 @@ Scope {
             return;
 
         root.initialised = true;
-        if (UPower.onBattery)
-            root.handleUnpluggedState(true);
-        else
-            root.handleChargingState(true);
+
+        // NOTE(fork): a restart must not override the profile the user picked, so the plug-state actions (which
+        // switch profile) only run on a real plug or unplug. Here the current profile's settings are put back.
+        if (UPower.onBattery) {
+            if (!root.settingsModified)
+                root.saveOriginalSettings();
+            root.settingsModified = true;
+            root.currentThresholdIndex = -1;
+        }
+        root.reapplyCurrent();
+        root.evaluateThresholds();
     }
 
     onPowerManagementEnabledChanged: {
