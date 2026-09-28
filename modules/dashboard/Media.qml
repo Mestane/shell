@@ -221,7 +221,6 @@ Item {
                             id: noMedia
 
                             anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: -Tokens.padding.extraLarge * 2
                             asynchronous: true
                             active: opacity > 0
                             opacity: 0
