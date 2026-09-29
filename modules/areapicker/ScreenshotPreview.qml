@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -10,6 +11,7 @@ import Caelestia.I18n
 import qs.components
 import qs.components.containers
 import qs.components.controls
+import qs.components.effects
 import qs.services
 import qs.utils
 
@@ -26,9 +28,6 @@ StyledWindow {
     readonly property int timeout: 3000
     // The bar owns the left edge, so the preview sits to the right of it.
     readonly property int barWidth: ShellState.componentsFor(root.screen)?.bar?.insetLeft ?? 0
-    // Match the outline Hyprland draws around client windows, using the theme's
-    // primary colour so the preview reads as another window rather than a panel.
-    readonly property int borderWidth: Hypr.options["general:border_size"] ?? 2
     // Local path of the capture being previewed, empty while the preview is idle.
     property string capturePath
     // Where the save button writes its copy of the capture to.
@@ -42,6 +41,7 @@ StyledWindow {
         root.capturePath = path;
         root.visible = true;
         timer.restart();
+        enterAnim.restart();
     }
 
     // Put the preview away and clear the capture's temporary file.
@@ -124,84 +124,162 @@ StyledWindow {
         }
     }
 
-    StyledClippingRect {
+    // Grows the card out of the corner it sits in rather than popping it into place.
+    ParallelAnimation {
+        id: enterAnim
+
+        Anim {
+            target: card
+            property: "opacity"
+            from: 0
+            to: 1
+            type: Anim.DefaultEffects
+        }
+        Anim {
+            target: card
+            property: "scale"
+            from: 0.92
+            to: 1
+            type: Anim.SlowEffects
+        }
+    }
+
+    StyledRect {
         id: card
 
         // Gap kept from the bar and the screen edges.
         readonly property int edgeMargin: Tokens.padding.large
-        // Padding between the frame and the capture, so the frame reads as a box.
-        readonly property int framePadding: Tokens.padding.medium
+        // Padding between the card edge and everything inside it.
+        readonly property int padding: Tokens.padding.medium
+        // Gap between the capture and the footer.
+        readonly property int gap: Tokens.spacing.small
         // Captures are usually screen sized, so keep the preview a thumbnail.
-        readonly property real maxWidth: Math.round((root.screen?.width ?? 0) / 5)
-        readonly property real maxHeight: Math.round((root.screen?.height ?? 0) / 5)
+        readonly property real maxImageWidth: Math.max(1, Math.round((root.screen?.width ?? 0) / 5) - padding * 2)
+        readonly property real maxImageHeight: Math.max(1, Math.round((root.screen?.height ?? 0) / 5) - padding * 2)
+
+        anchors.fill: parent
+        transformOrigin: Item.BottomLeft
+        opacity: 0
+        scale: 0.92
 
         color: Colours.tPalette.m3surfaceContainer
         radius: Tokens.rounding.extraLarge
+        // A hairline rather than an outline in the theme's primary colour: this is a
+        // floating panel like a toast or a menu, not another window on the desktop.
+        border.width: 1
+        border.color: Qt.alpha(Colours.palette.m3outlineVariant, 0.6)
 
-        border.width: root.borderWidth
-        border.color: Colours.palette.m3primary
-        implicitWidth: Math.max(img.width, buttons.implicitWidth) + framePadding * 2
-        implicitHeight: img.height + buttons.implicitHeight + framePadding * 3
-        anchors.fill: parent
+        implicitWidth: Math.max(captureImage.implicitWidth, footer.implicitWidth) + padding * 2
+        implicitHeight: captureImage.implicitHeight + footer.implicitHeight + padding * 2 + gap
 
         Behavior on border.color {
             CAnim {}
         }
 
-        Image {
-            id: img
+        // Lifts the card off whatever is behind it, matching the toasts and menus.
+        Elevation {
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
+            opacity: parent.opacity
+            level: 3
+        }
 
-            // The image is sized to the capture's own aspect ratio and never blown up
-            // past the bounds of the thumbnail, so a small capture previews small.
-            readonly property real previewScale: implicitWidth > 0 && implicitHeight > 0 ? Math.min(1, card.maxWidth / implicitWidth, card.maxHeight / implicitHeight) : 1
+        StyledClippingRect {
+            id: captureImage
 
-            // Bound the decoded size so a full screen capture isn't decoded at full
-            // resolution only to be shown as a thumbnail.
-            sourceSize: Qt.size(card.maxWidth * 2, card.maxHeight * 2)
-            width: Math.round(implicitWidth * previewScale)
-            height: Math.round(implicitHeight * previewScale)
             anchors.top: parent.top
-            anchors.topMargin: card.framePadding
+            anchors.topMargin: card.padding
             anchors.horizontalCenter: parent.horizontalCenter
-            asynchronous: true
-            fillMode: Image.PreserveAspectFit
-            source: root.capturePath ? Qt.resolvedUrl(root.capturePath) : ""
 
-            HoverHandler {
-                cursorShape: Qt.PointingHandCursor
+            implicitWidth: img.width
+            implicitHeight: img.height
+            // Clipped to a smaller radius than the card so the two nest properly,
+            // and so the capture doesn't keep the square corners it was taken with.
+            radius: Tokens.rounding.large
+            color: Colours.tPalette.m3surfaceContainerHigh
+
+            Image {
+                id: img
+
+                // The image is sized to the capture's own aspect ratio and never blown up
+                // past the bounds of the thumbnail, so a small capture previews small.
+                readonly property real previewScale: implicitWidth > 0 && implicitHeight > 0 ? Math.min(1, card.maxImageWidth / implicitWidth, card.maxImageHeight / implicitHeight) : 1
+
+                // Bound the decoded size so a full screen capture isn't decoded at full
+                // resolution only to be shown as a thumbnail.
+                sourceSize: Qt.size(card.maxImageWidth * 2, card.maxImageHeight * 2)
+                width: Math.round(implicitWidth * previewScale)
+                height: Math.round(implicitHeight * previewScale)
+                anchors.centerIn: parent
+                asynchronous: true
+                fillMode: Image.PreserveAspectFit
+                source: root.capturePath ? Qt.resolvedUrl(root.capturePath) : ""
             }
 
-            TapHandler {
-                onTapped: root.edit()
+            // Tapping the capture opens it in the editor, the same as the edit button.
+            StateLayer {
+                onClicked: root.edit()
             }
         }
 
-        Row {
-            id: buttons
+        RowLayout {
+            id: footer
 
-            spacing: Tokens.spacing.small
+            anchors.left: parent.left
             anchors.right: parent.right
-            anchors.rightMargin: card.framePadding
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: card.framePadding
+            anchors.margins: card.padding
+            spacing: Tokens.spacing.small
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Tokens.spacing.small
+
+                MaterialIcon {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: "screenshot_monitor"
+                    color: Colours.palette.m3primary
+                    fontStyle: Tokens.font.icon.small
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: Tr.tr("Screenshot")
+                        font: Tokens.font.title.small
+                        elide: Text.ElideRight
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: Tr.tr("Click to edit")
+                        color: Colours.palette.m3onSurfaceVariant
+                        font: Tokens.font.label.small
+                        elide: Text.ElideRight
+                    }
+                }
+            }
 
             // Opens the capture in the editor, leaving the temporary file to it.
             IconButton {
-                id: editButton
-
+                Layout.alignment: Qt.AlignVCenter
                 icon: "edit"
                 type: IconButton.Tonal
-                radius: Tokens.rounding.full
+                isRound: true
                 radiusMorph: false
                 onClicked: root.edit()
             }
 
             IconButton {
-                id: saveButton
-
+                Layout.alignment: Qt.AlignVCenter
                 icon: "save"
                 type: IconButton.Filled
-                radius: Tokens.rounding.full
+                isRound: true
                 radiusMorph: false
                 onClicked: root.saveToDesktop()
             }
