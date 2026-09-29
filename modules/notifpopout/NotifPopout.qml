@@ -1,25 +1,28 @@
 import Quickshell.Io
 import qs.services
 
-// Notification popout opened by a 4-finger swipe (see the Hyprland gestures). The panel itself is part of
-// the drawers window (see Wrapper.qml); this is only its IPC entry point.
+// `qs -c caelestia ipc call notifPopout open|close|toggle` - kept as its own target for anyone
+// already using it (the 4-finger swipe uses the same shortcuts), but notifications, the media
+// library and the to-do list are tabs of the sidebar's own top card now (see
+// modules/sidebar/Content.qml, modules/notifpopout/Content.qml), not a panel of their own, so
+// this just points at the sidebar itself.
 IpcHandler {
     function open(): void {
         const state = ShellState.forActive();
         if (state)
-            state.notifPopout = true;
+            state.sidebar = true;
     }
 
     function close(): void {
         const state = ShellState.forActive();
         if (state)
-            state.notifPopout = false;
+            state.sidebar = false;
     }
 
     function toggle(): void {
         const state = ShellState.forActive();
         if (state)
-            state.notifPopout = !state.notifPopout;
+            state.sidebar = !state.sidebar;
     }
 
     target: "notifPopout"

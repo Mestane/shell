@@ -85,11 +85,13 @@ Scope {
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
+        // Notifications, the media library and the to-do list are tabs of the sidebar's own top
+        // card (see modules/sidebar/Content.qml) rather than a separate popout
         name: "notifPopoutOpen"
-        description: "Open the notification popout"
+        description: "Open the sidebar"
         onPressed: {
             if (!root.hasFullscreen)
-                ShellState.forActive().notifPopout = true;
+                ShellState.forActive().sidebar = true;
         }
     }
 
@@ -97,25 +99,24 @@ Scope {
     CustomShortcut {
         // qmllint enable unresolved-type
         name: "notifPopoutClose"
-        description: "Close the notification popout"
+        description: "Close the sidebar"
         onPressed: {
             const screenState = ShellState.forActive();
             // With the overview up the same swipe turns its page instead
             if (screenState.overview)
                 screenState.overviewPageRequested(-1);
             else
-                screenState.notifPopout = false;
+                screenState.sidebar = false;
         }
     }
 
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
-        // What the popout's left swipe does: opening it the first time, then moving
-        // between its tabs on every swipe after that, since a gesture can only carry
-        // one action
+        // What the sidebar's left swipe does: opening it the first time, then moving between its
+        // tabs on every swipe after that, since a gesture can only carry one action
         name: "notifPopoutOpenOrNextTab"
-        description: "Open the notification popout, or switch it to its next tab"
+        description: "Open the sidebar, or switch its tab"
         onPressed: {
             const screenState = ShellState.forActive();
             if (screenState.overview) {
@@ -123,13 +124,13 @@ Scope {
                 return;
             }
 
-            if (!screenState.notifPopout) {
-                screenState.notifPopout = true;
+            if (!screenState.sidebar) {
+                screenState.sidebar = true;
                 return;
             }
 
-            // Notifications and the media library, so the next tab is the other one
-            screenState.notifPopoutTab = screenState.notifPopoutTab === 0 ? 1 : 0;
+            // Notifications, the media library, then the to-do list, then back to the first
+            screenState.notifPopoutTab = (screenState.notifPopoutTab + 1) % 3;
         }
     }
 
@@ -162,6 +163,26 @@ Scope {
             if (!screenState.overview && root.hasFullscreen)
                 return;
             screenState.overview = !screenState.overview;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        // The to-do list is the sidebar's third tab rather than a panel of its own
+        name: "todoPopout"
+        description: "Toggle the to-do list"
+        onPressed: {
+            const screenState = ShellState.forActive();
+            const isTodoOpen = screenState.sidebar && screenState.notifPopoutTab === 2;
+            if (isTodoOpen) {
+                screenState.sidebar = false;
+            } else {
+                if (root.hasFullscreen)
+                    return;
+                screenState.notifPopoutTab = 2;
+                screenState.sidebar = true;
+            }
         }
     }
 

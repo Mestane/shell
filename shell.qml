@@ -10,6 +10,7 @@ import "modules/background"
 import "modules/areapicker"
 import "modules/notifpopout"
 import "modules/overview"
+import "modules/todopopout"
 import "modules/lock"
 import QtQuick
 import Quickshell
@@ -38,6 +39,7 @@ ShellRoot {
     AreaPicker {}
     NotifPopout {}
     Overview {}
+    TodoPopout {}
     Lock {
         id: lock
     }

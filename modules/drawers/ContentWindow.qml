@@ -90,7 +90,6 @@ StyledWindow {
     }
 
     onHasFullscreenChanged: {
-        screenState.notifPopout = false;
         screenState.launcher = false;
         screenState.session = false;
         screenState.dashboard = false;
@@ -100,8 +99,9 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
-    // The popout's library tab has a search field, so it takes the keyboard while that tab is up
-    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session || (screenState.notifPopout && screenState.notifPopoutTab === 1) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // The sidebar's library tab has a search field, and its to-do tab has add-task and
+    // scheduling fields, so it takes the keyboard while either is up
+    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session || (screenState.sidebar && screenState.notifPopoutTab !== 0) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -166,7 +166,7 @@ StyledWindow {
         active: {
             const s = root.screenState;
             const conf = root.contentItem.Config;
-            if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled) || s.notifPopout)
+            if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
                 return true;
             if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
                 return true;
@@ -179,7 +179,6 @@ StyledWindow {
             root.screenState.launcher = false;
             root.screenState.session = false;
             root.screenState.sidebar = false;
-            root.screenState.notifPopout = false;
             root.screenState.dashboard = false;
             panels.popouts.hasCurrent = false;
             bar.closeTray();
@@ -304,14 +303,6 @@ StyledWindow {
         }
 
         PanelBg {
-            id: notifPopoutBg
-
-            panel: panels.notifPopout
-            deformAmount: 0.03
-            implicitWidth: panels.notifPopout.offsetScale < 0.999 ? panel.width : 0
-        }
-
-        PanelBg {
             id: osdBg
 
             panel: panels.osdWrapper
@@ -411,9 +402,6 @@ StyledWindow {
             }
             sidebar.transform: Matrix4x4 {
                 matrix: sidebarBg.deformMatrix
-            }
-            notifPopout.transform: Matrix4x4 {
-                matrix: notifPopoutBg.deformMatrix
             }
             osd.transform: Matrix4x4 {
                 matrix: osdBg.deformMatrix

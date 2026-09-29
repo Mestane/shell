@@ -32,9 +32,9 @@ Item {
     property string detachedMode
     property string queuedMode
 
-    // The notification / music popout is up: it covers the corner these hang into, so they stay
-    // shut rather than opening over it
-    readonly property bool blocked: ShellState.forScreen(root.screen)?.notifPopout ?? false
+    // The sidebar is up: it covers the corner these hang into, so they stay shut rather than
+    // opening over it
+    readonly property bool blocked: ShellState.forScreen(root.screen)?.sidebar ?? false
 
     // Dummy object so Tokens attached prop resolves to global config
     // Anim configs are not per-monitor
