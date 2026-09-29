@@ -12,6 +12,8 @@ QtObject {
     property int currentPageIdx
     property list<int> subPageIdxStack
     property bool searchOpen
+    // The text in the search field, so NavLocations can filter by it
+    property string searchQuery
 
     property string selectedWallpaperCategory
     property BluetoothDevice selectedBtDevice

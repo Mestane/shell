@@ -34,10 +34,20 @@ ColumnLayout {
             CAnim {}
         }
 
+        // Drawn above the list, so it stays a glass header rather than getting hidden
+        // behind items that scroll up past it
+        z: 1
+
         Binding {
             target: root.nState
             property: "searchOpen"
             value: searchField.text.length > 0
+        }
+
+        Binding {
+            target: root.nState
+            property: "searchQuery"
+            value: searchField.text
         }
     }
 
@@ -48,4 +58,5 @@ ColumnLayout {
         Layout.bottomMargin: -bottomMargin
         nState: root.nState
     }
+
 }

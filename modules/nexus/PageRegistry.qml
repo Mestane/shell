@@ -67,7 +67,9 @@ QtObject {
             label: Tr.tr("Network"),
             icon: "wifi",
             description: Tr.tr("Wi-Fi, ethernet, VPN"),
-            category: "connectivity"
+            category: "connectivity",
+            // Not shown anywhere, just extra words the search matches this page on
+            keywords: "tiktok"
         },
         {
             key: "bluetooth",
