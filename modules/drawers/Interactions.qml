@@ -23,27 +23,47 @@ CustomMouseArea {
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
 
-    // Top-left hot corner, opens the window overview (see the overview module)
-    readonly property bool overviewHotCorner: Config.overview.enabled && Config.overview.hotCorner && !fullscreen
-    readonly property int hotCornerSize: GlobalConfig.overview.hotCornerSize
-    property bool inHotCorner
+    // Hot corners: each corner of the screen can be given a panel to open when the pointer comes to
+    // rest in it (set in settings, under Panels)
+    readonly property int hotCornerSize: GlobalConfig.hotCorners.size
+    // What the corner the pointer is resting in is set to open, or None while it is in none of them
+    property int armedAction: HotCornerAction.None
+    // Set when a corner pulls the sidebar out, so it slides back in once the pointer leaves it, the
+    // same way it does when Config.sidebar.showOnHover is on
+    property bool sidebarCornerActive
+
+    // The panel a point in a corner is set to open, or None if it is in no corner, the shell is
+    // showing a fullscreen window, or the panel the corner names is switched off
+    function cornerAction(x: real, y: real): int {
+        if (fullscreen)
+            return HotCornerAction.None;
+
+        const size = root.hotCornerSize;
+        const left = x <= size;
+        const right = x >= width - size;
+        const top = y <= size;
+        if ((!left && !right) || (!top && y < height - size))
+            return HotCornerAction.None;
+
+        const action = top ? (left ? Config.hotCorners.topLeft : Config.hotCorners.topRight) : left ? Config.hotCorners.bottomLeft : Config.hotCorners.bottomRight;
+        if (action === HotCornerAction.Overview && !Config.overview.enabled)
+            return HotCornerAction.None;
+        if (action === HotCornerAction.Sidebar && !Config.sidebar.enabled)
+            return HotCornerAction.None;
+
+        return action;
+    }
 
     function updateHotCorner(x: real, y: real): void {
-        if (!root.overviewHotCorner) {
-            root.inHotCorner = false;
+        const action = root.cornerAction(x, y);
+        if (action === root.armedAction)
+            return;
+
+        root.armedAction = action;
+        if (action === HotCornerAction.None)
             hotCornerTimer.stop();
-            return;
-        }
-
-        const inCorner = x <= root.hotCornerSize && y <= root.hotCornerSize;
-        if (inCorner === root.inHotCorner)
-            return;
-
-        root.inHotCorner = inCorner;
-        if (inCorner)
-            hotCornerTimer.restart();
         else
-            hotCornerTimer.stop();
+            hotCornerTimer.restart();
     }
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
@@ -144,14 +164,19 @@ CustomMouseArea {
         }
     }
 
-    // Short dwell so brushing past the corner doesn't open the overview
+    // Short dwell, so brushing past a corner doesn't open anything. Stopped again as soon as the
+    // pointer leaves, which is what `armedAction` being reset to None stands for
     Timer {
         id: hotCornerTimer
 
         interval: 150
         onTriggered: {
-            if (root.inHotCorner)
+            if (root.armedAction === HotCornerAction.Overview)
                 root.screenState.overview = true;
+            else if (root.armedAction === HotCornerAction.Sidebar) {
+                root.sidebarCornerActive = true;
+                root.screenState.sidebar = true;
+            }
         }
     }
 
@@ -165,7 +190,7 @@ CustomMouseArea {
 
     onContainsMouseChanged: {
         if (!containsMouse) {
-            root.inHotCorner = false;
+            root.armedAction = HotCornerAction.None;
             hotCornerTimer.stop();
 
             // Only hide if not activated by shortcut
@@ -188,7 +213,9 @@ CustomMouseArea {
             if (Config.bar.showOnHover)
                 bar.isHovered = false;
 
-            if (Config.sidebar.showOnHover)
+            // A corner that pulled the sidebar out lets it go again the same way, as once the pointer is
+            // off the drawer window no further movement reaches this area
+            if (Config.sidebar.showOnHover || root.sidebarCornerActive)
                 screenState.sidebar = false;
         }
     }
@@ -284,8 +311,8 @@ CustomMouseArea {
                     screenState.session = false;
             }
 
-            // Show/hide sidebar on hover
-            if (Config.sidebar.showOnHover && !pressed) {
+            // Show/hide sidebar on hover, or once a hot corner has pulled it out
+            if ((Config.sidebar.showOnHover || root.sidebarCornerActive) && !pressed) {
                 const sidebarTriggerY = Math.max(Config.sidebar.minHoverThreshold, panels.notifsWithStack && panels.notifsTop ? panels.notifications.y + panels.notifications.height + borderThickness : 0);
                 const showSidebarHover = atSideEdge(x, panels.sidebar, panels.stackLeft) && y <= sidebarTriggerY;
                 if (showSidebarHover && !screenState.sidebar) {
@@ -402,6 +429,12 @@ CustomMouseArea {
                 // OSD hidden, clear shortcut flag
                 root.osdShortcutActive = false;
             }
+        }
+
+        function onSidebarChanged() {
+            // Nothing left for the corner to retract once the sidebar is closed some other way
+            if (!root.screenState.sidebar)
+                root.sidebarCornerActive = false;
         }
 
         function onUtilitiesChanged() {

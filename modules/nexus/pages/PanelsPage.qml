@@ -1,12 +1,31 @@
+import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
+import qs.components.controls
 import qs.modules.nexus.common
 
 // Sub-page numbers (openSubPage) refer to the order of the components in PageCompRegistry's Panels stack, so the
 // rows below can be arranged freely without renumbering anything.
 PageBase {
     id: root
+
+    // What a hot corner can be set to open, ordered to match config::HotCornerAction (None, Overview,
+    // Sidebar). A corner opens one panel at most, so this is a choice rather than a set of toggles
+    readonly property list<MenuItem> cornerItems: [
+        MenuItem {
+            text: Tr.trCtx("Nothing", "hot corner action")
+            icon: "block"
+        },
+        MenuItem {
+            text: Tr.trCtx("Overview", "hot corner action")
+            icon: "grid_view"
+        },
+        MenuItem {
+            text: Tr.trCtx("Sidebar", "hot corner action")
+            icon: "dock_to_right"
+        }
+    ]
 
     title: Tr.tr("Panels")
 
@@ -71,6 +90,66 @@ PageBase {
             text: Tr.tr("Overview")
             subtext: Config.overview.enabled ? Tr.trCtx("Enabled", "panel status") : Tr.trCtx("Disabled", "panel status")
             onClicked: root.nState.openSubPage(12)
+        }
+
+        // Screen corners
+        SectionHeader {
+            text: Tr.tr("Hot corners")
+        }
+
+        // The section sits well down a long page, and with the menus preferring the side with no room
+        // they flip back and forth chasing their own height, so above is pinned as the preference here
+        // the way the last row of the services page does
+        SelectRow {
+            first: true
+            label: Tr.tr("Top left")
+            subtext: Tr.tr("Hold the pointer in the top-left corner of the screen")
+            menuOnTop: true
+            fallbackIcon: "north_west"
+            menuItems: root.cornerItems
+            active: root.cornerItems[Config.hotCorners.topLeft]
+            onSelected: item => GlobalConfig.hotCorners.topLeft = root.cornerItems.indexOf(item)
+        }
+
+        SelectRow {
+            label: Tr.tr("Top right")
+            subtext: Tr.tr("Hold the pointer in the top-right corner of the screen")
+            menuOnTop: true
+            fallbackIcon: "north_east"
+            menuItems: root.cornerItems
+            active: root.cornerItems[Config.hotCorners.topRight]
+            onSelected: item => GlobalConfig.hotCorners.topRight = root.cornerItems.indexOf(item)
+        }
+
+        SelectRow {
+            label: Tr.tr("Bottom left")
+            subtext: Tr.tr("Hold the pointer in the bottom-left corner of the screen")
+            menuOnTop: true
+            fallbackIcon: "south_west"
+            menuItems: root.cornerItems
+            active: root.cornerItems[Config.hotCorners.bottomLeft]
+            onSelected: item => GlobalConfig.hotCorners.bottomLeft = root.cornerItems.indexOf(item)
+        }
+
+        SelectRow {
+            label: Tr.tr("Bottom right")
+            subtext: Tr.tr("Hold the pointer in the bottom-right corner of the screen")
+            menuOnTop: true
+            fallbackIcon: "south_east"
+            menuItems: root.cornerItems
+            active: root.cornerItems[Config.hotCorners.bottomRight]
+            onSelected: item => GlobalConfig.hotCorners.bottomRight = root.cornerItems.indexOf(item)
+        }
+
+        StepperRow {
+            last: true
+            label: Tr.tr("Corner size")
+            subtext: Tr.tr("How far into the corner the pointer has to be, in pixels")
+            value: GlobalConfig.hotCorners.size
+            from: 2
+            to: 40
+            stepSize: 2
+            onMoved: v => GlobalConfig.hotCorners.size = v
         }
 
         // What sits on the wallpaper
