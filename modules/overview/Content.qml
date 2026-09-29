@@ -8,6 +8,8 @@ import Quickshell.Widgets
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
+import qs.components.controls
+import qs.components.effects
 import qs.services
 import qs.utils
 
@@ -447,8 +449,17 @@ Item {
             implicitHeight: content.implicitHeight + Tokens.padding.extraLarge * 2
             radius: Tokens.rounding.extraLarge
             color: Colours.tPalette.m3surfaceContainerLow
+            // A hairline and a shadow rather than a solid outline, so the panel reads as a
+            // floating surface the way the settings window and the toasts do
             border.width: 1
-            border.color: Colours.tPalette.m3outlineVariant
+            border.color: Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
+
+            Elevation {
+                z: -1
+                anchors.fill: parent
+                radius: parent.radius
+                level: 3
+            }
 
             // Keeps clicks that land between the tiles from closing the overview
             MouseArea {
@@ -572,34 +583,26 @@ Item {
         Repeater {
             model: root.pageCount > 1 ? [-1, 1] : []
 
-            StyledRect {
+            // The same round arrow button the nexus uses for going back a page, instead of a
+            // bordered circle of its own. Held out past a side while dragging, it fills with
+            // the primary colour to show that the page is about to turn.
+            IconButton {
                 id: arrow
 
                 required property int modelData
                 readonly property bool available: root.page + modelData >= 0 && root.page + modelData < root.pageCount
+                readonly property bool turning: root.dragEdge === modelData
 
                 anchors.verticalCenter: panel.verticalCenter
                 x: modelData < 0 ? panel.x - width - Tokens.padding.large : panel.x + panel.width + Tokens.padding.large
-                implicitWidth: Tokens.padding.extraLarge * 3
-                implicitHeight: implicitWidth
-                radius: Tokens.rounding.full
-                color: root.dragEdge === modelData ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainerLow
-                border.width: 1
-                border.color: Colours.tPalette.m3outlineVariant
-                opacity: available ? 1 : 0.3
-
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    text: arrow.modelData < 0 ? "chevron_left" : "chevron_right"
-                    color: root.dragEdge === arrow.modelData ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
-                    fontStyle: Tokens.font.icon.large
-                }
-
-                StateLayer {
-                    disabled: !arrow.available
-                    radius: arrow.radius
-                    onClicked: root.setPage(root.page + arrow.modelData)
-                }
+                type: IconButton.Tonal
+                isRound: true
+                icon: modelData < 0 ? "chevron_left" : "chevron_right"
+                font: Tokens.font.icon.large
+                inactiveColour: arrow.turning ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainerHigh
+                inactiveOnColour: arrow.turning ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant
+                disabled: !arrow.available
+                onClicked: root.setPage(root.page + arrow.modelData)
             }
         }
     }
@@ -617,11 +620,19 @@ Item {
         height: root.ghostSize
         radius: Tokens.rounding.full
         color: Colours.palette.m3secondaryContainer
-        border.width: 2
-        border.color: root.dropWsId > 0 || root.swapClient !== null ? Colours.palette.m3primary : Colours.palette.m3outline
+        border.width: 1
+        border.color: root.dropWsId > 0 || root.swapClient !== null ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.5)
         visible: opacity > 0
         opacity: ghost.shown ? 0.95 : 0
         scale: ghost.shown ? (root.dropWsId > 0 || root.swapClient !== null ? 1.1 : 1) : 0.5
+
+        // Carried under the pointer like the current wallpaper in the launcher is
+        Elevation {
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
+            level: 4
+        }
 
         Behavior on opacity {
             Anim {

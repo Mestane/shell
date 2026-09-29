@@ -24,6 +24,9 @@ ENUM(PanelEdge, Top, Bottom)
 ENUM(PanelAlign, Start, Center, End)
 // Which side edge a panel that opens from the left or right (OSD, session menu, sidebar) comes from
 ENUM(PanelSide, Left, Right)
+// What resting the pointer in a screen corner opens. A corner can only ever open one thing, so this is
+// per corner rather than a set of flags
+ENUM(HotCornerAction, None, Overview, Sidebar)
 ENUM(BarWorkspaceDisplay, Shapes, Text, Icons)
 ENUM(BarWorkspaceCapitalisation, Preserve, Upper, Lower)
 ENUM(LyricsBackend, Auto, Local, LRCLIB, NetEase)

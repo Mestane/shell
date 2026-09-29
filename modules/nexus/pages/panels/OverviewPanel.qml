@@ -38,19 +38,15 @@ PageBase {
 
         ToggleRow {
             first: true
+            last: true
             text: Tr.tr("Trackpad swipe")
             subtext: Tr.tr("Swipe up with four fingers to open it and down to close it")
             checked: GlobalConfig.overview.gestures
             onToggled: GlobalConfig.overview.gestures = checked
         }
 
-        ToggleRow {
-            last: true
-            text: Tr.tr("Hot corner")
-            subtext: Tr.tr("Hold the pointer in the top-left corner of the screen")
-            checked: Config.overview.hotCorner
-            onToggled: GlobalConfig.overview.hotCorner = checked
-        }
+        // A corner can be pointed at the overview from the Panels page, next to the other panels a
+        // corner can open
 
         // Workspaces
         SectionHeader {

@@ -12,7 +12,7 @@ import qs.utils
 // One window inside a workspace tile: a capture of the window drawn at the position and
 // size Hyprland reports for it, scaled from its monitor into the tile, with the app's
 // own icon over the middle of it. Clicking it focuses the window and closes the overview.
-StyledRect {
+StyledClippingRect {
     id: root
 
     required property var client
@@ -70,11 +70,14 @@ StyledRect {
     width: Math.max(2, root.edgeRight - root.edgeLeft)
     height: Math.max(2, root.edgeBottom - root.edgeTop)
 
-    radius: Tokens.rounding.extraSmall
+    // Matches the preview in the bar's active window popout, rather than staying nearly square
+    // inside the tile that holds it
+    radius: Tokens.rounding.medium
     color: Colours.tPalette.m3surfaceContainerHighest
     border.width: 1
     border.color: root.hovered || root.dropHighlight ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.5)
-    clip: true
+    // The root clips the capture to its rounded corners; a plain Rectangle would only trim
+    // it to the bounding box and leave the corners square
     opacity: root.ghosted ? 0.35 : 1
     scale: root.dropHighlight ? 1.06 : root.hovered && !root.ghosted ? 1.02 : 1
 
@@ -109,18 +112,17 @@ StyledRect {
         }
     }
 
-    // Pops in when it first appears
+    // Pops in when it first appears, on the same curve the drag ghost uses
     Component.onCompleted: popIn.start()
 
-    NumberAnimation {
+    Anim {
         id: popIn
 
         target: root
         property: "scale"
         from: 0.85
         to: 1
-        duration: 260
-        easing.type: Easing.OutBack
+        type: Anim.FastSpatial
     }
 
     Behavior on opacity {
