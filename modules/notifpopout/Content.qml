@@ -7,13 +7,14 @@ import qs.components.controls
 import qs.services
 import qs.modules.sidebar as Sidebar
 import qs.modules.dashboard.media
+import qs.modules.todopopout as TodoPopout
 
 // Sits on the drawers window's frame (see Wrapper.qml), so there is no background of its own: the panel's
 // morphing blob is the surface, and the content rests on it in the same containers the sidebar uses.
 //
-// Two tabs, moved between with the same swipe that opens the popout: the
-// notification dock and the local music library, so the picker for what to play
-// lives where the swipe already goes rather than in a separate window.
+// Three tabs, moved between with the same swipe that opens the popout: the
+// notification dock, the local music library, and the to-do list, so all three sit in the
+// one panel that swipe already reaches rather than each needing a window of its own.
 Item {
     id: root
 
@@ -23,7 +24,7 @@ Item {
     // position many times a second, are only built then
     property bool shown: true
 
-    // 0 notifications, 1 media library. Lives on the screen state so closing the
+    // 0 notifications, 1 media library, 2 to-do. Lives on the screen state so closing the
     // popout doesn't send it back to the first tab
     readonly property int tab: root.screenState.notifPopoutTab
     // The library walks the music folder, so it is only built the first time the tab is
@@ -55,6 +56,9 @@ Item {
 
         SegmentedBar {
             Layout.fillWidth: true
+            // Icon-only: three full labels ("Notifications" is a long word) don't fit this
+            // panel's width without the icon and text squeezing into each other
+            compact: true
 
             model: [
                 {
@@ -64,6 +68,10 @@ Item {
                 {
                     icon: "library_music",
                     text: Tr.tr("Music")
+                },
+                {
+                    icon: "checklist",
+                    text: Tr.tr("To-do")
                 }
             ]
             currentIndex: root.tab
@@ -123,23 +131,48 @@ Item {
                     }
                 }
             }
+
+            StyledRect {
+                id: todoPane
+
+                readonly property real offset: 2 - root.tabPos
+
+                x: offset * panes.width * 0.6
+                width: panes.width
+                height: panes.height
+                opacity: 1 - Math.min(1, Math.abs(offset))
+                visible: opacity > 0
+                radius: Tokens.rounding.large
+                color: Colours.tPalette.m3surfaceContainerLow
+
+                TodoPopout.Content {
+                    anchors.fill: parent
+
+                    open: root.tab === 2
+                    screenState: root.screenState
+                }
+            }
         }
 
         // Controls for the in-shell player alone, under the library. The media tab's own
         // controls follow whichever MPRIS player is active; these keep driving the local
         // queue while you are picking from it, and while anything else is playing. They grow in
-        // and out with the tab rather than popping the panes' height about.
+        // and out with the tab rather than popping the panes' height about, and shrink away again
+        // moving on to the to-do tab.
         Loader {
             id: localControls
+
+            // 1 right on the music tab, fading out towards either neighbour
+            readonly property real nearMusic: Math.max(0, 1 - Math.abs(root.tabPos - 1))
 
             Layout.fillWidth: true
             Layout.leftMargin: Tokens.padding.medium
             Layout.rightMargin: Tokens.padding.medium
-            Layout.preferredHeight: (item ? item.implicitHeight : 64) * root.tabPos
-            visible: root.tabPos > 0.01
-            opacity: root.tabPos
+            Layout.preferredHeight: (item ? item.implicitHeight : 64) * nearMusic
+            visible: nearMusic > 0.01
+            opacity: nearMusic
             clip: true
-            active: root.shown && (root.tab === 1 || root.tabPos > 0.01)
+            active: root.shown && (root.tab === 1 || nearMusic > 0.01)
 
             sourceComponent: LocalControls {}
         }

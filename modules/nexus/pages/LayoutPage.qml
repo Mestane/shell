@@ -72,12 +72,6 @@ PageBase {
             kind: "side"
         },
         {
-            id: "popout",
-            label: Tr.tr("Notification popout"),
-            icon: "forum",
-            kind: "side"
-        },
-        {
             id: "widgets",
             label: Tr.tr("Desktop widgets"),
             icon: "widgets",
@@ -175,8 +169,6 @@ PageBase {
             return ["left", "right"][Config.session.side] ?? "right";
         case "sidebar":
             return ["left", "right"][Config.sidebar.side] ?? "right";
-        case "popout":
-            return ["left", "right"][GlobalConfig.notifPopout.side] ?? "right";
         case "notifs":
             return `${edges[Config.notifs.edge] ?? "top"}-${["left", "right"][Config.notifs.side] ?? "right"}`;
         case "toasts":
@@ -218,9 +210,6 @@ PageBase {
         case "sidebar":
             GlobalConfig.sidebar.side = sides.indexOf(slot);
             break;
-        case "popout":
-            GlobalConfig.notifPopout.side = sides.indexOf(slot);
-            break;
         case "notifs":
             GlobalConfig.notifs.edge = edges.indexOf(parts[0]);
             GlobalConfig.notifs.side = sides.indexOf(parts[1]);
@@ -261,8 +250,6 @@ PageBase {
             return Qt.size(w * 0.05, h * 0.30);
         case "sidebar":
             return Qt.size(w * 0.15, r.h - 12);
-        case "popout":
-            return Qt.size(w * 0.11, r.h - 12);
         case "notifs":
             return Qt.size(w * 0.13, h * 0.26);
         case "toasts":
@@ -303,7 +290,7 @@ PageBase {
         if (parts.length === 1) {
             // Side panels: left or right, centred vertically (the tall ones fill the height). Ones sharing an
             // edge sit in columns, nearest the edge first, so none hides another.
-            const order = ["sidebar", "popout", "session", "osd"];
+            const order = ["sidebar", "session", "osd"];
             let inset = m;
             for (const other of order) {
                 if (other === id)
@@ -312,7 +299,7 @@ PageBase {
                     inset += sizeOf(other).width + 4;
             }
             x = parts[0] === "left" ? r.x + inset : r.x + r.w - sz.width - inset;
-            if (id === "sidebar" || id === "popout" || id === "notifs")
+            if (id === "sidebar" || id === "notifs")
                 y = r.y + m;
         } else {
             const horizontal = parts[1];

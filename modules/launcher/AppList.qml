@@ -149,7 +149,7 @@ StyledListView {
             name: "todo"
 
             PropertyChanges {
-                root.delegate: actionItem
+                root.delegate: todoItem
             }
         }
     ]
@@ -300,6 +300,14 @@ StyledListView {
         id: sshItem
 
         ActionItem {
+            list: root
+        }
+    }
+
+    Component {
+        id: todoItem
+
+        TodoItem {
             list: root
         }
     }

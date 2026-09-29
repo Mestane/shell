@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.services
+import qs.modules.notifpopout as NotifPopout
 
 Item {
     id: root
@@ -23,9 +24,14 @@ Item {
             radius: Tokens.rounding.large
             color: Colours.tPalette.m3surfaceContainerLow
 
-            NotifDock {
+            // Notifications, the local music library and the to-do list, as tabs of one card
+            // (see modules/notifpopout/Content.qml, shared with the swipe gesture)
+            NotifPopout.Content {
                 objectName: "sidebarNotifications"
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
 
+                shown: root.screenState.sidebar
                 props: root.props
                 screenState: root.screenState
             }

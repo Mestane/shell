@@ -47,12 +47,6 @@ Region {
     }
 
     R {
-        panel: root.panels.notifPopout
-        x: root.panels.notifPopoutLeft ? 0 : root.win.width - width
-        width: panel.width * (1 - root.panels.notifPopout.offsetScale) + (root.panels.notifPopoutLeft ? root.bar.insetLeft : root.bar.insetRight)
-    }
-
-    R {
         panel: root.panels.osdWrapper
         x: root.panels.osdLeft ? 0 : root.win.width - width
         width: panel.width * (1 - root.panels.osd.offsetScale) + (root.panels.osdLeft ? root.bar.insetLeft : root.bar.insetRight) + (root.panels.osdWithSession ? sessionRegion.width : root.panels.osdWithStack ? sidebarRegion.width : 0)
