@@ -192,8 +192,15 @@ Item {
 
         RowLayout {
             Layout.fillWidth: true
-            visible: root.addingList
+            visible: opacity > 0
+            opacity: root.addingList ? 1 : 0
             spacing: Tokens.spacing.small
+
+            Behavior on opacity {
+                Anim {
+                    type: Anim.FastEffects
+                }
+            }
 
             StyledTextField {
                 id: listField
@@ -313,6 +320,16 @@ Item {
                         width: taskList.width
                         implicitHeight: row.implicitHeight + Tokens.padding.medium * 2
                         color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+                        clip: true
+
+                        // Opening the rename field or the scheduling editor grows the row rather
+                        // than snapping to its new height; the "move" transition above then
+                        // carries the rows below it along smoothly too
+                        Behavior on implicitHeight {
+                            Anim {
+                                type: Anim.DefaultSpatial
+                            }
+                        }
                         topLeftRadius: rowBg.isFirst ? Tokens.rounding.large : Tokens.rounding.extraSmall
                         topRightRadius: rowBg.isFirst ? Tokens.rounding.large : Tokens.rounding.extraSmall
                         bottomLeftRadius: rowBg.isLast ? Tokens.rounding.large : Tokens.rounding.extraSmall
@@ -375,6 +392,14 @@ Item {
                                     Layout.fillWidth: true
                                     active: root.editingId === row.modelData.id
                                     visible: active
+                                    opacity: active ? 1 : 0
+
+                                    Behavior on opacity {
+                                        Anim {
+                                            type: Anim.FastEffects
+                                        }
+                                    }
+
                                     sourceComponent: StyledTextField {
                                         text: row.modelData.text
                                         Component.onCompleted: {
@@ -496,6 +521,13 @@ Item {
                             Layout.leftMargin: Tokens.padding.large
                             active: root.schedulingId === row.modelData.id
                             visible: active
+                            opacity: active ? 1 : 0
+
+                            Behavior on opacity {
+                                Anim {
+                                    type: Anim.FastEffects
+                                }
+                            }
 
                             sourceComponent: ColumnLayout {
                                 id: editor
@@ -537,6 +569,13 @@ Item {
                                     Layout.fillWidth: true
                                     active: editor.editingField === "deadline"
                                     visible: active
+                                    opacity: active ? 1 : 0
+
+                                    Behavior on opacity {
+                                        Anim {
+                                            type: Anim.FastEffects
+                                        }
+                                    }
 
                                     sourceComponent: ColumnLayout {
                                         spacing: Tokens.spacing.small
@@ -657,6 +696,13 @@ Item {
                                     Layout.fillWidth: true
                                     active: editor.editingField === "new"
                                     visible: active
+                                    opacity: active ? 1 : 0
+
+                                    Behavior on opacity {
+                                        Anim {
+                                            type: Anim.FastEffects
+                                        }
+                                    }
 
                                     sourceComponent: ColumnLayout {
                                         spacing: Tokens.spacing.small
