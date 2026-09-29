@@ -4,7 +4,7 @@
 
 A personal fork of [caelestia-dots/shell](https://github.com/caelestia-dots/shell) with the features we wanted on top of it.
 
-[**Watch the feature showcase**](https://cykler.dev/caelestia/showcase.mp4) - every feature in this fork, in one clip
+https://cykler.dev/caelestia/showcase.mp4
 
 [Issues](https://github.com/cykler01/cykler-caelestia/issues)
 
