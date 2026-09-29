@@ -24,8 +24,8 @@ A personal fork of [caelestia-dots/shell](https://github.com/caelestia-dots/shel
 
 Every feature below is our own work on top of upstream.
 
-| Feature | What it does | Where | Docs | Demo |
-|---|---|---|---|---|
+| Feature | What it does | Where | Docs |
+|---|---|---|---|
 | **Battery & power management** | Automatic Hyprland power saving (animations, blur, gaps, shadows, refresh rate) per plug state and power profile, battery level thresholds, critical battery shell shutdown, and a battery pane in Settings | *Nexus → Power & battery* | [▶](https://cykler.dev/caelestia/demos/battery.mp4) |
 | **Keep awake** | One tri-state control for the idle inhibitor: off, prevent sleep, or also prevent lock | *Utilities card* | [▶](https://cykler.dev/caelestia/demos/idle.mp4) |
 | **Input settings** | Mouse sensitivity, scroll speed, touchpad scroll speed and acceleration, applied at runtime and put back after a Hyprland reload | *Nexus → Input* | [▶](https://cykler.dev/caelestia/demos/input.mp4) |
