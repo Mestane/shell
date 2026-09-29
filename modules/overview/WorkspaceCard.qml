@@ -119,18 +119,23 @@ StyledClippingRect {
             easing.type: Easing.OutCubic
         }
     }
+
     radius: Tokens.rounding.large
-    // Occupied workspaces read brighter than the empty ones, which stay dark
+    // Occupied workspaces sit one step up the surface ladder from the empty ones, so the tones
+    // read as panel, tile, window preview. Empty tiles only take the plain surface tone, held
+    // by their outline, the way an empty slot should read.
 
-    color: root.occupied ? Colours.tPalette.m3surfaceContainerHighest : Colours.tPalette.m3surfaceContainerLowest
+    color: root.occupied ? Colours.tPalette.m3surfaceContainerHigh : Colours.tPalette.m3surfaceContainer
 
-    border.width: root.active ? 2 : 1
+    // A hairline, as on every other floating surface in the shell; only the focused workspace
+    // takes a colour, and the shadow is left to the panel the tiles sit on
+    border.width: 1
 
     border.color: root.borderColour
 
     // Animated through a plain property: ClippingRectangle's border is an alias into an
     // inner rectangle, and a Behavior directly on border.color crashes Quickshell
-    property color borderColour: root.active ? Colours.palette.m3primary : root.occupied ? Colours.tPalette.m3outline : Colours.tPalette.m3outlineVariant
+    property color borderColour: root.active ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
 
     Behavior on borderColour {
         CAnim {}
@@ -185,13 +190,15 @@ StyledClippingRect {
     }
 
     // The keyboard's current choice, drawn inside the tile's own outline so it can sit on the
-    // focused workspace without hiding that it is the focused one
+    // focused workspace without hiding that it is the focused one. A thin ring alone would all
+    // but vanish at a hairline, so the tile is tinted with it as well, the way the drop target
+    // below is tinted with the primary.
     StyledRect {
         anchors.fill: parent
         anchors.margins: 3
         radius: root.radius - 3
-        color: "transparent"
-        border.width: 2
+        color: Qt.alpha(Colours.palette.m3tertiary, 0.12)
+        border.width: 1
         border.color: Colours.palette.m3tertiary
         opacity: root.selected ? 1 : 0
 
@@ -207,7 +214,7 @@ StyledClippingRect {
         anchors.fill: parent
         radius: root.radius
         color: Qt.alpha(Colours.palette.m3primary, 0.18)
-        border.width: 2
+        border.width: 1
         border.color: Colours.palette.m3primary
         opacity: root.dropTarget ? 1 : 0
 
