@@ -32,11 +32,15 @@ Item {
     // mistaken for a cold start on a later pill.
     property bool cavaWarm: false
 
-    // Whether the pill is showing the in-shell player rather than an MPRIS one. An open MPRIS
-    // player wins, matching the media tab: the local player is what there is to control when
-    // nothing external is open.
-    readonly property bool local: !Players.active && Music.hasTrack
+    // Whether the pill is showing the in-shell player rather than an MPRIS one. Whichever one is
+    // actually making sound right now wins outright; if neither is, both sides remember what was
+    // last playing for a while after it pauses (Players.recentPlayer / Music.recentlyPlaying) so
+    // the notch does not lose what it was showing the moment playback stops, and in that case the
+    // one that stopped most recently (Music.lastPlayedAt vs Players.rememberedAt) wins.
+    readonly property bool local: Music.playing || (Players.active?.isPlaying !== true && Music.recentlyPlaying && (!Players.recentPlayer || Music.lastPlayedAt >= Players.rememberedAt))
     readonly property bool playing: root.local ? Music.playing : Players.active?.isPlaying === true
+    // Whether there is still something worth showing, even if it is only paused right now
+    readonly property bool hasRecent: root.local ? Music.recentlyPlaying : Players.recentPlayer !== null
 
     // No tiled windows cover this monitor's desktop (floating ones leave it visible), same rule as the desktop widgets
     readonly property var monitor: Hypr.monitorFor(screen)
@@ -46,7 +50,7 @@ Item {
     // Whether the notch is meant to be up on this workspace at all: empty ones and ones with windows have their own switch
     readonly property bool wanted: emptyWorkspace ? Config.notch.showOnEmptyWorkspace : Config.notch.showWithWindows
     // Whether the standing notch has music to show
-    readonly property bool musicShown: Config.notch.showMusic && root.playing
+    readonly property bool musicShown: Config.notch.showMusic && root.hasRecent
     readonly property bool persistent: wanted && (Config.notch.showClock || musicShown)
     // Whether the notch is standing in for the clock, so the bar can drop its own
     readonly property bool showsClock: Config.notch.enabled && wanted && Config.notch.showClock
@@ -225,7 +229,7 @@ Item {
             local: root.local
             cavaWarm: root.cavaWarm
             allowLive: root.visualiserLive
-            showMedia: root.playing && (root.trackActive || (root.persistent && Config.notch.showMusic))
+            showMedia: root.hasRecent && (root.trackActive || (root.persistent && Config.notch.showMusic))
             showClock: root.persistent && Config.notch.showClock
             compact: root.inBarProg > 0.5
         }

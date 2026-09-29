@@ -165,10 +165,10 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             Layout.preferredWidth: root.coverSize
             Layout.preferredHeight: root.coverSize
-            source: root.local ? Music.coverPath : Players.getArtUrl(Players.active)
+            source: root.local ? Music.coverPath : Players.getArtUrl(Players.recentPlayer)
             // Turns only while the pill is allowed to animate (the same rule as the visualiser): a rotating shape
             // inside two effect layers redraws every frame, which was most of what music cost in the notch
-            spinning: root.live && (root.local ? Music.playing : (Players.active?.isPlaying ?? false))
+            spinning: root.live && (root.local ? Music.playing : (Players.recentPlayer?.isPlaying ?? false))
         }
 
         StyledText {
@@ -178,8 +178,8 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             Layout.maximumWidth: root.compact ? Math.min(Config.notch.maxTitleWidth, 200) : Config.notch.maxTitleWidth
             text: {
-                const title = root.local ? Music.title : Players.active?.trackTitle ?? "";
-                const artist = root.local ? Music.artist : Players.active?.trackArtist ?? "";
+                const title = root.local ? Music.title : Players.recentPlayer?.trackTitle ?? "";
+                const artist = root.local ? Music.artist : Players.recentPlayer?.trackArtist ?? "";
                 return Config.notch.showArtist && artist ? Tr.trCtx("%1 - %2", "track artist and title").arg(artist).arg(title) : title;
             }
             color: Colours.palette.m3onSurface

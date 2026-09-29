@@ -11,6 +11,7 @@ import Caelestia.Services
 import qs.components
 import qs.components.controls
 import qs.services
+import qs.modules.dashboard.media
 
 // Glass widget cards laid out on a snapping grid that covers the desktop. Which cards show and the cell each one
 // sits in come from background.desktopWidgets; cards that haven't been placed by hand flow in from a corner.
@@ -397,13 +398,21 @@ Item {
         }
     }
 
-    // --- Now playing (only while there is a player) ---
+    // --- Now playing (only while there is a player, or something remembered from one) ---
     component MediaCard: GridCard {
         id: media
 
-        readonly property var player: Players.active
+        // Mirrors the notch's own rule: whichever side is actually playing right now wins, and if
+        // neither is, whichever paused most recently (Music.lastPlayedAt vs Players.rememberedAt)
+        // wins. This is the only widget that used to read Players.active directly, which is why it
+        // never showed the in-shell player at all.
+        readonly property bool local: Music.playing || (Players.active?.isPlaying !== true && Music.recentlyPlaying && (!Players.recentPlayer || Music.lastPlayedAt >= Players.rememberedAt))
+        readonly property MediaSource source: MediaSource {
+            local: media.local
+            mpris: media.local ? null : Players.recentPlayer
+        }
 
-        visible: player !== null
+        visible: source.available
         title: Tr.tr("Now playing")
         icon: "music_note"
 
@@ -428,7 +437,7 @@ Item {
                     anchors.fill: parent
                     asynchronous: true
                     fillMode: Image.PreserveAspectCrop
-                    source: Players.getArtUrl(media.player)
+                    source: media.source.coverSource
                 }
             }
 
@@ -439,7 +448,7 @@ Item {
                 StyledText {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
-                    text: media.player?.trackTitle || Tr.tr("Unknown title")
+                    text: media.source.title || Tr.tr("Unknown title")
                     color: Colours.palette.m3onSurface
                     font: Tokens.font.body.builders.medium.weight(Font.DemiBold).build()
                 }
@@ -447,7 +456,7 @@ Item {
                 StyledText {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
-                    text: media.player?.trackArtist || Tr.tr("Unknown artist")
+                    text: media.source.artist || Tr.tr("Unknown artist")
                     color: Colours.palette.m3onSurfaceVariant
                     font: Tokens.font.label.medium
                 }
@@ -458,21 +467,21 @@ Item {
                     IconButton {
                         icon: "skip_previous"
                         type: IconButton.Text
-                        disabled: !media.player?.canGoPrevious
-                        onClicked: media.player?.previous()
+                        disabled: !media.source.canGoPrevious
+                        onClicked: media.source.previous()
                     }
 
                     IconButton {
-                        icon: media.player?.isPlaying ? "pause" : "play_arrow"
+                        icon: media.source.isPlaying ? "pause" : "play_arrow"
                         type: IconButton.Filled
-                        onClicked: media.player?.togglePlaying()
+                        onClicked: media.source.togglePlaying()
                     }
 
                     IconButton {
                         icon: "skip_next"
                         type: IconButton.Text
-                        disabled: !media.player?.canGoNext
-                        onClicked: media.player?.next()
+                        disabled: !media.source.canGoNext
+                        onClicked: media.source.next()
                     }
                 }
             }

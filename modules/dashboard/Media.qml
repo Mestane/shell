@@ -77,6 +77,18 @@ Item {
         target: Players
     }
 
+    // The other direction: the local player starting on its own (picked in the sidebar's library,
+    // not through this tab's own selector) should switch the tab to it the same way an MPRIS
+    // player taking over switches the tab away from it
+    Connections {
+        function onPlayingChanged(): void {
+            if (Music.playing)
+                root.useLocal = true;
+        }
+
+        target: Music
+    }
+
     function selectSource(option): void {
         if (option.kind === "local") {
             root.useLocal = true;

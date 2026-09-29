@@ -113,6 +113,44 @@ Singleton {
 
     readonly property bool playing: mediaPlayer.playbackState === MediaPlayer.PlayingState
 
+    // NOTE(fork): kept true for a while after pausing, so the notch and widgets do not lose
+    // what they were showing the moment playback stops - only while a track is still loaded.
+    // Cleared early if the queue empties out instead of waiting out the timer.
+    property bool wasRecentlyPlaying: false
+    readonly property bool recentlyPlaying: root.hasTrack && (root.playing || root.wasRecentlyPlaying)
+    // When this last started playing, so the notch can tell whether this or an MPRIS player
+    // (Players.rememberedAt) was more recently the one actually making sound
+    property real lastPlayedAt: 0
+
+    onPlayingChanged: {
+        if (root.playing) {
+            root.wasRecentlyPlaying = true;
+            root.lastPlayedAt = Date.now();
+            memoryTimer.stop();
+
+            // Only one thing should be making sound at a time: starting the local player pauses
+            // whatever MPRIS player was playing, the same as pressing pause on it directly
+            if (Players.active?.isPlaying && Players.active?.canPause)
+                Players.active.pause();
+        } else {
+            memoryTimer.restart();
+        }
+    }
+
+    onHasTrackChanged: {
+        if (!root.hasTrack) {
+            root.wasRecentlyPlaying = false;
+            memoryTimer.stop();
+        }
+    }
+
+    Timer {
+        id: memoryTimer
+
+        interval: 5 * 60 * 1000
+        onTriggered: root.wasRecentlyPlaying = false
+    }
+
     readonly property real position: mediaPlayer.position / 1000
 
     readonly property real duration: mediaPlayer.duration / 1000

@@ -33,6 +33,42 @@ Singleton {
     // The player picked by hand in the media selector. While it is playing nothing else takes over from it.
     property MprisPlayer pinned
 
+    // NOTE(fork): the last player that was actually playing, kept for a while after it pauses so
+    // the notch and widgets do not lose what they were showing the moment playback stops - only
+    // while the app behind it is still open. A real playing player always wins over this.
+    property MprisPlayer rememberedPlayer: null
+    readonly property MprisPlayer recentPlayer: list.find(p => p.isPlaying) ?? root.rememberedPlayer ?? root.active
+    // When the remembered player last started playing, so the notch can tell whether this or
+    // the local player (Music.lastPlayedAt) was more recently the one actually making sound
+    property real rememberedAt: 0
+
+    function markPlaying(player: MprisPlayer): void {
+        root.rememberedPlayer = player;
+        root.rememberedAt = Date.now();
+        rememberTimer.stop();
+    }
+
+    function markStopped(player: MprisPlayer): void {
+        if (root.rememberedPlayer === player)
+            rememberTimer.restart();
+    }
+
+    // The remembered player's own app closing (it drops out of Mpris.players) clears it early
+    // rather than waiting out the timer for a player that is no longer there to resume
+    onListChanged: {
+        if (root.rememberedPlayer && !list.includes(root.rememberedPlayer)) {
+            root.rememberedPlayer = null;
+            rememberTimer.stop();
+        }
+    }
+
+    Timer {
+        id: rememberTimer
+
+        interval: 5 * 60 * 1000
+        onTriggered: root.rememberedPlayer = null
+    }
+
     function pick(player: MprisPlayer): void {
         pinned = player;
         props.manualActive = player;
@@ -130,6 +166,10 @@ Singleton {
 
             function onIsPlayingChanged(): void {
                 root.followPlayback(target);
+                if (target.isPlaying)
+                    root.markPlaying(target);
+                else
+                    root.markStopped(target);
             }
 
             target: modelData
@@ -150,9 +190,20 @@ Singleton {
         name: "mediaToggle"
         description: "Toggle media playback"
         onPressed: {
+            // Only one thing should be making sound at a time, same rule the notch uses to pick
+            // what it shows: whichever side is actually playing right now wins outright, and if
+            // neither is, whichever paused most recently is what this resumes.
             const active = root.active;
-            if (active && active.canTogglePlaying)
+            if (Music.playing) {
+                Music.togglePlaying();
+            } else if (active?.isPlaying) {
+                if (active.canTogglePlaying)
+                    active.togglePlaying();
+            } else if (Music.recentlyPlaying && (!root.recentPlayer || Music.lastPlayedAt >= root.rememberedAt)) {
+                Music.togglePlaying();
+            } else if (active && active.canTogglePlaying) {
                 active.togglePlaying();
+            }
         }
     }
 

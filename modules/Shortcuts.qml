@@ -212,6 +212,16 @@ Scope {
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        // Same script the launcher's own "ocr"/"lens" action runs (see
+        // modules/launcher/services/Actions.qml), just reachable without opening the launcher first
+        name: "ocr"
+        description: "Run OCR"
+        onPressed: Quickshell.execDetached(["bash", `${Quickshell.shellDir}/assets/ocr.sh`])
+    }
+
     IpcHandler {
         function toggle(drawer: string): void {
             if (list().split("\n").includes(drawer)) {
