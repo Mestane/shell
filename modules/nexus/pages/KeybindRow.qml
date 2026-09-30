@@ -198,5 +198,16 @@ ConnectedRect {
                 onClicked: Keybinds.reset(root.entry.id)
             }
         }
+
+        // A special-workspace keybind (SUPER+D, SUPER+M, ...) also controls which apps it
+        // opens, on top of its own shortcut - see services/AppToggles.qml
+        Loader {
+            Layout.fillWidth: true
+            active: root.expanded && AppToggles.categoryFor(root.entry.id) !== ""
+
+            sourceComponent: AppListEditor {
+                category: AppToggles.categoryFor(root.entry.id)
+            }
+        }
     }
 }

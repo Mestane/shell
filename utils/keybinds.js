@@ -135,6 +135,160 @@ function edit(text, id, combos) {
     return lines.join("\n");
 }
 
+// Custom binds: an arbitrary { combo, command } list a user can add from the Keybinds page,
+// unlike everything above which rebinds a fixed id that already exists in variables.lua. Kept
+// as its own `customBinds = { {...}, {...} }` array in the overrides file rather than a kb*
+// assignment, since the `assignment` regex above only ever matches a single-level value and
+// these need one entry per bind. Parsed and written with their own small brace-aware scanner,
+// rather than the `assignment`/`values` regexes, because a shell command can itself contain
+// quotes or braces that those would trip over.
+
+// text[i] is the opening quote; returns { value, end } (end is just past the closing quote),
+// or null if the string never closes
+function stringLiteral(text, i) {
+    const quote = text[i];
+    let out = "";
+    let j = i + 1;
+    while (j < text.length) {
+        const c = text[j];
+        if (c === "\\" && j + 1 < text.length) {
+            out += text[j + 1];
+            j += 2;
+            continue;
+        }
+        if (c === quote)
+            return {
+                value: out,
+                end: j + 1
+            };
+        out += c;
+        j++;
+    }
+    return null;
+}
+
+// The `name = { ... }` block's inner text (between its braces), skipping past any brace that
+// turns up inside a quoted string rather than counting it
+function findBlock(text, name) {
+    const m = text.match(new RegExp(`[ \\t]*${name}[ \\t]*=[ \\t]*\\{`));
+    if (!m)
+        return null;
+
+    let i = m.index + m[0].length;
+    let depth = 1;
+    while (i < text.length && depth > 0) {
+        const c = text[i];
+        if (c === "\"" || c === "'") {
+            const lit = stringLiteral(text, i);
+            i = lit ? lit.end : i + 1;
+            continue;
+        }
+        if (c === "{")
+            depth++;
+        else if (c === "}")
+            depth--;
+        i++;
+    }
+    if (depth !== 0)
+        return null;
+    return {
+        content: text.slice(m.index + m[0].length, i - 1),
+        from: m.index,
+        to: i
+    };
+}
+
+// Every top-level `{ ... }` entry inside a block's content, same brace/quote awareness as above
+function splitEntries(content) {
+    const entries = [];
+    let i = 0;
+    while (i < content.length) {
+        if (content[i] === "{") {
+            const start = i;
+            let depth = 1;
+            i++;
+            while (i < content.length && depth > 0) {
+                const c = content[i];
+                if (c === "\"" || c === "'") {
+                    const lit = stringLiteral(content, i);
+                    i = lit ? lit.end : i + 1;
+                    continue;
+                }
+                if (c === "{")
+                    depth++;
+                else if (c === "}")
+                    depth--;
+                i++;
+            }
+            entries.push(content.slice(start, i));
+        } else {
+            i++;
+        }
+    }
+    return entries;
+}
+
+// The string value of `key = "..."` or `key = '...'` inside one entry's text
+function field(entryText, key) {
+    const m = entryText.match(new RegExp(`${key}[ \\t]*=[ \\t]*(["'])`));
+    if (!m)
+        return "";
+    const lit = stringLiteral(entryText, m.index + m[0].length - 1);
+    return lit ? lit.value : "";
+}
+
+// Every customBinds entry in file order: [{ combo, command }]
+function parseCustomBinds(text) {
+    const block = findBlock(text, "customBinds");
+    if (!block)
+        return [];
+
+    const entries = [];
+    for (const entryText of splitEntries(block.content)) {
+        const combo = field(entryText, "combo");
+        const command = field(entryText, "command");
+        if (combo && command)
+            entries.push({
+                combo,
+                command
+            });
+    }
+    return entries;
+}
+
+function customBindLiteral(entry) {
+    const escape = s => s.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+    return `{ combo = "${escape(entry.combo)}", command = "${escape(entry.command)}" }`;
+}
+
+// The overrides text with customBinds set to these entries, removed entirely when empty
+function withCustomBinds(text, entries) {
+    const block = findBlock(text, "customBinds");
+    let base = text.trim() === "" ? "return {\n}\n" : text;
+
+    if (block) {
+        // Also drop a trailing comma right after the block and the blank line that leaves,
+        // so removing the last entry doesn't leave one dangling before the closing brace
+        const afterComma = base.slice(block.to).match(/^[ \t]*,?/)[0].length;
+        base = base.slice(0, block.from) + base.slice(block.to + afterComma);
+        base = base.replace(/\n[ \t]*\n/g, "\n");
+    }
+
+    if (entries.length === 0)
+        return base;
+
+    const lines = entries.map(e => `\t\t${customBindLiteral(e)},`).join("\n");
+    const line = `\tcustomBinds = {\n${lines}\n\t},`;
+
+    const lines2 = base.split("\n");
+    const at = lines2.findIndex(l => /^\s*return\s*\{/.test(l));
+    if (at < 0)
+        return base;
+
+    lines2.splice(at + 1, 0, line);
+    return lines2.join("\n");
+}
+
 // Groups the entries by the shortcut they share: { NORMALISED: [id, ...] } for the clashes only
 function conflicts(entries) {
     const byCombo = {};

@@ -42,13 +42,48 @@ Singleton {
         });
     }
     readonly property bool available: root.entries.length > 0
-    // { NORMALISED COMBO: [ids] } for the shortcuts two binds share
-    readonly property var clashes: Lua.conflicts(root.entries)
 
-    // Which other binds already use this shortcut
+    // Arbitrary { combo, command } binds added from the settings page, on top of the fixed kb*
+    // ids above - see the customBinds functions in keybinds.js for why they're parsed apart
+    // from those. Pseudo-ids ("custom:0", "custom:1", ...) let them share the clash detection
+    // below without needing a real id of their own; they're recomputed fresh each time, so
+    // reordering or removing one is never stale.
+    readonly property var customBinds: Lua.parseCustomBinds(root.overridesText)
+
+    // { NORMALISED COMBO: [ids] } for the shortcuts two binds share, kb* ids and custom
+    // pseudo-ids together so either kind can warn about clashing with the other
+    readonly property var clashes: Lua.conflicts([...root.entries, ...root.customBinds.map((b, i) => ({
+                    id: `custom:${i}`,
+                    combos: [b.combo]
+                }))])
+
+    // Which other binds already use this shortcut, as display labels
     function usedBy(id: string, combo: string): list<string> {
         const ids = root.clashes[Lua.normalise(combo)] ?? [];
-        return ids.filter(other => other !== id).map(other => Lua.label(other));
+        return ids.filter(other => other !== id).map(other => other.startsWith("custom:") ? root.customBinds[Number(other.slice(7))]?.command ?? "" : Lua.label(other));
+    }
+
+    function addCustomBind(combo: string, command: string): void {
+        root.write(Lua.withCustomBinds(root.overridesText, [...root.customBinds, {
+                        combo,
+                        command
+                    }]));
+    }
+
+    function setCustomBind(index: int, combo: string, command: string): void {
+        if (index < 0 || index >= root.customBinds.length)
+            return;
+
+        const next = [...root.customBinds];
+        next[index] = {
+            combo,
+            command
+        };
+        root.write(Lua.withCustomBinds(root.overridesText, next));
+    }
+
+    function removeCustomBind(index: int): void {
+        root.write(Lua.withCustomBinds(root.overridesText, root.customBinds.filter((_, i) => i !== index)));
     }
 
     function pretty(combo: string): string {

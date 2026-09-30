@@ -14,6 +14,21 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
+    // A custom bind being added, not saved until it has both a combo and a command
+    property bool addingCustom
+    property string pendingCombo
+    property string pendingCommand
+
+    function commitCustom(): void {
+        if (root.pendingCombo === "" || root.pendingCommand.trim() === "")
+            return;
+
+        Keybinds.addCustomBind(root.pendingCombo, root.pendingCommand.trim());
+        root.addingCustom = false;
+        root.pendingCombo = "";
+        root.pendingCommand = "";
+    }
+
     // Sections of the binds that match the search, in file order
     readonly property var groups: {
         const q = search.text.trim().toLowerCase();
@@ -101,6 +116,100 @@ PageBase {
                         entry: modelData
                         first: index === 0
                         last: index === group.modelData.items.length - 1
+                    }
+                }
+            }
+        }
+
+        ColumnLayout {
+            id: customGroup
+
+            Layout.fillWidth: true
+            visible: search.text === ""
+            spacing: Tokens.spacing.extraSmall / 2
+
+            SectionHeader {
+                first: root.groups.length === 0
+                text: Tr.tr("Custom")
+            }
+
+            Repeater {
+                model: ScriptModel {
+                    values: Keybinds.customBinds
+                }
+
+                CustomKeybindRow {
+                    // index is filled in directly since this already declares its own
+                    // "required property int index"
+                    required property var modelData
+
+                    combo: modelData.combo
+                    command: modelData.command
+                }
+            }
+
+            ConnectedRect {
+                Layout.fillWidth: true
+                last: true
+                implicitHeight: addRow.implicitHeight + Tokens.padding.medium * 2
+
+                ColumnLayout {
+                    id: addRow
+
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Tokens.padding.largeIncreased
+                    spacing: Tokens.spacing.small
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+                        visible: root.addingCustom
+
+                        ComboEditor {
+                            Layout.fillWidth: true
+                            combo: root.pendingCombo
+                            startCapturing: root.pendingCombo === ""
+                            removable: true
+                            onChanged: c => root.pendingCombo = c
+                            onRemoved: {
+                                root.addingCustom = false;
+                                root.pendingCombo = "";
+                                root.pendingCommand = "";
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+                        visible: root.addingCustom
+
+                        StyledTextField {
+                            Layout.fillWidth: true
+                            text: root.pendingCommand
+                            placeholderText: Tr.tr("Command to run")
+                            onTextEdited: root.pendingCommand = text
+                            Keys.onReturnPressed: root.commitCustom()
+                        }
+
+                        IconButton {
+                            type: IconButton.Filled
+                            isRound: true
+                            icon: "check"
+                            disabled: root.pendingCombo === "" || root.pendingCommand.trim() === ""
+                            font: Tokens.font.icon.medium
+                            onClicked: root.commitCustom()
+                        }
+                    }
+
+                    TextButton {
+                        visible: !root.addingCustom
+                        type: TextButton.Text
+                        isRound: true
+                        text: Tr.tr("Add keybind")
+                        onClicked: root.addingCustom = true
                     }
                 }
             }
