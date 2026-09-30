@@ -39,11 +39,19 @@ ColumnLayout {
         centerWidth: root.centerWidth
     }
 
+    Greeting {
+        Layout.alignment: Qt.AlignHCenter
+    }
+
     PasswordInput {
         Layout.alignment: Qt.AlignHCenter
         centerScale: Math.max(0.8, root.centerScale)
         centerWidth: root.centerWidth
         lock: root.lock
+    }
+
+    SessionRow {
+        Layout.alignment: Qt.AlignHCenter
     }
 
     StateMessage {

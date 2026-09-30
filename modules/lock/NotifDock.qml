@@ -8,6 +8,7 @@ import Caelestia.Config
 import Caelestia.I18n
 import qs.components
 import qs.components.containers
+import qs.components.controls
 import qs.components.effects
 import qs.services
 import qs.utils
@@ -22,12 +23,53 @@ ColumnLayout {
 
     spacing: Tokens.spacing.medium
 
-    StyledText {
+    // Same batching close as the sidebar's own clear-all (modules/sidebar/NotifDock.qml): a
+    // handful of notifications close instantly, but 28 all vanishing in one frame looks broken
+    Timer {
+        id: clearTimer
+
+        repeat: true
+        triggeredOnStart: true
+        interval: Math.max(15, Math.min(80, 69.8 - 12.3 * Math.log(Notifs.notClosed.length)))
+        onTriggered: {
+            const first = Notifs.notClosed[0];
+            if (!first) {
+                stop();
+                return;
+            }
+
+            const appName = first.appName;
+            let cleared = 0;
+            for (const n of Notifs.notClosed.filter(n => n.appName === appName)) {
+                n.close();
+                cleared++;
+                if (cleared > 30) {
+                    interval = 5;
+                    return;
+                }
+            }
+        }
+    }
+
+    RowLayout {
         Layout.fillWidth: true
-        text: Notifs.list.length > 0 ? Tr.trN("%n notification", "%n notifications", Notifs.list.length) : Tr.tr("Notifications")
-        color: Colours.palette.m3outline
-        font: Tokens.font.mono.builders.small.weight(Font.Medium).build()
-        elide: Text.ElideRight
+        spacing: Tokens.spacing.small
+
+        StyledText {
+            Layout.fillWidth: true
+            text: Notifs.list.length > 0 ? Tr.trN("%n notification", "%n notifications", Notifs.list.length) : Tr.tr("Notifications")
+            color: Colours.palette.m3outline
+            font: Tokens.font.mono.builders.small.weight(Font.Medium).build()
+            elide: Text.ElideRight
+        }
+
+        IconButton {
+            visible: Notifs.notClosed.length > 0 && !Config.lock.hideNotifs
+            type: IconButton.Text
+            icon: "clear_all"
+            font: Tokens.font.icon.medium
+            onClicked: clearTimer.start()
+        }
     }
 
     ClippingRectangle {
