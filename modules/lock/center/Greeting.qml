@@ -8,8 +8,11 @@ import qs.components
 import qs.services
 import qs.utils
 
-// "Good night, {user}" - both the phrase and the icon change with the hour, sat between the
-// avatar and the password field
+// "{icon} Good night, {user}" by default, laid out from LockGreeting.format (or defaultFormat
+// if that's blank) - see the Lock screen settings page. {icon}/{weather_icon} become the period's
+// own icon and the current weather's; {greeting} and {user} become text, {user} in bold; anything
+// else in the format is kept as literal text exactly where it's written, spaces included, so the
+// format string is the only thing controlling what's shown, in what order, and how it's spaced.
 StyledRect {
     id: root
 
@@ -38,6 +41,41 @@ StyledRect {
             night: Tr.tr("Good night")
         })[root.period]
 
+    readonly property string format: LockGreeting.format || LockGreeting.defaultFormat
+    // The format split into { icon: glyph } / { text, bold } pieces in order, so mixed icon and
+    // text tokens can sit in a row together in whatever order the format put them in
+    readonly property var segments: {
+        const out = [];
+        const re = /\{(\w+)\}|([^{}]+)/g;
+        let m;
+        while ((m = re.exec(root.format)) !== null) {
+            if (m[1] === "icon")
+                out.push({
+                        icon: root.periodIcon
+                    });
+            else if (m[1] === "weather_icon")
+                out.push({
+                        icon: Weather.icon
+                    });
+            else if (m[1] === "greeting")
+                out.push({
+                        text: root.periodGreeting
+                    });
+            else if (m[1] === "user")
+                out.push({
+                        text: SysInfo.user,
+                        bold: true
+                    });
+            else if (m[1])
+                out.push({}); // an unknown {token}: dropped rather than shown literally
+            else
+                out.push({
+                        text: m[2]
+                    });
+        }
+        return out;
+    }
+
     implicitWidth: row.implicitWidth + Tokens.padding.large * 2
     implicitHeight: row.implicitHeight + Tokens.padding.small * 2
     radius: Tokens.rounding.full
@@ -47,25 +85,39 @@ StyledRect {
         id: row
 
         anchors.centerIn: parent
-        spacing: Tokens.spacing.small
+        spacing: 0
+
+        Repeater {
+            model: root.segments
+
+            Segment {}
+        }
+    }
+
+    component Segment: Item {
+        id: seg
+
+        required property var modelData
+
+        implicitWidth: seg.modelData.icon !== undefined ? icon.implicitWidth : label.implicitWidth
+        implicitHeight: seg.modelData.icon !== undefined ? icon.implicitHeight : label.implicitHeight
 
         MaterialIcon {
-            text: root.periodIcon
+            id: icon
+
+            visible: seg.modelData.icon !== undefined
+            text: seg.modelData.icon ?? ""
             color: Colours.palette.m3onSurfaceVariant
             fontStyle: Tokens.font.icon.small
         }
 
         StyledText {
-            // TRANSLATORS: %1 = time-of-day greeting ("Good morning"), followed by the username in bold
-            text: Tr.tr("%1,").arg(root.periodGreeting)
-            color: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.body.medium
-        }
+            id: label
 
-        StyledText {
-            text: SysInfo.user
+            visible: seg.modelData.icon === undefined
+            text: seg.modelData.text ?? ""
             color: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.body.builders.medium.weight(Font.DemiBold).build()
+            font: seg.modelData.bold ? Tokens.font.body.builders.medium.weight(Font.DemiBold).build() : Tokens.font.body.medium
         }
     }
 }

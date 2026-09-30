@@ -28,7 +28,26 @@ PageBase {
         StyledText {
             Layout.fillWidth: true
             Layout.bottomMargin: Tokens.spacing.small
-            text: Tr.tr("Shown above the password field. Leave one blank to use its default wording - the username after it is always added on top.")
+            text: Tr.tr("Shown above the password field. Available pieces: {icon} (time-of-day icon), {weather_icon} (current weather icon), {greeting} (the wording below) and {user}. Anything else you type stays exactly where you put it, spaces included, so this is what controls the order and spacing too.")
+            color: Colours.palette.m3outline
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
+        }
+
+        TextFieldRow {
+            first: true
+            last: true
+            label: Tr.tr("Layout")
+            value: LockGreeting.format
+            placeholderText: LockGreeting.defaultFormat
+            onEditingFinished: value => LockGreeting.setFormat(value)
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.small
+            Layout.bottomMargin: Tokens.spacing.small
+            text: Tr.tr("Wording for {greeting} by time of day. Leave one blank to use its default - the username is never part of these, only the format above.")
             color: Colours.palette.m3outline
             font: Tokens.font.label.small
             wrapMode: Text.WordWrap
