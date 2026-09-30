@@ -131,6 +131,17 @@ CustomMouseArea {
         return left ? inLeftPanel(panel, x, y) : inRightPanel(panel, x, y);
     }
 
+    // Whether the pointer is where this panel sits once fully open, rather than wherever it
+    // currently is mid-slide. inLeftPanel/inRightPanel hit-test the panel's live, animating x,
+    // which only covers as much width as it has slid into so far - a pointer moving in fast
+    // enough to outrun that animation reads as having left the panel and closes it right back.
+    // Same class of bug inPopout already works around with its own target geometry.
+    function inRestingSidePanel(panel: Item, left: bool, x: real, y: real): bool {
+        const edge = left ? bar.insetLeft + panel.width : width - panel.width;
+        const within = left ? x < edge : x > edge;
+        return within && withinPanelHeight(panel, x, y);
+    }
+
     // Whether px is at the screen edge such a panel comes from (or over the panel itself)
     function atSideEdge(px: real, panel: Item, left: bool): bool {
         if (left)
@@ -318,7 +329,7 @@ CustomMouseArea {
                 if (showSidebarHover && !screenState.sidebar) {
                     screenState.sidebar = true;
                 } else {
-                    const inSidebarArea = inSidePanel(panels.sidebar, panels.stackLeft, x, y) || (panels.sessionWithStack && inSidePanel(panels.sessionWrapper, panels.sessionLeft, x, y));
+                    const inSidebarArea = inRestingSidePanel(panels.sidebar, panels.stackLeft, x, y) || (panels.sessionWithStack && inRestingSidePanel(panels.sessionWrapper, panels.sessionLeft, x, y));
                     if (!inSidebarArea)
                         screenState.sidebar = false;
                 }
