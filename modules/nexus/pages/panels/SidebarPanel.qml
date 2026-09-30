@@ -30,6 +30,24 @@ PageBase {
             onToggled: GlobalConfig.sidebar.enabled = checked
         }
 
+        ToggleRow {
+            text: Tr.tr("Show on hover")
+            subtext: Tr.tr("Reveal when the cursor reaches the screen edge, near the top")
+            checked: Config.sidebar.showOnHover
+            onToggled: GlobalConfig.sidebar.showOnHover = checked
+        }
+
+        StepperRow {
+            visible: Config.sidebar.showOnHover
+            label: Tr.tr("Hover trigger height")
+            subtext: Tr.tr("How far down the edge triggers it, in pixels")
+            value: Config.sidebar.minHoverThreshold
+            from: 50
+            to: 600
+            stepSize: 25
+            onMoved: v => GlobalConfig.sidebar.minHoverThreshold = v
+        }
+
         StepperRow {
             last: true
             label: Tr.tr("Drag threshold")
