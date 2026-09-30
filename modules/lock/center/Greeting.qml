@@ -29,7 +29,9 @@ StyledRect {
             evening: "partly_cloudy_night",
             night: "bedtime"
         })[root.period]
-    readonly property string periodGreeting: ({
+    // A custom phrase from the Lock screen settings page wins if there is one; otherwise the
+    // built-in wording for the period
+    readonly property string periodGreeting: LockGreeting.textFor(root.period) || ({
             morning: Tr.tr("Good morning"),
             afternoon: Tr.tr("Good afternoon"),
             evening: Tr.tr("Good evening"),

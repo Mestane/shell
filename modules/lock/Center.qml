@@ -50,10 +50,6 @@ ColumnLayout {
         lock: root.lock
     }
 
-    SessionRow {
-        Layout.alignment: Qt.AlignHCenter
-    }
-
     StateMessage {
         Layout.fillWidth: true
         pam: root.lock.pam

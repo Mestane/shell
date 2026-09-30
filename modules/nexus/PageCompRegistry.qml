@@ -103,6 +103,11 @@ QtObject {
                 Component {
                     DesktopPanel {}
                 }
+
+                // Lock screen settings sub-page
+                Component {
+                    LockPanel {}
+                }
             }
         },
         Component {
