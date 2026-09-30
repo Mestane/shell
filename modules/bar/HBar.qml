@@ -121,6 +121,10 @@ RowLayout {
             } else {
                 popouts.hasCurrent = false;
             }
+        } else if (id === "activeWindow" && Config.bar.popouts.activeWindow && Config.bar.activeWindow.showOnHover) {
+            popouts.currentName = id.toLowerCase();
+            popouts.currentCenter = Qt.binding(() => root.centerOf(ch.item as Item));
+            popouts.hasCurrent = true;
         } else {
             popouts.hasCurrent = false;
         }
@@ -154,7 +158,7 @@ RowLayout {
         id: repeater
 
         model: ScriptModel {
-            values: root.Config.bar.entries.values.filter(e => e.enabled && e.id !== "activeWindow")
+            values: root.Config.bar.entries.values.filter(e => e.enabled)
         }
 
         DelegateChooser {
@@ -181,6 +185,16 @@ RowLayout {
                         objectName: "taskbarWorkspaces"
                         screen: root.screen
                         fullscreen: root.fullscreen
+                    }
+                }
+            }
+            DelegateChoice {
+                roleValue: "activeWindow"
+                delegate: EntryWrapper {
+                    HActiveWindow {
+                        objectName: "taskbarActiveWindow"
+                        bar: root
+                        monitor: Brightness.getMonitorForScreen(root.screen)
                     }
                 }
             }

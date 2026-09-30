@@ -106,6 +106,13 @@ PageBase {
 
         NavRow {
             first: true
+            icon: "reorder"
+            text: Tr.tr("Layout")
+            subtext: Tr.tr("What's shown, and in what order")
+            onClicked: root.nState.openSubPage(15)
+        }
+
+        NavRow {
             icon: "workspaces"
             text: Tr.tr("Workspaces")
             subtext: Tr.tr("Indicators, window icons")

@@ -108,6 +108,11 @@ QtObject {
                 Component {
                     LockPanel {}
                 }
+
+                // Taskbar layout/entries sub-page
+                Component {
+                    BarLayout {}
+                }
             }
         },
         Component {
