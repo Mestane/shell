@@ -69,14 +69,21 @@ are grouped into categories and have stable keys, so anything can open one by na
 > first - this fork provides the same package and they conflict.
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/cykler01/cykler-caelestia/main/bootstrap.sh | bash
+```
+
+That clones the repo into `./cykler-caelestia` and hands off to `install.sh`, which installs the
+dependencies and then builds and installs the shell. Pass flags through after `--`, e.g.
+`| bash -s -- -y`. Or do the same two steps by hand:
+
+```sh
 git clone https://github.com/cykler01/cykler-caelestia.git
 cd cykler-caelestia
 ./install.sh
 ```
 
-`install.sh` installs the dependencies and then builds and installs the shell. Pass
-`--install-deps false` if you already have the dependencies, `--repo-only` to skip AUR packages, or
-`-y` to skip the prompts. Then start it with `caelestia shell -d`.
+`install.sh` takes `--install-deps false` if you already have the dependencies, `--repo-only` to
+skip AUR packages, or `-y` to skip the prompts. Then start it with `caelestia shell -d`.
 
 Nix users can try the upstream flake that this fork keeps:
 
