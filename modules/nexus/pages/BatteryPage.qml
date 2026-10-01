@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Services.UPower
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -17,6 +18,9 @@ PageBase {
     // JS model for editing and written back on every change
     property list<var> thresholds: [...GlobalConfig.general.battery.powerManagement.thresholds]
     readonly property var pm: GlobalConfig.general.battery.powerManagement
+    // No battery (a desktop PC): everything plug/unplug/threshold-driven is meaningless, since
+    // those events never happen - only a plain profile picker and what each profile does apply
+    readonly property bool hasBattery: UPower.displayDevice.isLaptopBattery
     // Which profile's behaviour the tabbed card is editing
     property string behaviourTab: "powerSaver"
 
@@ -84,59 +88,69 @@ PageBase {
 
         ToggleRow {
             first: true
-            text: Tr.tr("Automatic power management")
-            subtext: Tr.tr("Change profile and effects when plugging in, unplugging or running low")
-            checked: root.pm.enabled
-            onToggled: root.pm.enabled = checked
-        }
-
-        ToggleRow {
-            last: true
+            last: !root.hasBattery
             text: Tr.tr("Notify when settings change")
-            subtext: Tr.tr("Show what was applied after each automatic change")
+            subtext: Tr.tr("Show what was applied whenever a profile's settings are applied")
             checked: GlobalConfig.utilities.toasts.lowPowerModeChanged
             onToggled: GlobalConfig.utilities.toasts.lowPowerModeChanged = checked
         }
 
-        // Independent of automatic power management: warns, then unloads the whole shell to save what is left
-        SectionHeader {
-            text: Tr.tr("Critical battery")
-        }
-
-        ToggleRow {
-            first: true
-            text: Tr.tr("Unload the shell at a critical level")
-            subtext: Tr.tr("Warn, then shut the shell down (caelestia shell -k) to stop it using power. Plugging in cancels it")
-            checked: GlobalConfig.general.battery.powerManagement.shellShutdown.enabled
-            onToggled: GlobalConfig.general.battery.powerManagement.shellShutdown.enabled = checked
-        }
-
-        StepperRow {
-            label: Tr.tr("Critical level")
-            // TRANSLATORS: % is the percent unit, leave it untranslated
-            subtext: Tr.tr("Battery percentage at or below which the countdown starts (%)")
-            value: GlobalConfig.general.battery.powerManagement.shellShutdown.level
-            from: 1
-            to: 30
-            stepSize: 1
-            onMoved: v => GlobalConfig.general.battery.powerManagement.shellShutdown.level = Math.round(v)
-        }
-
-        StepperRow {
-            last: true
-            label: Tr.tr("Warning time")
-            // TRANSLATORS: s is the seconds unit, leave it untranslated
-            subtext: Tr.tr("Seconds between the warning and the shell unloading (s)")
-            value: GlobalConfig.general.battery.powerManagement.shellShutdown.delay
-            from: 10
-            to: 300
-            stepSize: 10
-            onMoved: v => GlobalConfig.general.battery.powerManagement.shellShutdown.delay = Math.round(v)
-        }
-
-        // Everything below only runs with automatic power management on
+        // Plug/unplug/threshold-driven automation needs a battery to ever trigger at all
         ColumnLayout {
             Layout.fillWidth: true
+            visible: root.hasBattery
+            spacing: Tokens.spacing.extraSmall / 2
+
+            ToggleRow {
+                last: true
+                text: Tr.tr("Automatic power management")
+                subtext: Tr.tr("Switch profile when plugging in, unplugging or running low")
+                checked: root.pm.enabled
+                onToggled: root.pm.enabled = checked
+            }
+
+            // Independent of automatic power management: warns, then unloads the whole shell to save what is left
+            SectionHeader {
+                text: Tr.tr("Critical battery")
+            }
+
+            ToggleRow {
+                first: true
+                text: Tr.tr("Unload the shell at a critical level")
+                subtext: Tr.tr("Warn, then shut the shell down (caelestia shell -k) to stop it using power. Plugging in cancels it")
+                checked: GlobalConfig.general.battery.powerManagement.shellShutdown.enabled
+                onToggled: GlobalConfig.general.battery.powerManagement.shellShutdown.enabled = checked
+            }
+
+            StepperRow {
+                label: Tr.tr("Critical level")
+                // TRANSLATORS: % is the percent unit, leave it untranslated
+                subtext: Tr.tr("Battery percentage at or below which the countdown starts (%)")
+                value: GlobalConfig.general.battery.powerManagement.shellShutdown.level
+                from: 1
+                to: 30
+                stepSize: 1
+                onMoved: v => GlobalConfig.general.battery.powerManagement.shellShutdown.level = Math.round(v)
+            }
+
+            StepperRow {
+                last: true
+                label: Tr.tr("Warning time")
+                // TRANSLATORS: s is the seconds unit, leave it untranslated
+                subtext: Tr.tr("Seconds between the warning and the shell unloading (s)")
+                value: GlobalConfig.general.battery.powerManagement.shellShutdown.delay
+                from: 10
+                to: 300
+                stepSize: 10
+                onMoved: v => GlobalConfig.general.battery.powerManagement.shellShutdown.delay = Math.round(v)
+            }
+        }
+
+        // Everything in this block needs a battery, and only runs with automatic power
+        // management on - the profile behaviours further down apply regardless of either
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: root.hasBattery
             spacing: Tokens.spacing.extraSmall / 2
             enabled: root.pm.enabled
             opacity: enabled ? 1 : 0.5
@@ -168,13 +182,15 @@ PageBase {
                 onToggled: root.pm.pauseVisualisersInPowerSaver = checked
             }
 
-            // Plugged in
+            // Plugged in: just which profile to switch to. What that profile actually does
+            // (effects, refresh rate) lives in Profile behaviours below, not duplicated here
             SectionHeader {
                 text: Tr.tr("When plugged in")
             }
 
             PowerProfileSelector {
                 first: true
+                last: true
                 label: Tr.tr("Power profile")
                 subtext: Tr.tr("Previous goes back to the profile from before unplugging")
                 showRestore: true
@@ -183,20 +199,7 @@ PageBase {
                 onProfileChanged: v => root.pm.onCharging.setPowerProfile = v
             }
 
-            RefreshRateSelector {
-                label: Tr.tr("Refresh rate")
-                showRestore: true
-                showUnchanged: true
-                value: root.pm.onCharging.setRefreshRate
-                onRateChanged: v => root.pm.onCharging.setRefreshRate = v
-            }
-
-            EffectRows {
-                target: root.pm.onCharging
-                lastRow: true
-            }
-
-            // Unplugged
+            // Unplugged: same idea - just which profile, not its own copy of what it does
             SectionHeader {
                 text: Tr.tr("On battery")
             }
@@ -204,20 +207,10 @@ PageBase {
             PowerProfileSelector {
                 first: true
                 label: Tr.tr("Power profile")
+                subtext: Tr.tr("Keep current leaves whatever profile is already active alone, rather than switching it")
                 showUnchanged: true
                 value: root.pm.onUnplugged.setPowerProfile === "restore" ? "" : root.pm.onUnplugged.setPowerProfile
                 onProfileChanged: v => root.pm.onUnplugged.setPowerProfile = v
-            }
-
-            RefreshRateSelector {
-                label: Tr.tr("Refresh rate")
-                showUnchanged: true
-                value: root.pm.onUnplugged.setRefreshRate === "restore" ? "" : root.pm.onUnplugged.setRefreshRate
-                onRateChanged: v => root.pm.onUnplugged.setRefreshRate = v
-            }
-
-            EffectRows {
-                target: root.pm.onUnplugged
             }
 
             ToggleRow {
@@ -283,59 +276,60 @@ PageBase {
                     root.saveThresholds();
                 }
             }
+        }
 
-            // Power profile behaviours
-            SectionHeader {
-                text: Tr.tr("Profile behaviours")
-            }
+        // Power profile behaviours: always available, battery or not, automatic management on
+        // or off - this is what a manual switch (the card up top) applies too
+        SectionHeader {
+            text: Tr.tr("Profile behaviours")
+        }
 
-            StyledText {
-                Layout.fillWidth: true
-                Layout.bottomMargin: Tokens.spacing.small
-                text: Tr.tr("Applied whenever a profile is switched to. The plugged in, battery and threshold settings above take priority over these")
-                color: Colours.palette.m3outline
-                font: Tokens.font.label.small
-                wrapMode: Text.WordWrap
-            }
+        StyledText {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.small
+            text: root.hasBattery ? Tr.tr("Applied whenever a profile is switched to, manually or automatically. The plugged in, battery and threshold settings above take priority over these") : Tr.tr("Applied whenever a profile is switched to, from the card at the top of this page")
+            color: Colours.palette.m3outline
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
+        }
 
-            SegmentedButtons {
-                Layout.fillWidth: true
-                Layout.bottomMargin: Tokens.spacing.small
-                fillWidth: true
-                value: root.behaviourTab
-                options: [
-                    {
-                        text: Tr.tr("Power Saver"),
-                        icon: "energy_savings_leaf",
-                        value: "powerSaver"
-                    },
-                    {
-                        text: Tr.tr("Balanced"),
-                        icon: "balance",
-                        value: "balanced"
-                    },
-                    {
-                        text: Tr.tr("Performance"),
-                        icon: "speed",
-                        value: "performance"
-                    }
-                ]
-                onPicked: v => root.behaviourTab = v
-            }
+        SegmentedButtons {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.small
+            fillWidth: true
+            value: root.behaviourTab
+            options: [
+                {
+                    text: Tr.tr("Power Saver"),
+                    icon: "energy_savings_leaf",
+                    value: "powerSaver"
+                },
+                {
+                    text: Tr.tr("Balanced"),
+                    icon: "balance",
+                    value: "balanced"
+                },
+                {
+                    text: Tr.tr("Performance"),
+                    icon: "speed",
+                    value: "performance"
+                }
+            ]
+            onPicked: v => root.behaviourTab = v
+        }
 
-            RefreshRateSelector {
-                first: true
-                label: Tr.tr("Refresh rate")
-                showRestore: true
-                showUnchanged: true
-                value: root.pm.profileBehaviors[root.behaviourTab].setRefreshRate
-                onRateChanged: v => root.pm.profileBehaviors[root.behaviourTab].setRefreshRate = v
-            }
+        RefreshRateSelector {
+            first: true
+            label: Tr.tr("Refresh rate")
+            showRestore: true
+            showUnchanged: true
+            value: root.pm.profileBehaviors[root.behaviourTab].setRefreshRate
+            onRateChanged: v => root.pm.profileBehaviors[root.behaviourTab].setRefreshRate = v
+        }
 
-            EffectRows {
-                target: root.pm.profileBehaviors[root.behaviourTab]
-                lastRow: true
-            }
+        EffectRows {
+            target: root.pm.profileBehaviors[root.behaviourTab]
+            lastRow: true
         }
 
         // Screen & lock

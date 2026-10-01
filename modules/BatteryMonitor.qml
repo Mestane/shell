@@ -31,6 +31,27 @@ Scope {
 
     readonly property list<string> effectKeys: ["disableAnimations", "disableBlur", "disableRounding", "disableShadows"]
 
+    // NOTE(fork): a desktop PC (no battery) never gets a charging/unplugged event to pick a
+    // profile for, so it starts on Performance once rather than whatever powerprofilesd happened
+    // to come up with - PersistentProperties means this only ever fires once, so a later manual
+    // choice is never overridden on a future restart
+    PersistentProperties {
+        id: desktopDefault
+
+        property bool applied: false
+
+        reloadableId: "batteryMonitorDesktopDefault"
+    }
+
+    function applyDesktopDefault(): void {
+        if (desktopDefault.applied || UPower.displayDevice.isLaptopBattery)
+            return;
+
+        desktopDefault.applied = true;
+        if (PowerProfiles.hasPerformanceProfile)
+            PowerProfiles.profile = PowerProfile.Performance;
+    }
+
     // NOTE(fork): critical-battery shell shutdown. Seconds left on the countdown (0 = not counting down), and
     // whether the shell has already been told to unload (so it is only asked once)
     property int shutdownRemaining: 0
@@ -450,6 +471,7 @@ Scope {
             if (!UPower.displayDevice.ready)
                 return;
             root.handleBatteryWarnings();
+            root.applyDesktopDefault();
             startupTimer.restart();
         }
 
@@ -467,13 +489,16 @@ Scope {
     }
 
     // NOTE(fork): react to power profile changes made outside the shell (e.g. the bar's battery
-    // popout) by applying that profile's behaviour. Changes the shell made itself already
-    // included it, merged under the settings that asked for them, so they are skipped here.
+    // popout, or a manual pick on the Power & battery page) by applying that profile's
+    // behaviour. Deliberately independent of powerManagementEnabled, which is only about the
+    // plug/unplug/threshold automation - a manually picked profile applies its own behaviour
+    // either way, battery or not. Changes the shell made itself already included it, merged
+    // under the settings that asked for them, so they are skipped here.
     Connections {
         function onProfileChanged(): void {
             const expected = root.expectedProfile;
             root.expectedProfile = -1;
-            if (!root.powerManagementEnabled || PowerProfiles.profile === expected)
+            if (PowerProfiles.profile === expected)
                 return;
 
             const behaviour = root.behaviourFor(PowerProfiles.profile);
