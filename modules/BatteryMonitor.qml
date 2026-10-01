@@ -176,9 +176,13 @@ Scope {
             if (Math.abs((data.refreshRate ?? 0) - Number(targetRate)) < 0.5)
                 continue;
 
-            // NOTE(fork): lua Hyprland removed "keyword monitor"; use hl.monitor() there
+            // NOTE(fork): lua Hyprland removed "keyword monitor"; use hl.monitor() there. Position
+            // and scale come from a fresh hl.get_monitor() lookup done inside the eval itself,
+            // not data.x/data.y/data.scale here - those are Quickshell's own cached IPC snapshot,
+            // which can go stale (e.g. report 520,1440 as 0,0) and silently corrupt the monitor's
+            // position/scale, or stop the mode change applying at all, if trusted directly
             if (Hypr.usingLua)
-                Hypr.extras.message(`eval hl.monitor({ output = "${data.name}", mode = "${data.width}x${data.height}@${targetRate}", position = "${data.x}x${data.y}", scale = ${data.scale} });`);
+                Hypr.extras.message(`eval local m = hl.get_monitor("${data.name}"); if m then hl.monitor({ output = "${data.name}", mode = "${data.width}x${data.height}@${targetRate}", position = m.x .. "x" .. m.y, scale = m.scale }); end`);
             else
                 Hypr.extras.message(`keyword monitor ${data.name},${data.width}x${data.height}@${targetRate},${data.x}x${data.y},${data.scale}`);
         }
@@ -321,8 +325,9 @@ Scope {
             if (data && root.originalSettings.refreshRates[data.name]) {
                 const originalRate = root.originalSettings.refreshRates[data.name];
 
+                // See applyRefreshRate() for why position/scale are looked up fresh here
                 if (Hypr.usingLua)
-                    Hypr.extras.message(`eval hl.monitor({ output = "${data.name}", mode = "${data.width}x${data.height}@${originalRate}", position = "${data.x}x${data.y}", scale = ${data.scale} });`);
+                    Hypr.extras.message(`eval local m = hl.get_monitor("${data.name}"); if m then hl.monitor({ output = "${data.name}", mode = "${data.width}x${data.height}@${originalRate}", position = m.x .. "x" .. m.y, scale = m.scale }); end`);
                 else
                     Hypr.extras.message(`keyword monitor ${data.name},${data.width}x${data.height}@${originalRate},${data.x}x${data.y},${data.scale}`);
             }
