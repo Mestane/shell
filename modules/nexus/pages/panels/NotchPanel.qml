@@ -3,24 +3,16 @@ import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components.controls
+import qs.modules.nexus
 import qs.modules.nexus.common
 
 PageBase {
     id: root
 
-    readonly property list<MenuItem> alignItems: [
-        MenuItem {
-            text: Tr.trCtx("Left", "panel alignment")
-            icon: "align_horizontal_left"
-        },
-        MenuItem {
-            text: Tr.trCtx("Centre", "panel alignment")
-            icon: "align_horizontal_center"
-        },
-        MenuItem {
-            text: Tr.trCtx("Right", "panel alignment")
-            icon: "align_horizontal_right"
-        }
+    readonly property list<string> alignNames: [
+        Tr.trCtx("Left", "panel alignment"),
+        Tr.trCtx("Centre", "panel alignment"),
+        Tr.trCtx("Right", "panel alignment")
     ]
 
     title: Tr.tr("Notch")
@@ -52,14 +44,13 @@ PageBase {
             text: Tr.tr("Position")
         }
 
-        SelectRow {
+        NavRow {
             first: true
             last: true
-            label: Tr.tr("Alignment")
-            subtext: Tr.tr("Where along that edge the panel sits")
-            menuItems: root.alignItems
-            active: root.alignItems[Config.notch.align] ?? root.alignItems[0]
-            onSelected: item => GlobalConfig.notch.align = root.alignItems.indexOf(item)
+            icon: "dashboard_customize"
+            text: Tr.tr("Alignment")
+            subtext: Tr.tr("Currently %1 — change it, and everything else's position, in Layout").arg(root.alignNames[Config.notch.align] ?? root.alignNames[0])
+            onClicked: root.nState.currentPageIdx = PageRegistry.indexOfKey("layout")
         }
 
         // Standing notch

@@ -4,29 +4,18 @@ import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components.controls
+import qs.modules.nexus
 import qs.modules.nexus.common
 
 PageBase {
     id: root
 
     // Ordered to match config::BarPosition (Left, Right, Top, Bottom)
-    readonly property list<MenuItem> positionItems: [
-        MenuItem {
-            text: Tr.trCtx("Left", "bar position")
-            icon: "align_horizontal_left"
-        },
-        MenuItem {
-            text: Tr.trCtx("Right", "bar position")
-            icon: "align_horizontal_right"
-        },
-        MenuItem {
-            text: Tr.trCtx("Top", "bar position")
-            icon: "vertical_align_top"
-        },
-        MenuItem {
-            text: Tr.trCtx("Bottom", "bar position")
-            icon: "vertical_align_bottom"
-        }
+    readonly property list<string> positionNames: [
+        Tr.trCtx("Left", "bar position"),
+        Tr.trCtx("Right", "bar position"),
+        Tr.trCtx("Top", "bar position"),
+        Tr.trCtx("Bottom", "bar position")
     ]
 
     title: Tr.tr("Taskbar")
@@ -44,13 +33,12 @@ PageBase {
             text: Tr.tr("Placement")
         }
 
-        SelectRow {
+        NavRow {
             first: true
-            label: Tr.tr("Screen edge")
-            subtext: Tr.tr("Which side of the screen the bar sits on")
-            menuItems: root.positionItems
-            active: root.positionItems[Config.bar.position] ?? root.positionItems[0]
-            onSelected: item => GlobalConfig.bar.position = root.positionItems.indexOf(item)
+            icon: "dashboard_customize"
+            text: Tr.tr("Screen edge")
+            subtext: Tr.tr("Currently %1 — change it, and everything else's position, in Layout").arg(root.positionNames[Config.bar.position] ?? root.positionNames[0])
+            onClicked: root.nState.currentPageIdx = PageRegistry.indexOfKey("layout")
         }
 
         ToggleRow {
