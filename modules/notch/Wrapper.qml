@@ -123,9 +123,15 @@ Item {
     x: onVerticalBar ? (hangX + width / 2) * (1 - inBarProg) + barCx * inBarProg - width / 2 : hangX
 
     y: onVerticalBar ? (hangY + height / 2) * (1 - inBarProg) + barCy * inBarProg - height / 2 : hangY * (1 - inBarProg) + barY * inBarProg
-    // The turn happens half way, while the content is faded out
+    // The turn happens half way, while the content is faded out - eased rather than snapped
+    // outright, so it still reads as one continuous move if the fade and the switch aren't
+    // perfectly in step
 
     rotation: onVerticalBar && inBarProg > 0.5 ? (barRef.onLeft ? -90 : 90) : 0
+
+    Behavior on rotation {
+        Anim {}
+    }
 
     implicitWidth: content.implicitWidth
 
