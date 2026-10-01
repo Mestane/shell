@@ -98,6 +98,9 @@ Item {
     property point dragPoint
     // The workspace a dropped window would land on, or -1
     property int dropWsId: -1
+    // The tile for dropWsId, so a drop onto an occupied workspace can ask it which existing
+    // window the pointer is nearest, to split in on that side the way a native click-drag would
+    property var dropTile: null
     // The window under the pointer in the workspace it came from: dropping there trades places
     property var swapClient: null
     // Which side of the panel the pointer is out past while dragging, so the page can be turned
@@ -182,11 +185,13 @@ Item {
         root.dragPoint = root.mapFromItem(null, sceneX, sceneY);
 
         let target = -1;
+        let targetTile = null;
         let swap = null;
         for (let i = 0; i < tiles.count; ++i) {
             const tile = tiles.itemAt(i);
             if (tile && tile.contains(tile.mapFromItem(root, root.dragPoint.x, root.dragPoint.y))) {
                 target = tile.wsId;
+                targetTile = tile;
                 // Over another window of its own workspace, a drop rearranges rather than moves
                 if (!root.ghostIsWorkspace && target === root.pending?.wsId) {
                     const under = tile.windowAt(root, root.dragPoint.x, root.dragPoint.y);
@@ -197,6 +202,7 @@ Item {
             }
         }
         root.dropWsId = target;
+        root.dropTile = targetTile;
         root.swapClient = swap;
     }
 
@@ -234,6 +240,14 @@ Item {
                 Hypr.swapWindows(root.dragClient.address, root.swapClient.address);
                 root.refreshSoon();
             } else if (root.dropWsId > 0 && root.dropWsId !== p.wsId) {
+                // An occupied workspace splits the new window in beside whichever existing one
+                // it was dropped nearest to, on the side it was dropped on - an empty one needs
+                // no preselect, there is nothing yet to split against
+                const occupied = (Hypr.workspaces.values.find(w => w.id === root.dropWsId)?.lastIpcObject?.windows ?? 0) > 0;
+                if (occupied) {
+                    const dir = root.dropTile?.splitDirectionAt(root, root.dragPoint.x, root.dragPoint.y) || (root.dropTile && root.dragPoint.x - root.dropTile.mapToItem(root, 0, 0).x < root.dropTile.width / 2 ? "l" : "r");
+                    Hypr.preselectSplit(dir);
+                }
                 Hypr.moveWindowToWorkspace(root.dragClient.address, root.dropWsId);
                 root.refreshSoon();
             }
@@ -242,6 +256,7 @@ Item {
         root.dragClient = null;
         root.dragWs = -1;
         root.dropWsId = -1;
+        root.dropTile = null;
         root.swapClient = null;
         root.pending = null;
     }
@@ -308,6 +323,7 @@ Item {
             root.dragClient = null;
             root.dragWs = -1;
             root.dropWsId = -1;
+            root.dropTile = null;
             root.swapClient = null;
             root.pending = null;
             if (root.screenState.overview) {

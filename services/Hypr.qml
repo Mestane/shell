@@ -69,6 +69,17 @@ Singleton {
         dispatch(usingLua ? `hl.dsp.window.move({ workspace = ${ws}, follow = false, window = "address:0x${address}" })` : `movetoworkspacesilent ${ws},address:0x${address}`);
     }
 
+    // Forces the next window placed into the layout to split in on the given side (l/r/u/d)
+    // of whatever it lands next to, instead of wherever the layout's own heuristic would put
+    // it - used right before moveWindowToWorkspace so a window dropped onto an occupied
+    // workspace lands where it was actually dropped
+    function preselectSplit(dir: string): void {
+        if (!dir)
+            return;
+
+        dispatch(usingLua ? `hl.dsp.layout("preselect ${dir}")` : `layoutmsg preselect ${dir}`);
+    }
+
     // Trades the places of two windows in a workspace's layout
     function swapWindows(address: string, other: string): void {
         if (!address || !other)

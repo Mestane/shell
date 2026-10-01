@@ -46,6 +46,25 @@ StyledClippingRect {
         return null;
     }
 
+    // The window under a point and which of its edges the point is nearest, so a window dropped
+    // into this tile from elsewhere can split in right where it was dropped near, the same way
+    // Hyprland's own click-drag preview picks a side - rather than always landing on a fixed one
+    function splitDirectionAt(item: Item, x: real, y: real): string {
+        for (let i = 0; i < windowCards.count; ++i) {
+            const card = windowCards.itemAt(i);
+            const local = card ? card.mapFromItem(item, x, y) : null;
+            if (card && card.contains(local)) {
+                const left = local.x / card.width;
+                const top = local.y / card.height;
+                const right = 1 - left;
+                const bottom = 1 - top;
+                const closest = Math.min(left, right, top, bottom);
+                return closest === left ? "l" : closest === right ? "r" : closest === top ? "u" : "d";
+            }
+        }
+        return "";
+    }
+
     readonly property var workspace: Hypr.workspaces.values.find(w => w.id === root.wsId) ?? null
     // A plain array of toplevels. The Repeater below cannot take a `list<HyprlandToplevel>`
     // directly, it has to be handed something it can turn into model data.
