@@ -87,14 +87,15 @@ Item {
     readonly property bool visualiserLive: trackActive || !PowerSaving.onBattery
 
     // With windows open the notch sits inside the bar (where the active window's title used to be) instead of
-    // hanging below the top edge: as a flat pill on a horizontal bar, rotated to read along it on a vertical one
+    // hanging below the top edge, as a flat pill - on a side bar it would have to rotate to read along it, which
+    // felt like it was snapping into place, so it just stays hanging below the top edge there instead
     readonly property var barRef: ShellState.componentsFor(screen)?.bar
     // 1 once the workspace is empty, 0 with windows: one animated value owned by the drawers window, shared with the
     // bar's cut-away so the notch, the bar and the content all move on the same curve
 
     property real morph: 1
 
-    readonly property real inBarProg: barRef ? 1 - morph : 0
+    readonly property real inBarProg: barRef && !barRef.vertical ? 1 - morph : 0
 
     readonly property bool morphing: inBarProg > 0.001 && inBarProg < 0.999
 
