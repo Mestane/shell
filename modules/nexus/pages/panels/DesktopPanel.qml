@@ -100,7 +100,7 @@ PageBase {
 
         ToggleRow {
             text: Tr.tr("Hide when windows are open")
-            subtext: Tr.tr("Fade out while the workspace has windows on it")
+            subtext: Tr.tr("Fade the app shortcuts out while the workspace has windows on it")
             checked: root.iconsConfig.hideWithWindows
             onToggled: GlobalConfig.background.desktopIcons.hideWithWindows = checked
         }
@@ -238,7 +238,7 @@ PageBase {
 
         ToggleRow {
             text: Tr.tr("Hide when windows are open")
-            subtext: Tr.tr("Fade out while the workspace has windows on it")
+            subtext: Tr.tr("Fade the widget cards out while the workspace has windows on it")
             checked: root.widgetsConfig.hideWithWindows
             onToggled: GlobalConfig.background.desktopWidgets.hideWithWindows = checked
         }
@@ -259,6 +259,50 @@ PageBase {
             to: 100
             stepSize: 5
             onMoved: v => GlobalConfig.background.desktopWidgets.opacity = Math.round(v) / 100
+        }
+
+        SectionHeader {
+            text: Tr.tr("Widget list")
+        }
+
+        ListEditor {
+            function labelFor(item: var): string {
+                return root.widgetNames[item.id] ?? item.id;
+            }
+
+            function toggledFor(item: var): bool {
+                return item.enabled;
+            }
+
+            z: 1
+            first: true
+            values: root.widgetsConfig.entries.values
+            onItemMoved: (from, to) => GlobalConfig.background.desktopWidgets.entries.move(from, to)
+            onItemRemoved: index => GlobalConfig.background.desktopWidgets.entries.remove(index)
+            onItemToggled: (index, checked) => GlobalConfig.background.desktopWidgets.entries.at(index).enabled = checked
+        }
+
+        DialogSelectButton {
+            rootParent: root.flickable
+            icon: "add"
+            label: Tr.tr("Add widget")
+            header: Tr.tr("Add a widget")
+            acceptLabel: Tr.trCtx("Add", "button")
+
+            // Only widgets that aren't in the list already
+            model: Object.keys(root.widgetNames).filter(id => !root.widgetsConfig.entries.values.some(e => e.id === id)).map(id => ({
+                        id: id,
+                        label: root.widgetNames[id]
+                    }))
+
+            onAccepted: {
+                if (!selectedItem)
+                    return;
+                GlobalConfig.background.desktopWidgets.entries.insert({
+                    id: selectedItem,
+                    enabled: true
+                });
+            }
         }
 
         SectionHeader {
@@ -305,50 +349,6 @@ PageBase {
                     list.at(i).row = -1;
                     list.at(i).right = false;
                 }
-            }
-        }
-
-        SectionHeader {
-            text: Tr.tr("Widgets")
-        }
-
-        ListEditor {
-            function labelFor(item: var): string {
-                return root.widgetNames[item.id] ?? item.id;
-            }
-
-            function toggledFor(item: var): bool {
-                return item.enabled;
-            }
-
-            z: 1
-            first: true
-            values: root.widgetsConfig.entries.values
-            onItemMoved: (from, to) => GlobalConfig.background.desktopWidgets.entries.move(from, to)
-            onItemRemoved: index => GlobalConfig.background.desktopWidgets.entries.remove(index)
-            onItemToggled: (index, checked) => GlobalConfig.background.desktopWidgets.entries.at(index).enabled = checked
-        }
-
-        DialogSelectButton {
-            rootParent: root.flickable
-            icon: "add"
-            label: Tr.tr("Add widget")
-            header: Tr.tr("Add a widget")
-            acceptLabel: Tr.trCtx("Add", "button")
-
-            // Only widgets that aren't in the list already
-            model: Object.keys(root.widgetNames).filter(id => !root.widgetsConfig.entries.values.some(e => e.id === id)).map(id => ({
-                        id: id,
-                        label: root.widgetNames[id]
-                    }))
-
-            onAccepted: {
-                if (!selectedItem)
-                    return;
-                GlobalConfig.background.desktopWidgets.entries.insert({
-                    id: selectedItem,
-                    enabled: true
-                });
             }
         }
     }
