@@ -31,6 +31,11 @@ CustomMouseArea {
     // Set when a corner pulls the sidebar out, so it slides back in once the pointer leaves it, the
     // same way it does when Config.sidebar.showOnHover is on
     property bool sidebarCornerActive
+    // Set when the edge-hover trigger is what opened the sidebar (as opposed to a keybind or
+    // other shortcut), so leaving the pointer away from it closes it again only in that case -
+    // otherwise a sidebar opened by keybind while the pointer is elsewhere would close itself on
+    // the very next mouse move
+    property bool sidebarHoverActive
 
     // The panel a point in a corner is set to open, or None if it is in no corner, the shell is
     // showing a fullscreen window, or the panel the corner names is switched off
@@ -224,9 +229,10 @@ CustomMouseArea {
             if (Config.bar.showOnHover)
                 bar.isHovered = false;
 
-            // A corner that pulled the sidebar out lets it go again the same way, as once the pointer is
-            // off the drawer window no further movement reaches this area
-            if (Config.sidebar.showOnHover || root.sidebarCornerActive)
+            // A corner or hover trigger that pulled the sidebar out lets it go again the same way,
+            // as once the pointer is off the drawer window no further movement reaches this area.
+            // One opened some other way (a keybind) stays open regardless of where the pointer is.
+            if (root.sidebarHoverActive || root.sidebarCornerActive)
                 screenState.sidebar = false;
         }
     }
@@ -280,8 +286,10 @@ CustomMouseArea {
             if (Config.sidebar.showOnHover) {
                 const sidebarTriggerY = Math.max(Config.sidebar.minHoverThreshold, panels.notifsWithStack && panels.notifsTop ? panels.notifications.y + panels.notifications.height + borderThickness : 0);
                 const showSidebarHover = atSideEdge(x, panels.sidebar, panels.stackLeft) && y <= sidebarTriggerY;
-                if (showSidebarHover && !screenState.sidebar)
+                if (showSidebarHover && !screenState.sidebar) {
+                    root.sidebarHoverActive = true;
                     screenState.sidebar = true;
+                }
             }
 
             // Show/hide session on drag
@@ -322,13 +330,17 @@ CustomMouseArea {
                     screenState.session = false;
             }
 
-            // Show/hide sidebar on hover, or once a hot corner has pulled it out
+            // Show/hide sidebar on hover, or once a hot corner has pulled it out. Only closes it
+            // again when this is what opened it in the first place (sidebarHoverActive/
+            // sidebarCornerActive) - one opened by a keybind instead stays open regardless of
+            // where the pointer happens to be, same as before showOnHover existed
             if ((Config.sidebar.showOnHover || root.sidebarCornerActive) && !pressed) {
                 const sidebarTriggerY = Math.max(Config.sidebar.minHoverThreshold, panels.notifsWithStack && panels.notifsTop ? panels.notifications.y + panels.notifications.height + borderThickness : 0);
-                const showSidebarHover = atSideEdge(x, panels.sidebar, panels.stackLeft) && y <= sidebarTriggerY;
+                const showSidebarHover = Config.sidebar.showOnHover && atSideEdge(x, panels.sidebar, panels.stackLeft) && y <= sidebarTriggerY;
                 if (showSidebarHover && !screenState.sidebar) {
+                    root.sidebarHoverActive = true;
                     screenState.sidebar = true;
-                } else {
+                } else if (root.sidebarHoverActive || root.sidebarCornerActive) {
                     const inSidebarArea = inRestingSidePanel(panels.sidebar, panels.stackLeft, x, y) || (panels.sessionWithStack && inRestingSidePanel(panels.sessionWrapper, panels.sessionLeft, x, y));
                     if (!inSidebarArea)
                         screenState.sidebar = false;
@@ -443,9 +455,12 @@ CustomMouseArea {
         }
 
         function onSidebarChanged() {
-            // Nothing left for the corner to retract once the sidebar is closed some other way
-            if (!root.screenState.sidebar)
+            // Nothing left for the corner/hover trigger to retract once the sidebar is closed
+            // some other way
+            if (!root.screenState.sidebar) {
                 root.sidebarCornerActive = false;
+                root.sidebarHoverActive = false;
+            }
         }
 
         function onUtilitiesChanged() {
