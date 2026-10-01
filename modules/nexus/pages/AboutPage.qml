@@ -71,7 +71,7 @@ PageBase {
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: Tokens.spacing.small
-                    text: "Caelestia"
+                    text: "cykler - Caelestia"
                     font: Tokens.font.headline.builders.large.width(110).build()
                 }
 
@@ -142,18 +142,6 @@ PageBase {
             last: true
             label: "Qt"
             value: CUtils.qtVersion || "…"
-        }
-
-        // Plugins
-        SectionHeader {
-            text: Tr.tr("Plugins")
-        }
-
-        InfoRow {
-            first: true
-            last: true
-            label: Tr.tr("Loaded plugins")
-            value: root.pluginCount.toString()
         }
     }
 }
