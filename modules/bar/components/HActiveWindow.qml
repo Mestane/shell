@@ -86,7 +86,11 @@ Item {
         StyledText {
             id: label
 
-            Layout.maximumWidth: Math.max(0, root.maxWidth - icon.implicitWidth - row.spacing)
+            // Layout.maximumWidth only bounds a fillWidth item growing into slack space - this
+            // one never grows, so without an explicit preferredWidth here RowLayout just gives
+            // it its full unelided text width regardless, overlapping whatever the bar's other
+            // entries sit on right of it
+            Layout.preferredWidth: Math.min(implicitWidth, Math.max(0, root.maxWidth - icon.implicitWidth - row.spacing))
             text: root.windowTitle
             color: root.colour
             font: Tokens.font.body.builders.small.letterSpacing(1.4).build()
