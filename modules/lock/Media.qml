@@ -7,6 +7,7 @@ import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.components.images
+import qs.modules.dashboard.media
 import qs.services
 
 StyledClippingRect {
@@ -14,13 +15,24 @@ StyledClippingRect {
 
     required property var lock
 
+    // NOTE(fork): the in-shell local player is not an MPRIS player, so it never showed up here.
+    // Whichever side is actually making sound right now wins outright; if neither is, both keep
+    // what was last playing for a while after it pauses, and the one that stopped most recently
+    // (Music.lastPlayedAt vs Players.rememberedAt) wins - the same rule the notch and the desktop
+    // widget use to pick what to show.
+    readonly property bool local: Music.playing || (Players.active?.isPlaying !== true && Music.recentlyPlaying && (!Players.recentPlayer || Music.lastPlayedAt >= Players.rememberedAt))
+    readonly property MediaSource source: MediaSource {
+        local: root.local
+        mpris: root.local ? null : Players.recentPlayer
+    }
+
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
     radius: Tokens.rounding.extraLarge
     color: Colours.tPalette.m3surfaceContainer
 
     FadeImage {
         anchors.fill: parent
-        source: Players.getArtUrl(Players.active)
+        source: root.source.coverSource
 
         asynchronous: true
         fillMode: Image.PreserveAspectCrop
@@ -57,7 +69,7 @@ StyledClippingRect {
         StyledText {
             Layout.fillWidth: true
             animate: true
-            text: (Players.active?.trackTitle ?? Tr.tr("Nothing playing")) || Tr.tr("Unknown track")
+            text: root.source.title || Tr.tr("Nothing playing")
             color: Colours.palette.m3primary
             horizontalAlignment: Text.AlignHCenter
             font: Tokens.font.title.medium
@@ -67,7 +79,7 @@ StyledClippingRect {
         StyledText {
             Layout.fillWidth: true
             animate: true
-            text: (Players.active?.trackArtist ?? Tr.tr("Try playing some music!")) || Tr.tr("Unknown artist")
+            text: root.source.artist || Tr.tr("Try playing some music!")
             color: Colours.palette.m3onSurfaceVariant
             horizontalAlignment: Text.AlignHCenter
             font: Tokens.font.body.small
@@ -85,17 +97,17 @@ StyledClippingRect {
                 icon: "skip_previous"
                 isRound: true
                 shapeMorph: true
-                disabled: !Players.active?.canGoPrevious
-                onClicked: Players.active?.previous()
+                disabled: !root.source.canGoPrevious
+                onClicked: root.source.previous()
             }
 
             IconButton {
-                icon: Players.active?.isPlaying ? "pause" : "play_arrow"
+                icon: root.source.isPlaying ? "pause" : "play_arrow"
                 isRound: true
                 shapeMorph: true
-                checked: Players.active?.isPlaying ?? false
-                disabled: !Players.active?.canTogglePlaying
-                onClicked: Players.active?.togglePlaying()
+                checked: root.source.isPlaying
+                disabled: !root.source.canTogglePlaying
+                onClicked: root.source.togglePlaying()
                 implicitWidth: implicitHeight + Tokens.padding.largeIncreased * 2
             }
 
@@ -104,8 +116,8 @@ StyledClippingRect {
                 icon: "skip_next"
                 isRound: true
                 shapeMorph: true
-                disabled: !Players.active?.canGoNext
-                onClicked: Players.active?.next()
+                disabled: !root.source.canGoNext
+                onClicked: root.source.next()
             }
         }
     }
