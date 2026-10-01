@@ -17,8 +17,9 @@ Item {
     // Screen border thickness (animated by the drawers window while fullscreen)
     required property real borderThickness
     // Whether the bar's middle stretch is currently cut away (an empty desktop, with
-    // bar.hideMiddleOnDesktop on) - passed through to the workspaces entry, which hides along
-    // with it rather than floating alone once there's nothing in the middle to anchor it to
+    // bar.hideMiddleOnDesktop on) - passed through to the activeWindow entry, which hides along
+    // with it rather than its "Desktop" placeholder floating alone once there's nothing in the
+    // middle to anchor it to
     required property bool middleHidden
 
     readonly property int position: Config.bar.position
