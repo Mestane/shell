@@ -86,6 +86,62 @@ Singleton {
         root.write(Lua.withCustomBinds(root.overridesText, root.customBinds.filter((_, i) => i !== index)));
     }
 
+    // Touchpad gestures (hypr/hyprland/gestures.lua). The three built-in swipes' finger counts are
+    // plain top-level variables, not kb* ids, so they go through numberVar/withNumberVar rather
+    // than the entries/combos machinery above. Defaults come from the same defaultsText FileView
+    // already loaded for the kb* ids.
+    readonly property var gestureFingerDefaults: ({
+            gestureFingers: Lua.numberVar(root.defaultsText, "gestureFingers") ?? 3,
+            workspaceSwipeFingers: Lua.numberVar(root.defaultsText, "workspaceSwipeFingers") ?? 3,
+            gestureFingersMore: Lua.numberVar(root.defaultsText, "gestureFingersMore") ?? 4
+        })
+
+    function gestureFingerCount(name: string): int {
+        return Lua.numberVar(root.overridesText, name) ?? root.gestureFingerDefaults[name] ?? 3;
+    }
+
+    function gestureFingerOverridden(name: string): bool {
+        return Lua.numberVar(root.overridesText, name) !== null;
+    }
+
+    function setGestureFingerCount(name: string, value: int): void {
+        root.write(Lua.withNumberVar(root.overridesText, name, value === root.gestureFingerDefaults[name] ? null : value));
+    }
+
+    function resetGestureFingerCount(name: string): void {
+        root.write(Lua.withNumberVar(root.overridesText, name, null));
+    }
+
+    // Arbitrary { fingers, direction, command } swipes added from the settings page - the gesture
+    // equivalent of customBinds, in the same overrides file, with their own array since a swipe
+    // has no key combo to live alongside
+    readonly property var customGestures: Lua.parseCustomGestures(root.overridesText)
+
+    function addCustomGesture(fingers: int, direction: string, command: string): void {
+        root.write(Lua.withCustomGestures(root.overridesText, [...root.customGestures, {
+                        fingers,
+                        direction,
+                        command
+                    }]));
+    }
+
+    function setCustomGesture(index: int, fingers: int, direction: string, command: string): void {
+        if (index < 0 || index >= root.customGestures.length)
+            return;
+
+        const next = [...root.customGestures];
+        next[index] = {
+            fingers,
+            direction,
+            command
+        };
+        root.write(Lua.withCustomGestures(root.overridesText, next));
+    }
+
+    function removeCustomGesture(index: int): void {
+        root.write(Lua.withCustomGestures(root.overridesText, root.customGestures.filter((_, i) => i !== index)));
+    }
+
     function pretty(combo: string): string {
         return Lua.pretty(combo);
     }
