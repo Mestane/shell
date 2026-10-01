@@ -146,6 +146,9 @@ QtObject {
                 Component {
                     NotificationsPage {}
                 }
+                Component {
+                    DiscordPage {}
+                }
             }
         },
 

@@ -269,19 +269,15 @@ Singleton {
                 track.timestamps.end = start + Math.round(Music.duration * 1000);
         }
 
-        // 2 is Discord's Listening activity type; omitted, Discord shows it as Playing
-        if (root.cfg.listeningType)
-            track.type = 2;
+        // Discord's activity type, straight from the config: 0 = playing, 1 = streaming,
+        // 2 = listening, 3 = watching, 5 = competing. Sent as-is rather than as a flag,
+        // because the type a client assumes by itself is not the same everywhere.
+        track.type = root.cfg.activityType;
 
         // Which field Discord puts in the member-list status text: 0 = app name, 1 = the
         // artist line, 2 = the song line. This is what makes it read like YouTube Music's
         // "Listening to <song>" instead of naming the app.
         track.status_display_type = root.cfg.statusDisplay;
-
-        // Optional override for the header itself. Empty leaves the application's name.
-        const name = root.expand(root.cfg.nameFormat);
-        if (name)
-            track.name = name;
 
         rpc.setActivity(track);
     }
@@ -372,15 +368,11 @@ Singleton {
             root.push();
         }
 
-        function onListeningTypeChanged(): void {
+        function onActivityTypeChanged(): void {
             root.push();
         }
 
         function onStatusDisplayChanged(): void {
-            root.push();
-        }
-
-        function onNameFormatChanged(): void {
             root.push();
         }
 

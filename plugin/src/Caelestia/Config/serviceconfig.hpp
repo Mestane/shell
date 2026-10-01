@@ -37,17 +37,16 @@ class DiscordConfig : public settings::ObjectNode {
     // Discord cannot show a local file, so the cover is looked up online by artist/album
     CONFIG_GLOBAL_PROPERTY(bool, showCover, true)
     CONFIG_GLOBAL_PROPERTY(bool, showElapsed, true)
-    // Ask Discord to show it as "Listening to" rather than "Playing"
-    CONFIG_GLOBAL_PROPERTY(bool, listeningType, true)
+    // Which activity type Discord labels it with, using Discord's own numbering: 0 = playing,
+    // 1 = streaming, 2 = listening, 3 = watching, 5 = competing. Listening by default so the
+    // card reads "Listening to" rather than "Playing". 4 is the app-only custom status and
+    // has no meaning here. Types a client does not honour fall back to playing.
+    CONFIG_GLOBAL_PROPERTY(int, activityType, 2)
     // Which activity field Discord uses as the status text in member lists, the same
     // switch Music Presence and the like expose: 0 = the app name ("caelestia"), 1 = the
     // artist line, 2 = the song line. Details is the default so the song shows, like
     // YouTube Music does.
     CONFIG_GLOBAL_PROPERTY(int, statusDisplay, 2)
-    // Overrides the activity name shown in the "Listening to ..." header. Empty leaves the
-    // application's own name in place. Whether the client honours this varies, so it is
-    // left off unless filled in.
-    CONFIG_GLOBAL_PROPERTY(QString, nameFormat, {})
 };
 
 class ServiceConfig : public settings::ObjectNode {
