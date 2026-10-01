@@ -53,8 +53,11 @@ Item {
     readonly property bool barActiveWindowShown: Config.bar.entries.values.some(e => e.id === "activeWindow" && e.enabled)
 
     // Up for as long as the workspace is empty, as long as there is something to show
-    // Whether the notch is meant to be up on this workspace at all: empty ones and ones with windows have their own switch
-    readonly property bool wanted: emptyWorkspace ? Config.notch.showOnEmptyWorkspace : (Config.notch.showWithWindows && !root.barActiveWindowShown)
+    // Whether the notch is meant to be up on this workspace at all: empty ones and ones with windows have their own switch.
+    // On a side bar it no longer morphs into the bar with windows open (it just hangs below the top edge like the empty-
+    // workspace state), so standing there persistently would be a permanent floating pill rather than something that
+    // read as tucked away - a side bar only gets the brief track-change pill there instead (see trackActive)
+    readonly property bool wanted: emptyWorkspace ? Config.notch.showOnEmptyWorkspace : (!(root.barRef?.vertical ?? false) && Config.notch.showWithWindows && !root.barActiveWindowShown)
     // Whether the standing notch has music to show
     readonly property bool musicShown: Config.notch.showMusic && root.hasRecent
     readonly property bool persistent: wanted && (Config.notch.showClock || musicShown)
