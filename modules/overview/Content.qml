@@ -262,12 +262,19 @@ Item {
     }
 
     // While it is up the previews are kept current, since a layout change (a swap, a resize
-    // from elsewhere) sends no event of its own
+    // from elsewhere) sends no event of its own. Both calls matter: toplevels carries each
+    // window's own geometry (what WindowCard draws), workspaces is what settles it after a
+    // move/split changes how many windows share the layout - either on its own can leave a
+    // preview showing a window's old, pre-change size
     Timer {
         interval: 500
         repeat: true
+        triggeredOnStart: true
         running: root.screenState.overview
-        onTriggered: Hyprland.refreshToplevels()
+        onTriggered: {
+            Hyprland.refreshToplevels();
+            Hyprland.refreshWorkspaces();
+        }
     }
 
     Timer {
