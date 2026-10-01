@@ -8,6 +8,7 @@ import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
+import qs.modules.nexus
 import qs.modules.nexus.common
 import qs.modules.nexus.pages.battery
 
@@ -86,13 +87,13 @@ PageBase {
             text: Tr.tr("Power management")
         }
 
-        ToggleRow {
+        NavRow {
             first: true
             last: !root.hasBattery
+            icon: "notifications"
             text: Tr.tr("Notify when settings change")
-            subtext: Tr.tr("Show what was applied whenever a profile's settings are applied")
-            checked: GlobalConfig.utilities.toasts.lowPowerModeChanged
-            onToggled: GlobalConfig.utilities.toasts.lowPowerModeChanged = checked
+            subtext: Tr.tr("Toast events, in Notifications settings")
+            onClicked: root.nState.currentPageIdx = PageRegistry.indexOfKey("services")
         }
 
         // Plug/unplug/threshold-driven automation needs a battery to ever trigger at all

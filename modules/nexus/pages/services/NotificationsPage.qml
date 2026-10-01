@@ -142,6 +142,13 @@ PageBase {
         }
 
         ToggleRow {
+            text: Tr.tr("Power profile settings applied")
+            subtext: Tr.tr("Show what was applied whenever a profile's settings are applied")
+            checked: GlobalConfig.utilities.toasts.lowPowerModeChanged
+            onToggled: GlobalConfig.utilities.toasts.lowPowerModeChanged = checked
+        }
+
+        ToggleRow {
             text: Tr.tr("Game mode changes")
             checked: GlobalConfig.utilities.toasts.gameModeChanged
             onToggled: GlobalConfig.utilities.toasts.gameModeChanged = checked

@@ -157,11 +157,18 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
             text: Tr.tr("Brightness")
             subtext: Tr.tr("Scroll on the bottom half of the bar to adjust brightness")
             checked: Config.bar.scrollActions.brightness
             onToggled: GlobalConfig.bar.scrollActions.brightness = checked
+        }
+
+        NavRow {
+            last: true
+            icon: "tune"
+            text: Tr.tr("Step size")
+            subtext: Tr.tr("How much each scroll changes - shared with the volume/brightness keys and OSD, in Services")
+            onClicked: root.nState.currentPageIdx = PageRegistry.indexOfKey("services")
         }
     }
 }
