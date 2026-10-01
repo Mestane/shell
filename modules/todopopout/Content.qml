@@ -304,7 +304,14 @@ Item {
                 Repeater {
                     id: taskRepeater
 
-                    model: root.currentTasks
+                    // Keyed by id, so an unrelated task changing (done, deadline, ...) doesn't
+                    // destroy and recreate every other row's delegate - that churn is what left
+                    // a freshly (re)created row's layer stuck on its first, pre-blend paint
+                    // (looking flat and grey) until something else forced it to repaint
+                    model: ScriptModel {
+                        values: root.currentTasks
+                        objectProp: "id"
+                    }
 
                     // A grouped list like the settings pages and menus use: connected rows in one
                     // surface, rounded only at the very top and bottom, with the usual hover feedback
