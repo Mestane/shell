@@ -138,8 +138,10 @@ StyledClippingRect {
         captureSource: root.captureSource
         // Without this the capture renders at its own native size rather than the tile's -
         // on a workspace split between windows that leaves each one looking too small, with
-        // grey padding around it instead of actually filling its half
-        constraintSize: Qt.size(root.width, root.height)
+        // grey padding around it instead of actually filling its half. Set per-axis to match
+        // how the other ScreencopyViews in this codebase do it (ActiveWindow.qml, Preview.qml)
+        constraintSize.width: root.width
+        constraintSize.height: root.height
         // A still frame per window: a live stream of every window on screen would
         // capture at full resolution on every frame
         live: false
