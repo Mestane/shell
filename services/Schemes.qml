@@ -78,6 +78,12 @@ Singleton {
         Quickshell.execDetached(["caelestia", "scheme", "set", "-v", variant]);
     }
 
+    // NOTE(fork): toggle the special "dynamic" scheme, which derives the palette from
+    // the current wallpaper. Turning it off returns to the static "caelestia" scheme.
+    function setDynamic(enabled: bool): void {
+        Quickshell.execDetached(["caelestia", "scheme", "set", "-n", enabled ? "dynamic" : "caelestia"]);
+    }
+
     Process {
         id: getSchemes
 

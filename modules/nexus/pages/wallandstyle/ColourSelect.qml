@@ -31,6 +31,20 @@ PageBase {
             onToggled: Colours.setMode(checked ? "dark" : "light")
         }
 
+        // Dynamic colours
+        SectionHeader {
+            text: Tr.tr("Dynamic colours")
+        }
+
+        ToggleRow {
+            first: true
+            last: true
+            text: Tr.tr("Use colours from wallpaper")
+            subtext: Tr.tr("Derive the colour scheme from the current wallpaper")
+            checked: Colours.scheme === "dynamic"
+            onToggled: Schemes.setDynamic(checked)
+        }
+
         // Colour scheme
         SectionHeader {
             text: Tr.tr("Colour scheme")
