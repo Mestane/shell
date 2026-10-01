@@ -8,6 +8,7 @@ Scope {
         // Force certain singletons to load on shell init instead of lazily
 
         IdleInhibitor;
+        DiscordPresence;
         GameMode;
         InputSettings;
         Notifs;

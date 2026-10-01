@@ -27,6 +27,20 @@ PageBase {
         }
     ]
 
+    // What Discord puts in the member-list status text, ordered to match statusDisplay
+    // (App name, Artist, Song)
+    readonly property list<MenuItem> statusItems: [
+        MenuItem {
+            text: Tr.trCtx("App name", "discord status text")
+        },
+        MenuItem {
+            text: Tr.trCtx("Artist", "discord status text")
+        },
+        MenuItem {
+            text: Tr.trCtx("Song", "discord status text")
+        }
+    ]
+
     // GPU types, ordered to match config::GpuType (Auto, Nvidia, Generic, None)
     readonly property list<MenuItem> gpuItems: [
         MenuItem {
@@ -214,6 +228,81 @@ PageBase {
             menuItems: root.gpuItems
             active: root.gpuItems[GlobalConfig.services.gpuType]
             onSelected: item => GlobalConfig.services.gpuType = root.gpuItems.indexOf(item)
+        }
+
+        // Discord rich presence
+        SectionHeader {
+            text: Tr.tr("Discord rich presence")
+        }
+
+        ToggleRow {
+            first: true
+            text: Tr.tr("Show what's playing")
+            subtext: Tr.tr("Mirror the local player on your Discord profile")
+            checked: GlobalConfig.services.discord.enabled
+            onToggled: GlobalConfig.services.discord.enabled = checked
+        }
+
+        TextFieldRow {
+            label: Tr.tr("Application ID")
+            subtext: Tr.tr("Optional - only to use your own Discord application")
+            value: GlobalConfig.services.discord.clientId
+            placeholderText: Tr.tr("Bundled Caelestia application")
+            onEditingFinished: value => GlobalConfig.services.discord.clientId = value
+        }
+
+        TextFieldRow {
+            label: Tr.tr("Title line")
+            subtext: Tr.tr("Placeholders: {title}, {artist}, {album}, {file}")
+            value: GlobalConfig.services.discord.titleFormat
+            placeholderText: "{title}"
+            onEditingFinished: value => GlobalConfig.services.discord.titleFormat = value
+        }
+
+        TextFieldRow {
+            label: Tr.tr("Description line")
+            subtext: Tr.tr("Shown under the title; leave blank to hide it")
+            value: GlobalConfig.services.discord.descFormat
+            placeholderText: "{artist}"
+            onEditingFinished: value => GlobalConfig.services.discord.descFormat = value
+        }
+
+        ToggleRow {
+            text: Tr.tr("Show album art")
+            subtext: Tr.tr("Look the cover up online by artist and album (via Apple)")
+            checked: GlobalConfig.services.discord.showCover
+            onToggled: GlobalConfig.services.discord.showCover = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Show elapsed time")
+            subtext: Tr.tr("Let Discord count up from where the track started")
+            checked: GlobalConfig.services.discord.showElapsed
+            onToggled: GlobalConfig.services.discord.showElapsed = checked
+        }
+
+        SelectRow {
+            label: Tr.tr("Status text")
+            subtext: Tr.tr("What shows beside your name in member lists")
+            menuItems: root.statusItems
+            active: root.statusItems[GlobalConfig.services.discord.statusDisplay] ?? root.statusItems[2]
+            onSelected: item => GlobalConfig.services.discord.statusDisplay = root.statusItems.indexOf(item)
+        }
+
+        TextFieldRow {
+            label: Tr.tr("Header text")
+            subtext: Tr.tr("Blank uses the app name; same placeholders as above")
+            value: GlobalConfig.services.discord.nameFormat
+            placeholderText: Tr.tr("App name")
+            onEditingFinished: value => GlobalConfig.services.discord.nameFormat = value
+        }
+
+        ToggleRow {
+            last: true
+            text: Tr.tr("Show as listening")
+            subtext: Tr.tr("Use the Listening status instead of Playing")
+            checked: GlobalConfig.services.discord.listeningType
+            onToggled: GlobalConfig.services.discord.listeningType = checked
         }
     }
 }

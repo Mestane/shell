@@ -20,6 +20,36 @@ class PlayerAlias : public settings::ObjectNode {
 };
 CONFIG_LIST_TYPE(PlayerAlias, PlayerAliasList)
 
+// NOTE(fork): Discord rich presence for the in-shell local player. Enabled by default and
+// ready to go out of the box - a client ID is just a public app identifier, not a secret, so
+// the fork's own application is baked in as the default. It can be overridden with a personal
+// application for a different name/art in the settings.
+class DiscordConfig : public settings::ObjectNode {
+    CONFIG_NODE(DiscordConfig, settings::ObjectNode)
+
+    CONFIG_GLOBAL_PROPERTY(bool, enabled, true)
+    // The fork's Discord application, used unless overridden
+    CONFIG_GLOBAL_PROPERTY(QString, clientId, u"1554932189844480091"_s)
+    // The two lines of the activity. {title}, {artist}, {album} and {file} are substituted;
+    // the song shows as the headline and the artist below it unless these are changed.
+    CONFIG_GLOBAL_PROPERTY(QString, titleFormat, u"{title}"_s)
+    CONFIG_GLOBAL_PROPERTY(QString, descFormat, u"{artist}"_s)
+    // Discord cannot show a local file, so the cover is looked up online by artist/album
+    CONFIG_GLOBAL_PROPERTY(bool, showCover, true)
+    CONFIG_GLOBAL_PROPERTY(bool, showElapsed, true)
+    // Ask Discord to show it as "Listening to" rather than "Playing"
+    CONFIG_GLOBAL_PROPERTY(bool, listeningType, true)
+    // Which activity field Discord uses as the status text in member lists, the same
+    // switch Music Presence and the like expose: 0 = the app name ("caelestia"), 1 = the
+    // artist line, 2 = the song line. Details is the default so the song shows, like
+    // YouTube Music does.
+    CONFIG_GLOBAL_PROPERTY(int, statusDisplay, 2)
+    // Overrides the activity name shown in the "Listening to ..." header. Empty leaves the
+    // application's own name in place. Whether the client honours this varies, so it is
+    // left off unless filled in.
+    CONFIG_GLOBAL_PROPERTY(QString, nameFormat, {})
+};
+
 class ServiceConfig : public settings::ObjectNode {
     CONFIG_NODE(ServiceConfig, settings::ObjectNode)
 
@@ -51,6 +81,7 @@ class ServiceConfig : public settings::ObjectNode {
             vmap({ { u"from"_s, u"com.github.th_ch.youtube_music"_s }, { u"to"_s, u"YT Music"_s } }),
         }))
     CONFIG_GLOBAL_ENUM_PROPERTY(LyricsBackend, lyricsBackend, LyricsBackend::Auto)
+    CONFIG_GLOBAL_SUBOBJECT(DiscordConfig, discord)
 };
 
 } // namespace caelestia::config

@@ -20,6 +20,7 @@ qml_module(caelestia-services
         networkusage.cpp
         hyprdevices.cpp
         hyprextras.cpp
+        discordrpc.cpp
     LIBRARIES
         Qt::Concurrent
         Qt::DBus
