@@ -454,6 +454,24 @@ Singleton {
         root.loadCurrent();
     }
 
+    // Shuffles the whole library: a song at random to start on, and the rest of the music
+    // folder dealt out behind it in a random order. This is what the shuffle button does when
+    // there is no context to shuffle - nothing open, nothing playing - so pressing it on an
+    // empty player still puts music on rather than doing nothing.
+    function shuffleAll(): void {
+        const entries = root.library;
+        if (entries.length === 0)
+            return;
+
+        const paths = [];
+        for (let i = 0; i < entries.length; i++)
+            paths.push(entries[i].path);
+
+        const at = Math.floor(Math.random() * paths.length);
+        root.shuffle = true;
+        root.playQueue(paths, at);
+    }
+
     // Adds tracks to the queue without disturbing what is playing, so there is no gap and the
     // current song carries on. They go ahead of the rest of the album or artist they were
     // picked out of but behind anything already added, so hand-picked songs play first, in the
