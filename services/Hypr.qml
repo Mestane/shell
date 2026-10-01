@@ -69,15 +69,22 @@ Singleton {
         dispatch(usingLua ? `hl.dsp.window.move({ workspace = ${ws}, follow = false, window = "address:0x${address}" })` : `movetoworkspacesilent ${ws},address:0x${address}`);
     }
 
-    // Forces the next window placed into the layout to split in on the given side (l/r/u/d)
-    // of whatever it lands next to, instead of wherever the layout's own heuristic would put
-    // it - used right before moveWindowToWorkspace so a window dropped onto an occupied
-    // workspace lands where it was actually dropped
-    function preselectSplit(dir: string): void {
-        if (!dir)
+    // Moves a window to a workspace, splitting it in on the given side (l/r/u/d) of whatever it
+    // lands next to there, instead of wherever the target workspace's layout heuristic would put
+    // it. The "preselect" layoutmsg that does this only ever applies to the active workspace, not
+    // whichever one the move targets, so this briefly focuses the target to make it active,
+    // issues the preselect and the move, then restores whatever was focused before - all of it
+    // invisible as long as something else (the overview, in practice) is covering the screen
+    // while this runs
+    function moveWindowToWorkspaceSplit(address: string, ws: int, dir: string): void {
+        if (!address || !dir)
             return;
 
+        const previous = root.activeWsId;
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${ws}" })` : `workspace ${ws}`);
         dispatch(usingLua ? `hl.dsp.layout("preselect ${dir}")` : `layoutmsg preselect ${dir}`);
+        root.moveWindowToWorkspace(address, ws);
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${previous}" })` : `workspace ${previous}`);
     }
 
     // Trades the places of two windows in a workspace's layout
