@@ -145,6 +145,9 @@ ColumnLayout {
         }
 
         StyledSpinBox {
+            // Narrower than the default: this sits in a sidebar card alongside a full month
+            // grid, which doesn't leave room for the default field width on both of these
+            fieldWidth: 44
             from: 0
             to: 23
             value: root.value.getHours()
@@ -157,6 +160,7 @@ ColumnLayout {
         }
 
         StyledSpinBox {
+            fieldWidth: 44
             from: 0
             to: 59
             stepSize: 5

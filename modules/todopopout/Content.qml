@@ -321,6 +321,11 @@ Item {
                         implicitHeight: row.implicitHeight + Tokens.padding.medium * 2
                         color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
                         clip: true
+                        // Without this the translucent fill blends twice (itself over whatever's
+                        // behind it, then that result blended again) until something forces a
+                        // repaint, which is what left rows looking darker/greyed out until the
+                        // list changed again - see ContentWindow.qml for the same fix elsewhere
+                        layer.enabled: true
 
                         // Opening the rename field or the scheduling editor grows the row rather
                         // than snapping to its new height; the "move" transition above then
@@ -578,6 +583,10 @@ Item {
                                     }
 
                                     sourceComponent: ColumnLayout {
+                                        // Loader doesn't resize a loaded item to its own width by itself - without
+                                        // this, the picker (and the button below it) just take their natural
+                                        // width, which can run past the card's edge rather than wrapping to fit it
+                                        width: parent.width
                                         spacing: Tokens.spacing.small
 
                                         DatePicker {
@@ -705,6 +714,10 @@ Item {
                                     }
 
                                     sourceComponent: ColumnLayout {
+                                        // Loader doesn't resize a loaded item to its own width by itself - without
+                                        // this, the picker (and the button below it) just take their natural
+                                        // width, which can run past the card's edge rather than wrapping to fit it
+                                        width: parent.width
                                         spacing: Tokens.spacing.small
 
                                         DatePicker {

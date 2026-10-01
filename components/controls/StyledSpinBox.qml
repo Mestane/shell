@@ -10,6 +10,9 @@ DoubleSpinBox {
     property int repeatRate: 400
     property int repeatDecay: 50
     property int cLayer: 1
+    // The text field's own implicit width, overridable for a narrower caller (the to-do
+    // deadline picker's time row, in a sidebar card) rather than every spin box everywhere
+    property int fieldWidth: 65
 
     function increase(): void {
         let newValue = Math.min(to, value + stepSize);
@@ -49,7 +52,7 @@ DoubleSpinBox {
         leftPadding: Tokens.padding.medium
         rightPadding: Tokens.padding.medium
 
-        implicitWidth: 65
+        implicitWidth: root.fieldWidth
         horizontalAlignment: TextField.AlignHCenter
 
         background: StyledRect {
