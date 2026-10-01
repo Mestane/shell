@@ -244,9 +244,10 @@ Item {
                 // it was dropped nearest to, on the side it was dropped on - an empty one needs
                 // no preselect, there is nothing yet to split against
                 const occupied = (Hypr.workspaces.values.find(w => w.id === root.dropWsId)?.lastIpcObject?.windows ?? 0) > 0;
-                const dir = occupied ? root.dropTile?.splitDirectionAt(root, root.dragPoint.x, root.dragPoint.y) || (root.dropTile && root.dragPoint.x - root.dropTile.mapToItem(root, 0, 0).x < root.dropTile.width / 2 ? "l" : "r") : "";
+                const target = occupied ? root.dropTile?.splitTargetAt(root, root.dragPoint.x, root.dragPoint.y) : null;
+                const dir = target?.dir || (occupied && root.dropTile ? (root.dragPoint.x - root.dropTile.mapToItem(root, 0, 0).x < root.dropTile.width / 2 ? "l" : "r") : "");
                 if (dir)
-                    Hypr.moveWindowToWorkspaceSplit(root.dragClient.address, root.dropWsId, dir);
+                    Hypr.moveWindowToWorkspaceSplit(root.dragClient.address, root.dropWsId, dir, target?.client?.address ?? "");
                 else
                     Hypr.moveWindowToWorkspace(root.dragClient.address, root.dropWsId);
                 root.refreshSoon();

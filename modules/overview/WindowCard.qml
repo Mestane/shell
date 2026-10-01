@@ -134,12 +134,11 @@ StyledClippingRect {
     ScreencopyView {
         id: view
 
-        anchors.fill: parent
         captureSource: root.captureSource
-        // Without this the capture renders at its own native size rather than the tile's -
-        // on a workspace split between windows that leaves each one looking too small, with
-        // grey padding around it instead of actually filling its half. Set per-axis to match
-        // how the other ScreencopyViews in this codebase do it (ActiveWindow.qml, Preview.qml)
+        // No anchors.fill here, same as the other ScreencopyViews in this codebase
+        // (ActiveWindow.qml, windowinfo/Preview.qml) - the view sizes itself from
+        // constraintSize, and forcing width/height via an anchor on top of that is what
+        // left the capture drawn at its own native size inside a bigger, unfilled item
         constraintSize.width: root.width
         constraintSize.height: root.height
         // A still frame per window: a live stream of every window on screen would

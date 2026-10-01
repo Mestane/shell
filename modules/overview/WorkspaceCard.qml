@@ -48,8 +48,11 @@ StyledClippingRect {
 
     // The window under a point and which of its edges the point is nearest, so a window dropped
     // into this tile from elsewhere can split in right where it was dropped near, the same way
-    // Hyprland's own click-drag preview picks a side - rather than always landing on a fixed one
-    function splitDirectionAt(item: Item, x: real, y: real): string {
+    // Hyprland's own click-drag preview picks a side - rather than always landing on a fixed one.
+    // Hands back the window too: preselect splits relative to whichever window is focused at
+    // the time, not whatever the pointer happens to be over, so the caller needs to focus this
+    // one specifically first rather than just the workspace
+    function splitTargetAt(item: Item, x: real, y: real): var {
         for (let i = 0; i < windowCards.count; ++i) {
             const card = windowCards.itemAt(i);
             const local = card ? card.mapFromItem(item, x, y) : null;
@@ -59,10 +62,14 @@ StyledClippingRect {
                 const right = 1 - left;
                 const bottom = 1 - top;
                 const closest = Math.min(left, right, top, bottom);
-                return closest === left ? "l" : closest === right ? "r" : closest === top ? "u" : "d";
+                const dir = closest === left ? "l" : closest === right ? "r" : closest === top ? "u" : "d";
+                return {
+                    dir,
+                    client: card.client
+                };
             }
         }
-        return "";
+        return null;
     }
 
     readonly property var workspace: Hypr.workspaces.values.find(w => w.id === root.wsId) ?? null
