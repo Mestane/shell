@@ -46,9 +46,15 @@ Item {
     readonly property var monitor: Hypr.monitorFor(screen)
     readonly property bool emptyWorkspace: monitor?.activeWorkspace?.toplevels?.values.every(t => t.lastIpcObject?.floating) ?? true
 
+    // The bar's own active-window title sits in the same top-centre spot the notch does, so
+    // having both up at once on a workspace with windows would just overlap - this only ever
+    // suppresses showWithWindows, never touches the saved setting itself, so it comes back as
+    // soon as the bar entry is turned off again
+    readonly property bool barActiveWindowShown: Config.bar.entries.values.some(e => e.id === "activeWindow" && e.enabled)
+
     // Up for as long as the workspace is empty, as long as there is something to show
     // Whether the notch is meant to be up on this workspace at all: empty ones and ones with windows have their own switch
-    readonly property bool wanted: emptyWorkspace ? Config.notch.showOnEmptyWorkspace : Config.notch.showWithWindows
+    readonly property bool wanted: emptyWorkspace ? Config.notch.showOnEmptyWorkspace : (Config.notch.showWithWindows && !root.barActiveWindowShown)
     // Whether the standing notch has music to show
     readonly property bool musicShown: Config.notch.showMusic && root.hasRecent
     readonly property bool persistent: wanted && (Config.notch.showClock || musicShown)

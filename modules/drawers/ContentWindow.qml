@@ -429,6 +429,7 @@ StyledWindow {
 
             fullscreen: root.hasFullscreen
             borderThickness: root.borderThickness
+            middleHidden: root.middleHidden
         }
     }
 

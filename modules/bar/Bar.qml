@@ -17,6 +17,10 @@ ColumnLayout {
     required property ScreenState screenState
     required property BarPopouts.Wrapper popouts
     required property bool fullscreen
+    // Whether the bar's middle stretch is currently cut away (see ContentWindow.qml) - the
+    // workspaces indicator hides along with it rather than being left floating on its own once
+    // there's nothing in the middle to anchor it to
+    required property bool middleHidden
     readonly property int vPadding: Tokens.padding.large
     // The notch shows the time and date on an empty workspace, so the bar's clock steps aside
     readonly property bool clockHidden: ShellState.componentsFor(screen)?.panels?.notch?.showsClock ?? false
@@ -161,6 +165,8 @@ ColumnLayout {
             DelegateChoice {
                 roleValue: "workspaces"
                 delegate: EntryWrapper {
+                    shown: !root.middleHidden
+
                     Workspaces {
                         objectName: "taskbarWorkspaces"
                         screen: root.screen

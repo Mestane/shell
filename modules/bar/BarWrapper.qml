@@ -16,6 +16,10 @@ Item {
     required property bool fullscreen
     // Screen border thickness (animated by the drawers window while fullscreen)
     required property real borderThickness
+    // Whether the bar's middle stretch is currently cut away (an empty desktop, with
+    // bar.hideMiddleOnDesktop on) - passed through to the workspaces entry, which hides along
+    // with it rather than floating alone once there's nothing in the middle to anchor it to
+    required property bool middleHidden
 
     readonly property int position: Config.bar.position
     readonly property bool onLeft: position === BarPosition.Left
@@ -148,6 +152,7 @@ Item {
             screenState: root.screenState
             popouts: root.popouts // qmllint disable incompatible-type
             fullscreen: root.fullscreen
+            middleHidden: root.middleHidden
         }
     }
 
@@ -159,6 +164,7 @@ Item {
             screenState: root.screenState
             popouts: root.popouts // qmllint disable incompatible-type
             fullscreen: root.fullscreen
+            middleHidden: root.middleHidden
         }
     }
 }
