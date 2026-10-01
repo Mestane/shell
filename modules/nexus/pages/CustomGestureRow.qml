@@ -9,16 +9,14 @@ import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
 
-// One user-added custom keybind: an arbitrary combo bound to running a command, unlike every
-// other row on this page which just rebinds a fixed, already-existing shortcut
+// One user-added custom gesture: a touchpad swipe bound to running a command
 ConnectedRect {
     id: root
 
     required property int index
-    required property string combo
+    required property int fingers
+    required property string direction
     required property string command
-
-    readonly property var clashing: Keybinds.usedBy(`custom:${root.index}`, root.combo)
 
     Layout.fillWidth: true
     implicitHeight: content.implicitHeight + Tokens.padding.medium * 2
@@ -37,24 +35,27 @@ ConnectedRect {
             spacing: Tokens.spacing.medium
 
             MaterialIcon {
-                text: "bolt"
+                text: "swipe"
                 color: Colours.palette.m3onSurfaceVariant
                 fontStyle: Tokens.font.icon.medium
                 fill: 1
             }
 
-            ComboEditor {
-                Layout.fillWidth: true
-                combo: root.combo
-                removable: false
-                onChanged: c => Keybinds.setCustomBind(root.index, c, root.command)
+            StyledSpinBox {
+                fieldWidth: 32
+                from: 2
+                to: 5
+                value: root.fingers
+                onValueModified: Keybinds.setCustomGesture(root.index, value, root.direction, root.command)
             }
 
-            MaterialIcon {
-                visible: root.clashing.length > 0
-                text: "warning"
-                color: Colours.palette.m3error
-                fontStyle: Tokens.font.icon.medium
+            GestureDirectionPicker {
+                direction: root.direction
+                onSelected: d => Keybinds.setCustomGesture(root.index, root.fingers, d, root.command)
+            }
+
+            Item {
+                Layout.fillWidth: true
             }
 
             IconButton {
@@ -63,29 +64,18 @@ ConnectedRect {
                 icon: "close"
                 inactiveOnColour: Colours.palette.m3error
                 font: Tokens.font.icon.medium
-                onClicked: Keybinds.removeCustomBind(root.index)
+                onClicked: Keybinds.removeCustomGesture(root.index)
             }
         }
 
-        StyledText {
-            Layout.fillWidth: true
-            visible: root.clashing.length > 0
-            text: Tr.tr("Also used by %1").arg(root.clashing.join(", "))
-            color: Colours.palette.m3error
-            font: Tokens.font.label.small
-            wrapMode: Text.WordWrap
-        }
-
         StyledTextField {
-            id: commandField
-
             Layout.fillWidth: true
             text: root.command
             placeholderText: Tr.tr("Command to run")
 
             onEditingFinished: {
                 if (text !== root.command)
-                    Keybinds.setCustomBind(root.index, root.combo, text);
+                    Keybinds.setCustomGesture(root.index, root.fingers, root.direction, text);
             }
         }
     }

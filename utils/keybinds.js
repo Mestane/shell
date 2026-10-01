@@ -289,6 +289,98 @@ function withCustomBinds(text, entries) {
     return lines2.join("\n");
 }
 
+// Gestures: a touchpad swipe mapped to a command, the gesture equivalent of customBinds -
+// { fingers, direction, command } instead of { combo, command }. Same block/entry scanner, since
+// a command can just as easily contain quotes or braces here too.
+
+// The numeric value of `key = <number>` inside one entry's text
+function numberField(entryText, key) {
+    const m = entryText.match(new RegExp(`${key}[ \\t]*=[ \\t]*(-?\\d+(?:\\.\\d+)?)`));
+    return m ? Number(m[1]) : null;
+}
+
+// Every customGestures entry in file order: [{ fingers, direction, command }]
+function parseCustomGestures(text) {
+    const block = findBlock(text, "customGestures");
+    if (!block)
+        return [];
+
+    const entries = [];
+    for (const entryText of splitEntries(block.content)) {
+        const fingers = numberField(entryText, "fingers");
+        const direction = field(entryText, "direction");
+        const command = field(entryText, "command");
+        if (fingers && direction && command)
+            entries.push({
+                fingers,
+                direction,
+                command
+            });
+    }
+    return entries;
+}
+
+function customGestureLiteral(entry) {
+    const escape = s => s.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+    return `{ fingers = ${Math.round(entry.fingers)}, direction = "${escape(entry.direction)}", command = "${escape(entry.command)}" }`;
+}
+
+// The overrides text with customGestures set to these entries, removed entirely when empty
+function withCustomGestures(text, entries) {
+    const block = findBlock(text, "customGestures");
+    let base = text.trim() === "" ? "return {\n}\n" : text;
+
+    if (block) {
+        const afterComma = base.slice(block.to).match(/^[ \t]*,?/)[0].length;
+        base = base.slice(0, block.from) + base.slice(block.to + afterComma);
+        base = base.replace(/\n[ \t]*\n/g, "\n");
+    }
+
+    if (entries.length === 0)
+        return base;
+
+    const lines = entries.map(e => `\t\t${customGestureLiteral(e)},`).join("\n");
+    const line = `\tcustomGestures = {\n${lines}\n\t},`;
+
+    const lines2 = base.split("\n");
+    const at = lines2.findIndex(l => /^\s*return\s*\{/.test(l));
+    if (at < 0)
+        return base;
+
+    lines2.splice(at + 1, 0, line);
+    return lines2.join("\n");
+}
+
+// A plain `name = <number>` top-level assignment, unlike the kb*-prefixed ones above - used for
+// the touchpad gesture finger counts (gestureFingers, workspaceSwipeFingers, gestureFingersMore),
+// which aren't kb* ids and aren't combo strings
+function numberVar(text, name) {
+    const m = text.match(new RegExp(`[ \\t]*${name}[ \\t]*=[ \\t]*(-?\\d+(?:\\.\\d+)?)`));
+    return m ? Number(m[1]) : null;
+}
+
+// The overrides text with that variable set to this value, or removed (back to the default) when
+// value is null. Only that line is touched, same as edit() above.
+function withNumberVar(text, name, value) {
+    let base = text.trim() === "" ? "return {\n}\n" : text;
+    const re = new RegExp(`^[ \\t]*${name}[ \\t]*=[ \\t]*-?\\d+(?:\\.\\d+)?[ \\t]*,?[ \\t]*(?:--.*)?$`, "m");
+
+    if (value === null)
+        return base.replace(re, "").replace(/\n[ \t]*\n/g, "\n");
+
+    const line = `\t${name} = ${value},`;
+    if (re.test(base))
+        return base.replace(re, line);
+
+    const lines = base.split("\n");
+    const at = lines.findIndex(l => /^\s*return\s*\{/.test(l));
+    if (at < 0)
+        return base;
+
+    lines.splice(at + 1, 0, line);
+    return lines.join("\n");
+}
+
 // Groups the entries by the shortcut they share: { NORMALISED: [id, ...] } for the clashes only
 function conflicts(entries) {
     const byCombo = {};

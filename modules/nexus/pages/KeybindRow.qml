@@ -18,6 +18,20 @@ ConnectedRect {
     // A new shortcut being added, not saved until it has a key
     property bool adding
 
+    // One icon per section, the same leading-icon treatment every other settings row already
+    // has (see RowButton) - Keybinds was the one page that never got it
+    readonly property var sectionIcons: ({
+            "Workspaces": "workspaces",
+            "Window Group": "select_window",
+            "Window Actions": "fullscreen",
+            "Apps": "apps",
+            "Utilities": "construction",
+            "Media": "queue_music",
+            "Misc": "tune",
+            "Clipboard and emoji picker": "content_paste"
+        })
+    readonly property string icon: root.sectionIcons[root.entry.section] ?? "keyboard"
+
     readonly property var combos: root.entry.combos
     readonly property var clashing: {
         const found = [];
@@ -74,9 +88,16 @@ ConnectedRect {
             anchors.margins: Tokens.padding.largeIncreased
             spacing: Tokens.spacing.medium
 
+            MaterialIcon {
+                text: root.icon
+                color: Colours.palette.m3onSurfaceVariant
+                fontStyle: Tokens.font.icon.medium
+                fill: 1
+            }
+
             Column {
                 Layout.fillWidth: true
-                spacing: 0
+                spacing: Tokens.spacing.extraSmall / 2
 
                 StyledText {
                     anchors.left: parent.left
@@ -89,10 +110,41 @@ ConnectedRect {
                 StyledText {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    text: root.combos.length > 0 ? root.combos.map(c => Keybinds.pretty(c)).join("   ·   ") : Tr.tr("Not set")
-                    color: root.clashing.length > 0 ? Colours.palette.m3error : Colours.palette.m3outline
+                    visible: root.combos.length === 0
+                    text: Tr.tr("Not set")
+                    color: Colours.palette.m3outline
                     font: Tokens.font.label.small
-                    elide: Text.ElideRight
+                }
+
+                Flow {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    visible: root.combos.length > 0
+                    spacing: Tokens.spacing.extraSmall
+
+                    Repeater {
+                        model: root.combos
+
+                        StyledRect {
+                            id: chip
+
+                            required property string modelData
+
+                            radius: Tokens.rounding.small
+                            color: root.clashing.length > 0 ? Qt.alpha(Colours.palette.m3error, 0.15) : Colours.tPalette.m3surfaceContainerHighest
+                            implicitWidth: chipLabel.implicitWidth + Tokens.padding.small * 2
+                            implicitHeight: chipLabel.implicitHeight + Tokens.padding.extraSmall * 2
+
+                            StyledText {
+                                id: chipLabel
+
+                                anchors.centerIn: parent
+                                text: Keybinds.pretty(chip.modelData)
+                                color: root.clashing.length > 0 ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+                                font: Tokens.font.label.small
+                            }
+                        }
+                    }
                 }
             }
 

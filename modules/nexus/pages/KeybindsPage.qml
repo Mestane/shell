@@ -29,6 +29,23 @@ PageBase {
         root.pendingCommand = "";
     }
 
+    // A custom gesture being added, not saved until it has a command
+    property bool addingGesture
+    property int pendingGestureFingers: 3
+    property string pendingGestureDirection: "up"
+    property string pendingGestureCommand
+
+    function commitGesture(): void {
+        if (root.pendingGestureCommand.trim() === "")
+            return;
+
+        Keybinds.addCustomGesture(root.pendingGestureFingers, root.pendingGestureDirection, root.pendingGestureCommand.trim());
+        root.addingGesture = false;
+        root.pendingGestureFingers = 3;
+        root.pendingGestureDirection = "up";
+        root.pendingGestureCommand = "";
+    }
+
     // Sections of the binds that match the search, in file order
     readonly property var groups: {
         const q = search.text.trim().toLowerCase();
@@ -210,6 +227,156 @@ PageBase {
                         isRound: true
                         text: Tr.tr("Add keybind")
                         onClicked: root.addingCustom = true
+                    }
+                }
+            }
+        }
+
+        ColumnLayout {
+            id: gestureGroup
+
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.largeIncreased
+            visible: search.text === ""
+            spacing: Tokens.spacing.extraSmall / 2
+
+            SectionHeader {
+                first: true
+                text: Tr.tr("Gestures")
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                Layout.bottomMargin: Tokens.spacing.small
+                text: Tr.tr("Touchpad swipes. Changes are saved to your hypr-vars.lua and Hyprland is reloaded.")
+                color: Colours.palette.m3outline
+                font: Tokens.font.label.small
+                wrapMode: Text.WordWrap
+            }
+
+            StepperRow {
+                first: true
+                label: Tr.tr("Switch workspace")
+                subtext: Tr.tr("Horizontal swipe")
+                value: Keybinds.gestureFingerCount("workspaceSwipeFingers")
+                from: 2
+                to: 5
+                onMoved: v => Keybinds.setGestureFingerCount("workspaceSwipeFingers", v)
+            }
+
+            StepperRow {
+                label: Tr.tr("Special workspace")
+                subtext: Tr.tr("Swipe up or down")
+                value: Keybinds.gestureFingerCount("gestureFingers")
+                from: 2
+                to: 5
+                onMoved: v => Keybinds.setGestureFingerCount("gestureFingers", v)
+            }
+
+            StepperRow {
+                last: true
+                label: Tr.tr("Close overview, or sleep")
+                subtext: Tr.tr("Swipe down")
+                value: Keybinds.gestureFingerCount("gestureFingersMore")
+                from: 2
+                to: 5
+                onMoved: v => Keybinds.setGestureFingerCount("gestureFingersMore", v)
+            }
+        }
+
+        ColumnLayout {
+            id: customGestureGroup
+
+            Layout.fillWidth: true
+            visible: search.text === ""
+            spacing: Tokens.spacing.extraSmall / 2
+
+            SectionHeader {
+                text: Tr.tr("Custom gestures")
+            }
+
+            Repeater {
+                model: ScriptModel {
+                    values: Keybinds.customGestures
+                }
+
+                CustomGestureRow {
+                    // index is filled in directly since this already declares its own
+                    // "required property int index"
+                    required property var modelData
+
+                    fingers: modelData.fingers
+                    direction: modelData.direction
+                    command: modelData.command
+                }
+            }
+
+            ConnectedRect {
+                Layout.fillWidth: true
+                last: true
+                implicitHeight: addGestureRow.implicitHeight + Tokens.padding.medium * 2
+
+                ColumnLayout {
+                    id: addGestureRow
+
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Tokens.padding.largeIncreased
+                    spacing: Tokens.spacing.small
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+                        visible: root.addingGesture
+
+                        StyledSpinBox {
+                            fieldWidth: 32
+                            from: 2
+                            to: 5
+                            value: root.pendingGestureFingers
+                            onValueModified: root.pendingGestureFingers = value
+                        }
+
+                        GestureDirectionPicker {
+                            direction: root.pendingGestureDirection
+                            onSelected: d => root.pendingGestureDirection = d
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+                        visible: root.addingGesture
+
+                        StyledTextField {
+                            Layout.fillWidth: true
+                            text: root.pendingGestureCommand
+                            placeholderText: Tr.tr("Command to run")
+                            onTextEdited: root.pendingGestureCommand = text
+                            Keys.onReturnPressed: root.commitGesture()
+                        }
+
+                        IconButton {
+                            type: IconButton.Filled
+                            isRound: true
+                            icon: "check"
+                            disabled: root.pendingGestureCommand.trim() === ""
+                            font: Tokens.font.icon.medium
+                            onClicked: root.commitGesture()
+                        }
+                    }
+
+                    TextButton {
+                        visible: !root.addingGesture
+                        type: TextButton.Text
+                        isRound: true
+                        text: Tr.tr("Add gesture")
+                        onClicked: root.addingGesture = true
                     }
                 }
             }
