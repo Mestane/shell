@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -39,14 +41,14 @@ PageBase {
     ]
     readonly property list<string> toastFullscreenValues: ["off", "important", "all"]
 
-    property string pendingSilencedApp: ""
+    function appFor(id: string): var {
+        return DesktopEntries.byId(id) ?? DesktopEntries.heuristicLookup(id);
+    }
 
-    function addSilencedApp(): void {
-        const app = root.pendingSilencedApp.trim();
-        if (app === "" || GlobalConfig.notifs.silencedApps.includes(app))
+    function addSilencedApp(id: string): void {
+        if (id === "" || GlobalConfig.notifs.silencedApps.includes(id))
             return;
-        GlobalConfig.notifs.silencedApps = [...GlobalConfig.notifs.silencedApps, app];
-        root.pendingSilencedApp = "";
+        GlobalConfig.notifs.silencedApps = [...GlobalConfig.notifs.silencedApps, id];
     }
 
     function removeSilencedApp(index: int): void {
@@ -144,6 +146,7 @@ PageBase {
 
                 required property string modelData
                 required property int index
+                readonly property var entry: root.appFor(modelData)
 
                 Layout.fillWidth: true
                 first: index === 0
@@ -158,15 +161,15 @@ PageBase {
                     anchors.margins: Tokens.padding.largeIncreased
                     spacing: Tokens.spacing.medium
 
-                    MaterialIcon {
-                        text: "notifications_off"
-                        color: Colours.palette.m3onSurfaceVariant
-                        fontStyle: Tokens.font.icon.medium
+                    IconImage {
+                        asynchronous: true
+                        implicitSize: Math.round(Tokens.font.icon.medium.pointSize * 1.6)
+                        source: Quickshell.iconPath(silencedAppRow.entry?.icon ?? "", "image-missing")
                     }
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: silencedAppRow.modelData
+                        text: silencedAppRow.entry?.name ?? silencedAppRow.modelData
                         elide: Text.ElideRight
                     }
 
@@ -182,37 +185,23 @@ PageBase {
             }
         }
 
-        ConnectedRect {
-            Layout.fillWidth: true
+        DialogSelectButton {
+            rootParent: root.flickable
             first: GlobalConfig.notifs.silencedApps.length === 0
-            last: true
-            implicitHeight: addSilencedAppRow.implicitHeight + Tokens.padding.medium * 2
+            icon: "add"
+            label: Tr.tr("Add app")
+            header: Tr.tr("Silence an app")
+            acceptLabel: Tr.trCtx("Add", "button")
 
-            RowLayout {
-                id: addSilencedAppRow
+            model: [...DesktopEntries.applications.values].filter(a => !GlobalConfig.notifs.silencedApps.includes(a.id)).sort((a, b) => a.name.localeCompare(b.name)).map(a => ({
+                        id: a.id,
+                        label: a.name,
+                        icon: a.icon
+                    }))
 
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Tokens.padding.largeIncreased
-                spacing: Tokens.spacing.medium
-
-                StyledTextField {
-                    Layout.fillWidth: true
-                    text: root.pendingSilencedApp
-                    placeholderText: Tr.tr("App name, e.g. spotify")
-                    onTextEdited: root.pendingSilencedApp = text
-                    Keys.onReturnPressed: root.addSilencedApp()
-                }
-
-                IconButton {
-                    type: IconButton.Filled
-                    isRound: true
-                    icon: "add"
-                    disabled: root.pendingSilencedApp.trim() === ""
-                    font: Tokens.font.icon.medium
-                    onClicked: root.addSilencedApp()
-                }
+            onAccepted: {
+                if (selectedItem)
+                    root.addSilencedApp(selectedItem);
             }
         }
 
