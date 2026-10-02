@@ -47,10 +47,19 @@ Singleton {
         root.list = [live, kept, ...rest];
     }
 
-    function shouldShowPopup(): bool {
+    // NOTE(fork): matched case-insensitively by substring, the same way keepsHistory() matches
+    // chatApps - an app listed here never pops up, regardless of do not disturb
+    function isSilenced(appName: string): bool {
+        const name = appName.toLowerCase();
+        return GlobalConfig.notifs.silencedApps.some(app => name.includes(app.toLowerCase()));
+    }
+
+    function shouldShowPopup(appName: string): bool {
         if (props.dnd || ShellState.anySidebarOpen())
             return false;
         if (GlobalConfig.notifs.fullscreen === NotifsFullscreen.Off && hasFullscreen())
+            return false;
+        if (root.isSilenced(appName))
             return false;
         return true;
     }
@@ -113,7 +122,7 @@ Singleton {
             notif.tracked = true;
 
             const comp = notifComp.createObject(root, {
-                popup: root.shouldShowPopup(),
+                popup: root.shouldShowPopup(notif.appName),
                 notification: notif
             });
             root.list = [comp, ...root.list];

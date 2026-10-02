@@ -217,7 +217,7 @@ QtObject {
             Notifs.keepReplaced(notif, previous);
             time = new Date();
             updateTimeStr();
-            popup = Notifs.shouldShowPopup();
+            popup = Notifs.shouldShowPopup(appName);
             timer.restart();
         });
     }

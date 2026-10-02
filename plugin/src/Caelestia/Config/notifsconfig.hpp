@@ -43,6 +43,10 @@ class NotifsConfig : public settings::ObjectNode {
             u"whatsapp"_s,
             u"firefox"_s,
         }))
+    // Apps matched here (case-insensitively, by substring of their notification app name) never
+    // popup - they go straight to the notification centre, the same as every app does under
+    // do not disturb, but regardless of whether do not disturb is on
+    CONFIG_GLOBAL_PROPERTY(QStringList, silencedApps, DEFAULT_ARG({}))
 };
 
 } // namespace caelestia::config

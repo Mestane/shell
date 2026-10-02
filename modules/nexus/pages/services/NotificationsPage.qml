@@ -2,7 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
+import qs.components
 import qs.components.controls
+import qs.services
 import qs.modules.nexus.common
 
 PageBase {
@@ -36,6 +38,22 @@ PageBase {
         }
     ]
     readonly property list<string> toastFullscreenValues: ["off", "important", "all"]
+
+    property string pendingSilencedApp: ""
+
+    function addSilencedApp(): void {
+        const app = root.pendingSilencedApp.trim();
+        if (app === "" || GlobalConfig.notifs.silencedApps.includes(app))
+            return;
+        GlobalConfig.notifs.silencedApps = [...GlobalConfig.notifs.silencedApps, app];
+        root.pendingSilencedApp = "";
+    }
+
+    function removeSilencedApp(index: int): void {
+        const apps = [...GlobalConfig.notifs.silencedApps];
+        apps.splice(index, 1);
+        GlobalConfig.notifs.silencedApps = apps;
+    }
 
     title: Tr.tr("Notifications")
     isSubPage: true
@@ -102,6 +120,100 @@ PageBase {
             to: 10
             stepSize: 1
             onMoved: v => GlobalConfig.notifs.groupPreviewNum = Math.round(v)
+        }
+
+        // Silenced apps
+        SectionHeader {
+            text: Tr.tr("Silenced apps")
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.bottomMargin: Tokens.spacing.small
+            text: Tr.tr("Notifications from these apps never pop up - they go straight to the notification centre, the same as every app does while do not disturb is on")
+            color: Colours.palette.m3outline
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
+        }
+
+        Repeater {
+            model: GlobalConfig.notifs.silencedApps
+
+            ConnectedRect {
+                id: silencedAppRow
+
+                required property string modelData
+                required property int index
+
+                Layout.fillWidth: true
+                first: index === 0
+                implicitHeight: silencedAppContent.implicitHeight + Tokens.padding.medium * 2
+
+                RowLayout {
+                    id: silencedAppContent
+
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Tokens.padding.largeIncreased
+                    spacing: Tokens.spacing.medium
+
+                    MaterialIcon {
+                        text: "notifications_off"
+                        color: Colours.palette.m3onSurfaceVariant
+                        fontStyle: Tokens.font.icon.medium
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: silencedAppRow.modelData
+                        elide: Text.ElideRight
+                    }
+
+                    IconButton {
+                        type: IconButton.Text
+                        isRound: true
+                        icon: "close"
+                        inactiveOnColour: Colours.palette.m3error
+                        font: Tokens.font.icon.medium
+                        onClicked: root.removeSilencedApp(silencedAppRow.index)
+                    }
+                }
+            }
+        }
+
+        ConnectedRect {
+            Layout.fillWidth: true
+            first: GlobalConfig.notifs.silencedApps.length === 0
+            last: true
+            implicitHeight: addSilencedAppRow.implicitHeight + Tokens.padding.medium * 2
+
+            RowLayout {
+                id: addSilencedAppRow
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: Tokens.padding.largeIncreased
+                spacing: Tokens.spacing.medium
+
+                StyledTextField {
+                    Layout.fillWidth: true
+                    text: root.pendingSilencedApp
+                    placeholderText: Tr.tr("App name, e.g. spotify")
+                    onTextEdited: root.pendingSilencedApp = text
+                    Keys.onReturnPressed: root.addSilencedApp()
+                }
+
+                IconButton {
+                    type: IconButton.Filled
+                    isRound: true
+                    icon: "add"
+                    disabled: root.pendingSilencedApp.trim() === ""
+                    font: Tokens.font.icon.medium
+                    onClicked: root.addSilencedApp()
+                }
+            }
         }
 
         // Toasts
