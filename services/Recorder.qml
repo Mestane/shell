@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.services
 
 Singleton {
     id: root
@@ -15,6 +16,9 @@ Singleton {
     property list<string> startArgs
     property bool needsStop
     property bool needsPause
+
+    onRunningChanged: if (running)
+        SoundEffects.play("screenRecord");
 
     function start(extraArgs = []): void {
         needsStart = true;

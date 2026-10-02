@@ -108,6 +108,7 @@ Scope {
             for (const level of root.warnLevels) {
                 if (p <= level.level && root.lastPercentage > level.level) {
                     Toaster.toast(Tr.trMarked(level.title ?? Tr.tr("Battery warning")), Tr.trMarked(level.message ?? Tr.tr("Battery level is low")), level.icon ?? "battery_android_alert", level.critical ? Toast.Error : Toast.Warning);
+                    SoundEffects.play("lowBattery");
                     break;
                 }
             }
@@ -458,6 +459,7 @@ Scope {
             } else {
                 if (GlobalConfig.utilities.toasts.chargingChanged)
                     Toaster.toast(Tr.tr("Charger plugged in"), Tr.tr("Battery is charging"), "power");
+                SoundEffects.play("chargingStarted");
                 root.lastPercentage = 100;
                 root.cancelShellShutdown();
                 root.shutdownFired = false;

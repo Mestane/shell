@@ -85,6 +85,87 @@ PageBase {
             onClicked: root.nState.openSubPage(1)
         }
 
+        // Sound effects
+        SectionHeader {
+            text: Tr.tr("Sound effects")
+        }
+
+        ToggleRow {
+            first: true
+            text: Tr.tr("Enable sound effects")
+            subtext: Tr.tr("Play short sounds for things like screen lock, low battery and screenshots")
+            checked: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.enabled = checked
+        }
+
+        SliderRow {
+            icon: "volume_up"
+            label: Tr.tr("SFX volume")
+            valueLabel: Strings.percentOne(value)
+            value: GlobalConfig.services.soundEffects.sfxVolume
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onMoved: v => GlobalConfig.services.soundEffects.sfxVolume = v
+        }
+
+        SliderRow {
+            icon: "notifications"
+            label: Tr.tr("Notification volume")
+            valueLabel: Strings.percentOne(value)
+            value: GlobalConfig.services.soundEffects.notificationVolume
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onMoved: v => GlobalConfig.services.soundEffects.notificationVolume = v
+        }
+
+        ToggleRow {
+            text: Tr.tr("Camera click")
+            checked: GlobalConfig.services.soundEffects.cameraClick
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.cameraClick = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Charging started")
+            checked: GlobalConfig.services.soundEffects.chargingStarted
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.chargingStarted = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Volume tick")
+            checked: GlobalConfig.services.soundEffects.volumeTick
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.volumeTick = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Screen lock")
+            checked: GlobalConfig.services.soundEffects.screenLock
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.screenLock = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Screen unlock")
+            checked: GlobalConfig.services.soundEffects.screenUnlock
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.screenUnlock = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Low battery")
+            checked: GlobalConfig.services.soundEffects.lowBattery
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.lowBattery = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: Tr.tr("Screen record")
+            checked: GlobalConfig.services.soundEffects.screenRecord
+            enabled: GlobalConfig.services.soundEffects.enabled
+            onToggled: GlobalConfig.services.soundEffects.screenRecord = checked
+        }
+
         // Equalizer
         SectionHeader {
             text: Tr.tr("Equalizer")

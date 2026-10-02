@@ -49,6 +49,22 @@ class DiscordConfig : public settings::ObjectNode {
     CONFIG_GLOBAL_PROPERTY(int, statusDisplay, 2)
 };
 
+// System sound effects, played through the system's XDG sound theme
+class SoundEffectsConfig : public settings::ObjectNode {
+    CONFIG_NODE(SoundEffectsConfig, settings::ObjectNode)
+
+    CONFIG_GLOBAL_PROPERTY(bool, enabled, true)
+    CONFIG_GLOBAL_PROPERTY(qreal, sfxVolume, 0.9)
+    CONFIG_GLOBAL_PROPERTY(qreal, notificationVolume, 0.5)
+    CONFIG_GLOBAL_PROPERTY(bool, cameraClick, true)
+    CONFIG_GLOBAL_PROPERTY(bool, chargingStarted, true)
+    CONFIG_GLOBAL_PROPERTY(bool, volumeTick, true)
+    CONFIG_GLOBAL_PROPERTY(bool, screenLock, true)
+    CONFIG_GLOBAL_PROPERTY(bool, screenUnlock, true)
+    CONFIG_GLOBAL_PROPERTY(bool, lowBattery, true)
+    CONFIG_GLOBAL_PROPERTY(bool, screenRecord, true)
+};
+
 class ServiceConfig : public settings::ObjectNode {
     CONFIG_NODE(ServiceConfig, settings::ObjectNode)
 
@@ -81,6 +97,7 @@ class ServiceConfig : public settings::ObjectNode {
         }))
     CONFIG_GLOBAL_ENUM_PROPERTY(LyricsBackend, lyricsBackend, LyricsBackend::Auto)
     CONFIG_GLOBAL_SUBOBJECT(DiscordConfig, discord)
+    CONFIG_GLOBAL_SUBOBJECT(SoundEffectsConfig, soundEffects)
 };
 
 } // namespace caelestia::config

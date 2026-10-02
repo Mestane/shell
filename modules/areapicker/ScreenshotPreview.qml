@@ -37,6 +37,7 @@ StyledWindow {
         // Clear any capture still being previewed before taking over.
         root.dismiss();
 
+        SoundEffects.play("cameraClick");
         root.screen = target;
         root.capturePath = path;
         root.visible = true;

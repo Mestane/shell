@@ -49,10 +49,12 @@ Singleton {
 
     function incrementVolume(amount: real): void {
         setVolume(volume + (amount || GlobalConfig.services.audioIncrement));
+        SoundEffects.play("volumeTick");
     }
 
     function decrementVolume(amount: real): void {
         setVolume(volume - (amount || GlobalConfig.services.audioIncrement));
+        SoundEffects.play("volumeTick");
     }
 
     function setSourceVolume(newVolume: real): void {
