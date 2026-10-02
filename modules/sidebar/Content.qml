@@ -1,36 +1,44 @@
-import qs.components
-import qs.services
-import qs.config
 import QtQuick
 import QtQuick.Layouts
+import Caelestia.Config
+import qs.components
+import qs.services
+import qs.modules.notifpopout as NotifPopout
 
 Item {
     id: root
 
     required property Props props
-    required property var visibilities
+    required property ScreenState screenState
 
     ColumnLayout {
         id: layout
 
         anchors.fill: parent
-        spacing: Appearance.spacing.normal
+        spacing: Tokens.spacing.medium
 
         StyledRect {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            radius: Appearance.rounding.normal
+            radius: Tokens.rounding.large
             color: Colours.tPalette.m3surfaceContainerLow
 
-            NotifDock {
+            // Notifications, the local music library and the to-do list, as tabs of one card
+            // (see modules/notifpopout/Content.qml, shared with the swipe gesture)
+            NotifPopout.Content {
+                objectName: "sidebarNotifications"
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
+
+                shown: root.screenState.sidebar
                 props: root.props
-                visibilities: root.visibilities
+                screenState: root.screenState
             }
         }
 
         StyledRect {
-            Layout.topMargin: Appearance.padding.large - layout.spacing
+            Layout.topMargin: Tokens.padding.large - layout.spacing
             Layout.fillWidth: true
             implicitHeight: 1
 

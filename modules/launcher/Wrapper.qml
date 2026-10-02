@@ -1,130 +1,68 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.config
-import Quickshell
 import QtQuick
+import Quickshell
+import Caelestia.Config
+import qs.components
+import qs.modules.launcher.services
 
 Item {
     id: root
 
     required property ShellScreen screen
-    required property PersistentProperties visibilities
+    required property ScreenState screenState
     required property var panels
 
-    readonly property bool shouldBeActive: visibilities.launcher && Config.launcher.enabled
-    property int contentHeight
+    readonly property bool shouldBeActive: screenState.launcher && Config.launcher.enabled
 
     readonly property real maxHeight: {
-        let max = screen.height - Config.border.thickness * 2 - Appearance.spacing.large;
-        if (visibilities.dashboard)
+        let max = screen.height - Config.border.thickness * 2 + Tokens.padding.extraLarge;
+        if (screenState.dashboard)
             max -= panels.dashboard.nonAnimHeight;
         return max;
     }
 
-    onMaxHeightChanged: timer.start()
+    property real offsetScale: shouldBeActive ? 0 : 1
 
-    visible: height > 0
-    implicitHeight: 0
-    implicitWidth: content.implicitWidth
+    // Which edge the launcher hangs from and where along it (config launcher.edge / launcher.align)
+    readonly property bool atTop: Config.launcher.edge === PanelEdge.Top
+    readonly property int align: Config.launcher.align
 
     onShouldBeActiveChanged: {
-        if (shouldBeActive) {
-            timer.stop();
-            hideAnim.stop();
-            showAnim.start();
-        } else {
-            showAnim.stop();
-            hideAnim.start();
-        }
+        if (shouldBeActive)
+            implicitHeight = Qt.binding(() => content.implicitHeight);
+        else
+            implicitHeight = implicitHeight; // Break binding during close anim
     }
 
-    SequentialAnimation {
-        id: showAnim
+    visible: offsetScale < 1
+    // Plain x/y bindings rather than anchors, which don't reset reliably when the edge changes live
+    x: align === PanelAlign.Start ? 0 : align === PanelAlign.End ? parent.width - width : (parent.width - width) / 2
+    y: atTop ? (-height - 5) * offsetScale : parent.height - height + (height + 5) * offsetScale
+    implicitHeight: content.implicitHeight
+    implicitWidth: content.implicitWidth || 630 // Hard coded fallback for first open
+    opacity: 1 - offsetScale
 
-        Anim {
-            target: root
-            property: "implicitHeight"
-            to: root.contentHeight
-            duration: Appearance.anim.durations.expressiveDefaultSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
-        }
-        ScriptAction {
-            script: root.implicitHeight = Qt.binding(() => content.implicitHeight)
-        }
-    }
+    Component.onCompleted: Qt.callLater(() => Apps) // Load apps on init
 
-    SequentialAnimation {
-        id: hideAnim
-
-        ScriptAction {
-            script: root.implicitHeight = root.implicitHeight
-        }
-        Anim {
-            target: root
-            property: "implicitHeight"
-            to: 0
-            easing.bezierCurve: Appearance.anim.curves.emphasized
-        }
-    }
-
-    Connections {
-        target: Config.launcher
-
-        function onEnabledChanged(): void {
-            timer.start();
-        }
-
-        function onMaxShownChanged(): void {
-            timer.start();
-        }
-    }
-
-    Connections {
-        target: DesktopEntries.applications
-
-        function onValuesChanged(): void {
-            if (DesktopEntries.applications.values.length < Config.launcher.maxShown)
-                timer.start();
-        }
-    }
-
-    Timer {
-        id: timer
-
-        interval: Appearance.anim.durations.extraLarge
-        onRunningChanged: {
-            if (running && !root.shouldBeActive) {
-                content.visible = false;
-                content.active = true;
-            } else {
-                root.contentHeight = Math.min(root.maxHeight, content.implicitHeight);
-                content.active = Qt.binding(() => root.shouldBeActive || root.visible);
-                content.visible = true;
-                if (showAnim.running) {
-                    showAnim.stop();
-                    showAnim.start();
-                }
-            }
-        }
+    Behavior on offsetScale {
+        Anim {}
     }
 
     Loader {
         id: content
 
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
+        x: (parent.width - width) / 2
+        // Flush with the wrapper's inner edge: the panel's far side from the screen edge it hangs from
+        y: root.atTop ? parent.height - height : 0
 
-        visible: false
-        active: false
-        Component.onCompleted: timer.start()
+        active: root.shouldBeActive || root.visible
 
         sourceComponent: Content {
-            visibilities: root.visibilities
+            screenState: root.screenState
             panels: root.panels
             maxHeight: root.maxHeight
-
-            Component.onCompleted: root.contentHeight = implicitHeight
+            flipped: root.atTop
         }
     }
 }

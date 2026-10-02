@@ -1,403 +1,356 @@
-pragma ComponentBehavior: Bound
-
+import "media"
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import M3Shapes
+import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
-import qs.utils
-import qs.config
-import Caelestia.Services
-import Quickshell
-import Quickshell.Services.Mpris
-import QtQuick
-import QtQuick.Layouts
-import QtQuick.Shapes
 
+// NOTE(fork): one media tab for both the external MPRIS players and the in-shell local
+// player. The player keeps the original layout: browsing the music and picking what to play
+// lives in the notification popout's library tab, so this tab is only about controlling
+// whatever is playing.
 Item {
     id: root
 
-    required property PersistentProperties visibilities
+    required property ScreenState screenState
 
-    property real playerProgress: {
-        const active = Players.active;
-        return active?.length ? active.position / active.length : 0;
+    // Whether the tab is controlling the in-shell player instead of an MPRIS player
+    property bool useLocal
+    // Whether the user opened the equalizer drawer under the player
+    property bool eqToggled
+
+    readonly property MediaSource localSource: MediaSource {
+        local: true
+    }
+    readonly property MediaSource mprisSource: MediaSource {
+        mpris: Players.active
+    }
+    // Nothing external means the in-shell player is the only thing to control
+    readonly property bool localActive: root.useLocal || !Players.active
+    readonly property MediaSource source: root.localActive ? root.localSource : root.mprisSource
+
+    // The equalizer is an opt-in service (Settings > Audio), so the tab only offers it - and only
+    // keeps it open - while that option is on
+    readonly property bool eqOpen: root.eqToggled && Equalizer.enabled
+    // The tab grows by the drawer, rather than the drawer eating into the player
+    readonly property bool drawerOpen: root.eqOpen
+    // How much the drawer adds to the tab (and so to the dashboard) while it is open
+    readonly property real drawerHeight: 320
+    // Breathing room between the player and the drawer, on top of the layout's own spacing, so
+    // the drawer opens clear of the controls instead of on top of them
+    readonly property real drawerGap: Tokens.spacing.large
+    // Room the fixed tab height leaves for the player, and the height the player actually needs.
+    // A track with a volume row, or the placeholder, is taller than that room; the tab grows to
+    // match rather than cutting the bottom off the controls.
+    readonly property real playerRoom: Tokens.sizes.dashboard.mediaTabHeight - Tokens.padding.large * 2 - header.height - Tokens.spacing.small * 2
+    readonly property real playerHeight: Math.max(root.playerRoom, content.implicitHeight, noMedia.implicitHeight)
+
+    // External players plus the in-shell player, for the source picker
+    readonly property var sourceOptions: {
+        const options = [];
+        for (const player of Players.list)
+            options.push({
+                kind: "mpris",
+                player: player,
+                label: Players.getIdentity(player)
+            });
+        options.push({
+            kind: "local",
+            player: null,
+            label: Tr.tr("Local player")
+        });
+        return options;
     }
 
-    function lengthStr(length: int): string {
-        if (length < 0)
-            return "-1:-1";
-
-        const hours = Math.floor(length / 3600);
-        const mins = Math.floor((length % 3600) / 60);
-        const secs = Math.floor(length % 60).toString().padStart(2, "0");
-
-        if (hours > 0)
-            return `${hours}:${mins.toString().padStart(2, "0")}:${secs}`;
-        return `${mins}:${secs}`;
-    }
-
-    implicitWidth: cover.implicitWidth + Config.dashboard.sizes.mediaVisualiserSize * 2 + details.implicitWidth + details.anchors.leftMargin + bongocat.implicitWidth + bongocat.anchors.leftMargin * 2 + Appearance.padding.large * 2
-    implicitHeight: Math.max(cover.implicitHeight + Config.dashboard.sizes.mediaVisualiserSize * 2, details.implicitHeight, bongocat.implicitHeight) + Appearance.padding.large * 2
-
-    Behavior on playerProgress {
-        Anim {
-            duration: Appearance.anim.durations.large
-        }
-    }
-
-    Timer {
-        running: Players.active?.isPlaying ?? false
-        interval: Config.dashboard.mediaUpdateInterval
-        triggeredOnStart: true
-        repeat: true
-        onTriggered: Players.active?.positionChanged()
-    }
-
-    ServiceRef {
-        service: Audio.cava
-    }
-
-    ServiceRef {
-        service: Audio.beatTracker
-    }
-
-    Shape {
-        id: visualiser
-
-        readonly property real centerX: width / 2
-        readonly property real centerY: height / 2
-        readonly property real innerX: cover.implicitWidth / 2 + Appearance.spacing.small
-        readonly property real innerY: cover.implicitHeight / 2 + Appearance.spacing.small
-        property color colour: Colours.palette.m3primary
-
-        anchors.fill: cover
-        anchors.margins: -Config.dashboard.sizes.mediaVisualiserSize
-
-        asynchronous: true
-        preferredRendererType: Shape.CurveRenderer
-        data: visualiserBars.instances
-    }
-
-    Variants {
-        id: visualiserBars
-
-        model: Array.from({
-            length: Config.services.visualiserBars
-        }, (_, i) => i)
-
-        ShapePath {
-            id: visualiserBar
-
-            required property int modelData
-            readonly property real value: Math.max(1e-3, Math.min(1, Audio.cava.values[modelData]))
-
-            readonly property real angle: modelData * 2 * Math.PI / Config.services.visualiserBars
-            readonly property real magnitude: value * Config.dashboard.sizes.mediaVisualiserSize
-            readonly property real cos: Math.cos(angle)
-            readonly property real sin: Math.sin(angle)
-
-            capStyle: Appearance.rounding.scale === 0 ? ShapePath.SquareCap : ShapePath.RoundCap
-            strokeWidth: 360 / Config.services.visualiserBars - Appearance.spacing.small / 4
-            strokeColor: Colours.palette.m3primary
-
-            startX: visualiser.centerX + (visualiser.innerX + strokeWidth / 2) * cos
-            startY: visualiser.centerY + (visualiser.innerY + strokeWidth / 2) * sin
-
-            PathLine {
-                x: visualiser.centerX + (visualiser.innerX + visualiserBar.strokeWidth / 2 + visualiserBar.magnitude) * visualiserBar.cos
-                y: visualiser.centerY + (visualiser.innerY + visualiserBar.strokeWidth / 2 + visualiserBar.magnitude) * visualiserBar.sin
-            }
-
-            Behavior on strokeColor {
-                CAnim {}
-            }
-        }
-    }
-
-    StyledClippingRect {
-        id: cover
-
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: parent.left
-        anchors.leftMargin: Appearance.padding.large + Config.dashboard.sizes.mediaVisualiserSize
-
-        implicitWidth: Config.dashboard.sizes.mediaCoverArtSize
-        implicitHeight: Config.dashboard.sizes.mediaCoverArtSize
-
-        color: Colours.tPalette.m3surfaceContainerHigh
-        radius: Infinity
-
-        MaterialIcon {
-            anchors.centerIn: parent
-
-            grade: 200
-            text: "art_track"
-            color: Colours.palette.m3onSurfaceVariant
-            font.pointSize: (parent.width * 0.4) || 1
+    // The tab follows the audio: when the active player switches on its own, leave the local player
+    Connections {
+        function onAutoSwitched(): void {
+            // Not away from the local player while it is what is playing and was chosen
+            if (!(root.useLocal && Music.playing))
+                root.useLocal = false;
         }
 
-        Image {
-            id: image
+        target: Players
+    }
 
-            anchors.fill: parent
-
-            source: Players.active?.trackArtUrl ?? "" // qmllint disable incompatible-type
-            asynchronous: true
-            fillMode: Image.PreserveAspectCrop
-            sourceSize.width: width
-            sourceSize.height: height
+    // The other direction: the local player starting on its own (picked in the sidebar's library,
+    // not through this tab's own selector) should switch the tab to it the same way an MPRIS
+    // player taking over switches the tab away from it
+    Connections {
+        function onPlayingChanged(): void {
+            if (Music.playing)
+                root.useLocal = true;
         }
+
+        target: Music
+    }
+
+    function selectSource(option): void {
+        if (option.kind === "local") {
+            root.useLocal = true;
+            return;
+        }
+        root.useLocal = false;
+        Players.pick(option.player);
+    }
+
+    implicitWidth: Tokens.sizes.dashboard.mediaTabWidth
+    // The player and the drawer both grow the tab rather than eating into each other, so the
+    // controls keep the height they have while the drawer is closed and the drawer stays below
+    // whatever the player is showing
+
+    implicitHeight: Tokens.sizes.dashboard.mediaTabHeight + (root.drawerOpen ? root.drawerHeight + root.drawerGap : 0) + Math.max(0, root.playerHeight - root.playerRoom)
+
+    BackgroundShapes {
+        anchors.fill: parent
+        playing: root.source.isPlaying
     }
 
     ColumnLayout {
-        id: details
-
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: visualiser.right
-        anchors.leftMargin: Appearance.spacing.normal
-
-        spacing: Appearance.spacing.small
-
-        StyledText {
-            id: title
-
-            Layout.fillWidth: true
-            Layout.maximumWidth: parent.implicitWidth
-
-            animate: true
-            horizontalAlignment: Text.AlignHCenter
-            text: (Players.active?.trackTitle ?? qsTr("No media")) || qsTr("Unknown title")
-            color: Players.active ? Colours.palette.m3primary : Colours.palette.m3onSurface
-            font.pointSize: Appearance.font.size.normal
-            elide: Text.ElideRight
-        }
-
-        StyledText {
-            id: album
-
-            Layout.fillWidth: true
-            Layout.maximumWidth: parent.implicitWidth
-
-            animate: true
-            horizontalAlignment: Text.AlignHCenter
-            visible: !!Players.active
-            text: Players.active?.trackAlbum || qsTr("Unknown album")
-            color: Colours.palette.m3outline
-            font.pointSize: Appearance.font.size.small
-            elide: Text.ElideRight
-        }
-
-        StyledText {
-            id: artist
-
-            Layout.fillWidth: true
-            Layout.maximumWidth: parent.implicitWidth
-
-            animate: true
-            horizontalAlignment: Text.AlignHCenter
-            text: (Players.active?.trackArtist ?? qsTr("Play some music for stuff to show up here!")) || qsTr("Unknown artist")
-            color: Players.active ? Colours.palette.m3secondary : Colours.palette.m3outline
-            elide: Text.ElideRight
-            wrapMode: Players.active ? Text.NoWrap : Text.WordWrap
-        }
+        anchors.fill: parent
+        anchors.margins: Tokens.padding.large
+        spacing: Tokens.spacing.small
 
         RowLayout {
-            id: controls
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: Tokens.spacing.extraLarge
 
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Appearance.spacing.small
-            Layout.bottomMargin: Appearance.spacing.smaller
+            // The player's own column. The header belongs over the cover and details rather than
+            // across the whole tab, which is what lets the lyrics column beside it run the full
+            // height of the tab instead of starting below the header
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: Tokens.spacing.small
 
-            spacing: Appearance.spacing.small
+                RowLayout {
+                    id: header
 
-            PlayerControl {
-                type: IconButton.Text
-                icon: "skip_previous"
-                font.pointSize: Math.round(Appearance.font.size.large * 1.5)
-                disabled: !Players.active?.canGoPrevious
-                onClicked: Players.active?.previous()
-            }
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
 
-            PlayerControl {
-                icon: Players.active?.isPlaying ? "pause" : "play_arrow"
-                label.animate: true
-                toggle: true
-                padding: Appearance.padding.small / 2
-                checked: Players.active?.isPlaying ?? false
-                font.pointSize: Math.round(Appearance.font.size.large * 1.5)
-                disabled: !Players.active?.canTogglePlaying
-                onClicked: Players.active?.togglePlaying()
-            }
+                    IconButton {
+                        visible: Equalizer.enabled
+                        icon: "equalizer"
+                        type: root.eqOpen ? IconButton.Filled : IconButton.Tonal
+                        isToggle: true
+                        checked: root.eqOpen
+                        onClicked: root.eqToggled = !root.eqToggled
+                    }
 
-            PlayerControl {
-                type: IconButton.Text
-                icon: "skip_next"
-                font.pointSize: Math.round(Appearance.font.size.large * 1.5)
-                disabled: !Players.active?.canGoNext
-                onClicked: Players.active?.next()
-            }
-        }
+                    // Sits just right of the drawer toggles rather than out at the right hand end,
+                    // so the menu that comes out of it drops over the cover and details and leaves
+                    // the lyrics column clear
+                    SplitButton {
+                        // Dropdown arrow leading, ahead of the name of the media system being
+                        // controlled
+                        expandOnLeft: true
+                        menuItems: sourceItems.instances
+                        active: menuItems.find(i => root.localActive ? i.modelData.kind === "local" : i.modelData.player === Players.active) ?? null
+                        // Drops down rather than up: the header sits at the top of the tab, so
+                        // there is far more room below the button than above it, and Menu still
+                        // flips it back up by itself if one ever grows too tall to fit (see
+                        // Menu.effectiveAbove). With the arrow leading, SplitButton lays the menu
+                        // out under it, so the menu starts at the left edge of the selector
+                        // rather than out at the far end of the label
+                        menu.onItemSelected: item => root.selectSource((item as SourceItem).modelData)
+                        fallbackIcon: "music_note"
+                        fallbackText: Tr.trCtx("No players", "no media players active")
+                    }
 
-        StyledSlider {
-            id: slider
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
 
-            enabled: !!Players.active
-            implicitWidth: 280
-            implicitHeight: Appearance.padding.normal * 3
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: Tokens.spacing.extraLarge
 
-            onMoved: {
-                const active = Players.active;
-                if (active?.canSeek && active?.positionSupported)
-                    active.position = value * active.length;
-            }
+                    CoverVisualiser {
+                        Layout.fillHeight: true
+                        implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
+                        source: root.source
+                    }
 
-            Binding {
-                target: slider
-                property: "value"
-                value: root.playerProgress
-                when: !slider.pressed
-            }
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
 
-            CustomMouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.NoButton
+                        state: root.source.available ? "" : "noMedia"
 
-                function onWheel(event: WheelEvent) {
-                    const active = Players.active;
-                    if (!active?.canSeek || !active?.positionSupported)
-                        return;
+                        states: State {
+                            name: "noMedia"
 
-                    event.accepted = true;
-                    const delta = event.angleDelta.y > 0 ? 10 : -10;    // Time 10 seconds
-                    Qt.callLater(() => {
-                        active.position = Math.max(0, Math.min(active.length, active.position + delta));
-                    });
+                            PropertyChanges {
+                                noMedia.opacity: 1
+                                content.opacity: 0
+                            }
+                        }
+
+                        transitions: [
+                            Transition {
+                                from: ""
+
+                                SequentialAnimation {
+                                    Anim {
+                                        target: content
+                                        property: "opacity"
+                                        type: Anim.DefaultEffects
+                                    }
+                                    Anim {
+                                        target: noMedia
+                                        property: "opacity"
+                                        type: Anim.SlowEffects
+                                    }
+                                }
+                            },
+                            Transition {
+                                to: ""
+
+                                SequentialAnimation {
+                                    Anim {
+                                        target: noMedia
+                                        property: "opacity"
+                                        type: Anim.DefaultEffects
+                                    }
+                                    Anim {
+                                        target: content
+                                        property: "opacity"
+                                        type: Anim.SlowEffects
+                                    }
+                                }
+                            }
+                        ]
+
+                        Loader {
+                            id: noMedia
+
+                            anchors.centerIn: parent
+                            asynchronous: true
+                            active: opacity > 0
+                            opacity: 0
+
+                            sourceComponent: ColumnLayout {
+                                spacing: Tokens.spacing.small
+
+                                MaterialShape {
+                                    Layout.topMargin: (pathBounds().height - implicitSize) / 2
+                                    Layout.bottomMargin: (pathBounds().height - implicitSize) / 2 + Tokens.spacing.small
+                                    Layout.alignment: Qt.AlignHCenter
+                                    color: Colours.palette.m3primaryContainer
+                                    implicitSize: icon.implicitHeight + Tokens.padding.extraLarge * 2
+                                    shape: MaterialShape.ClamShell
+
+                                    Behavior on color {
+                                        CAnim {}
+                                    }
+
+                                    MaterialIcon {
+                                        id: icon
+
+                                        anchors.centerIn: parent
+                                        text: "queue_music"
+                                        fontStyle: Tokens.font.icon.builders.large.scale(2).build()
+                                        color: Colours.palette.m3onPrimaryContainer
+                                    }
+                                }
+
+                                StyledText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: Tr.tr("Nothing playing")
+                                    font: Tokens.font.headline.medium
+                                }
+
+                                StyledText {
+                                    text: Tr.tr("Pick something in the sidebar to play it here")
+                                    color: Colours.palette.m3onSurfaceVariant
+                                    font: Tokens.font.body.large
+                                }
+                            }
+                        }
+
+                        Loader {
+                            id: content
+
+                            anchors.fill: parent
+                            asynchronous: true
+                            active: opacity > 0
+
+                            // Still in a layout of its own, so the details keep to their own height
+                            // and stay centred in the column rather than being stretched by the
+                            // loader
+                            sourceComponent: RowLayout {
+                                Details {
+                                    Layout.fillWidth: true
+                                    source: root.source
+                                }
+                            }
+                        }
+                    }
                 }
             }
+
+            // Spans the tab beside the player, since the header above only covers the player's own
+            // column: the lyrics are as tall as the two of them together
+            LyricsPane {
+                Layout.fillHeight: true
+                implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
+                source: root.source
+            }
         }
 
+        // The drawer under the player, so the tab grows rather than the player shrinking
         Item {
+            id: drawer
+
             Layout.fillWidth: true
-            implicitHeight: Math.max(position.implicitHeight, length.implicitHeight)
+            Layout.topMargin: root.drawerOpen ? root.drawerGap : 0
+            Layout.preferredHeight: root.drawerOpen ? root.drawerHeight : 0
+            Layout.minimumHeight: 0
+            clip: true
 
-            StyledText {
-                id: position
-
-                anchors.left: parent.left
-
-                text: root.lengthStr(Players.active?.position ?? -1)
-                color: Colours.palette.m3onSurfaceVariant
-                font.pointSize: Appearance.font.size.small
+            Behavior on Layout.topMargin {
+                Anim {}
             }
 
-            StyledText {
-                id: length
-
-                anchors.right: parent.right
-
-                text: root.lengthStr(Players.active?.length ?? -1)
-                color: Colours.palette.m3onSurfaceVariant
-                font.pointSize: Appearance.font.size.small
+            Behavior on Layout.preferredHeight {
+                Anim {}
             }
-        }
 
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            spacing: Appearance.spacing.small
+            EqualizerPanel {
+                anchors.fill: parent
+                opacity: root.eqOpen ? 1 : 0
+                enabled: root.eqOpen
 
-            PlayerControl {
-                type: IconButton.Text
-                icon: "move_up"
-                inactiveOnColour: Colours.palette.m3secondary
-                padding: Appearance.padding.small
-                font.pointSize: Appearance.font.size.large
-                disabled: !Players.active?.canRaise
-                onClicked: {
-                    Players.active?.raise();
-                    root.visibilities.dashboard = false;
+                Behavior on opacity {
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
                 }
             }
-
-            SplitButton {
-                id: playerSelector
-
-                disabled: !Players.list.length
-                active: menuItems.find(m => m.modelData === Players.active) ?? menuItems[0] ?? null
-                menu.onItemSelected: item => Players.manualActive = (item as PlayerItem).modelData
-
-                menuItems: playerList.instances
-                fallbackIcon: "music_off"
-                fallbackText: qsTr("No players")
-
-                label.Layout.maximumWidth: slider.implicitWidth * 0.28
-                label.elide: Text.ElideRight
-
-                stateLayer.disabled: true
-                menuOnTop: true
-
-                Variants {
-                    id: playerList
-
-                    model: Players.list
-
-                    PlayerItem {}
-                }
-            }
-
-            PlayerControl {
-                type: IconButton.Text
-                icon: "delete"
-                inactiveOnColour: Colours.palette.m3error
-                padding: Appearance.padding.small
-                font.pointSize: Appearance.font.size.large
-                disabled: !Players.active?.canQuit
-                onClicked: Players.active?.quit()
-            }
         }
     }
 
-    Item {
-        id: bongocat
+    Variants {
+        id: sourceItems
 
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: details.right
-        anchors.leftMargin: Appearance.spacing.normal
+        model: root.sourceOptions
 
-        implicitWidth: visualiser.width
-        implicitHeight: visualiser.height
-
-        AnimatedImage {
-            anchors.centerIn: parent
-
-            width: visualiser.width * 0.75
-            height: visualiser.height * 0.75
-
-            playing: Players.active?.isPlaying ?? false
-            speed: Audio.beatTracker.bpm / Appearance.anim.mediaGifSpeedAdjustment // qmllint disable unresolved-type
-            source: Paths.absolutePath(Config.paths.mediaGif)
-            asynchronous: true
-            fillMode: AnimatedImage.PreserveAspectFit
-        }
+        SourceItem {}
     }
 
-    component PlayerItem: MenuItem {
-        required property MprisPlayer modelData
+    component SourceItem: MenuItem {
+        required property var modelData
 
-        icon: modelData === Players.active ? "check" : ""
-        text: Players.getIdentity(modelData)
-        activeIcon: "animated_images"
-    }
-
-    component PlayerControl: IconButton {
-        Layout.preferredWidth: implicitWidth + (stateLayer.pressed ? Appearance.padding.large : internalChecked ? Appearance.padding.smaller : 0)
-        radius: stateLayer.pressed ? Appearance.rounding.small / 2 : internalChecked ? Appearance.rounding.small : implicitHeight / 2
-        radiusAnim.duration: Appearance.anim.durations.expressiveFastSpatial
-        radiusAnim.easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
-
-        Behavior on Layout.preferredWidth {
-            Anim {
-                duration: Appearance.anim.durations.expressiveFastSpatial
-                easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
-            }
-        }
+        text: modelData.label
+        icon: modelData.kind === "local" ? "library_music" : "music_note"
+        activeIcon: modelData.kind === "local" ? "library_music" : "animated_images"
     }
 }

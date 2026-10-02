@@ -1,30 +1,83 @@
 pragma ComponentBehavior: Bound
 
-import "items"
-import "services"
-import qs.components
-import qs.components.controls
-import qs.components.containers
-import qs.services
-import qs.config
-import Quickshell
 import QtQuick
+import Quickshell
+import Caelestia.Config
+import qs.components
+import qs.components.containers
+import qs.components.controls
+import qs.services
+import qs.modules.launcher.items
+import qs.modules.launcher.services
 
 StyledListView {
     id: root
 
-    required property StyledTextField search
-    required property PersistentProperties visibilities
+    required property SearchBar search
+    required property ScreenState screenState
+
+    property string displayText
+
+    readonly property string requestedState: stateForText(search.text)
+    readonly property string displayState: stateForText(displayText)
+
+    function syncDisplayText(): void {
+        if (screenState.launcher && requestedState === displayState)
+            displayText = search.text;
+    }
+
+    function stateForText(text: string): string {
+        const prefix = GlobalConfig.launcher.actionPrefix;
+        if (text.startsWith(prefix)) {
+            if (text.startsWith(`${prefix}calc `))
+                return "calc";
+
+            if (text === `${prefix}gpu` || text.startsWith(`${prefix}gpu `))
+                return "gpu";
+
+            if (text === `${prefix}ssh` || text.startsWith(`${prefix}ssh `))
+                return "ssh";
+
+            if (text === `${prefix}todo` || text.startsWith(`${prefix}todo `))
+                return "todo";
+
+            return "actions";
+        }
+
+        return "apps";
+    }
+
+    function resultsForText(text: string): var {
+        switch (stateForText(text)) {
+        case "actions":
+            return Actions.query(text);
+        case "calc":
+            return [0];
+        case "gpu":
+            return Supergfxctl.modeData;
+        case "ssh":
+            return SSH.search(text);
+        case "todo":
+            return Todo.items(text);
+        default:
+            return Apps.search(text);
+        }
+    }
 
     model: ScriptModel {
-        id: model
-
+        values: {
+            SSH.hostRevision;
+            Supergfxctl.modeRevision;
+            Supergfxctl.modeData;
+            Todo.revision;
+            return root.resultsForText(root.displayText);
+        }
         onValuesChanged: root.currentIndex = 0
     }
 
-    spacing: Appearance.spacing.small
+    spacing: Tokens.spacing.small
     orientation: Qt.Vertical
-    implicitHeight: (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
+    implicitHeight: (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
 
     preferredHighlightBegin: 0
     preferredHighlightEnd: height
@@ -32,7 +85,7 @@ StyledListView {
 
     highlightFollowsCurrentItem: false
     highlight: StyledRect {
-        radius: Appearance.rounding.normal
+        radius: Tokens.rounding.large
         color: Colours.palette.m3onSurface
         opacity: 0.08
 
@@ -41,38 +94,26 @@ StyledListView {
         implicitHeight: root.currentItem?.implicitHeight ?? 0
 
         Behavior on y {
-            Anim {
-                duration: Appearance.anim.durations.expressiveDefaultSpatial
-                easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
-            }
+            Anim {}
         }
     }
 
-    state: {
-        const text = search.text;
-        const prefix = Config.launcher.actionPrefix;
-        if (text.startsWith(prefix)) {
-            for (const action of ["calc", "scheme", "variant"])
-                if (text.startsWith(`${prefix}${action} `))
-                    return action;
-
-            return "actions";
-        }
-
-        return "apps";
-    }
+    state: screenState.launcher ? requestedState : displayState
 
     onStateChanged: {
-        if (state === "scheme" || state === "variant")
-            Schemes.reload();
+        if (state === "gpu")
+            Supergfxctl.reload();
+        else if (state === "ssh")
+            SSH.reload();
     }
+
+    Component.onCompleted: displayText = search.text
 
     states: [
         State {
             name: "apps"
 
             PropertyChanges {
-                model.values: Apps.search(search.text)
                 root.delegate: appItem
             }
         },
@@ -80,7 +121,6 @@ StyledListView {
             name: "actions"
 
             PropertyChanges {
-                model.values: Actions.query(search.text)
                 root.delegate: actionItem
             }
         },
@@ -88,24 +128,28 @@ StyledListView {
             name: "calc"
 
             PropertyChanges {
-                model.values: [0]
                 root.delegate: calcItem
             }
         },
         State {
-            name: "scheme"
+            name: "gpu"
 
             PropertyChanges {
-                model.values: Schemes.query(search.text)
-                root.delegate: schemeItem
+                root.delegate: actionItem
             }
         },
         State {
-            name: "variant"
+            name: "ssh"
 
             PropertyChanges {
-                model.values: M3Variants.query(search.text)
-                root.delegate: variantItem
+                root.delegate: sshItem
+            }
+        },
+        State {
+            name: "todo"
+
+            PropertyChanges {
+                root.delegate: todoItem
             }
         }
     ]
@@ -118,21 +162,29 @@ StyledListView {
                     property: "opacity"
                     from: 1
                     to: 0
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardAccel
                 }
                 Anim {
                     target: root
                     property: "scale"
                     from: 1
                     to: 0.9
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardAccel
                 }
             }
             PropertyAction {
-                targets: [model, root]
-                properties: "values,delegate"
+                target: root
+                property: "delegate"
+                value: null
+            }
+            ScriptAction {
+                script: root.displayText = root.search.text
+            }
+            PropertyAction {
+                target: root
+                property: "delegate"
             }
             ParallelAnimation {
                 Anim {
@@ -140,16 +192,16 @@ StyledListView {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardDecel
                 }
                 Anim {
                     target: root
                     property: "scale"
                     from: 0.9
                     to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardDecel
                 }
             }
             PropertyAction {
@@ -168,7 +220,8 @@ StyledListView {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 0
             to: 1
         }
@@ -178,7 +231,8 @@ StyledListView {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 1
             to: 0
         }
@@ -189,7 +243,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -197,10 +252,11 @@ StyledListView {
     addDisplaced: Transition {
         Anim {
             property: "y"
-            duration: Appearance.anim.durations.small
+            type: Anim.StandardSmall
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -210,7 +266,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -219,7 +276,7 @@ StyledListView {
         id: appItem
 
         AppItem {
-            visibilities: root.visibilities
+            screenState: root.screenState
         }
     }
 
@@ -240,18 +297,34 @@ StyledListView {
     }
 
     Component {
-        id: schemeItem
+        id: sshItem
 
-        SchemeItem {
+        ActionItem {
             list: root
         }
     }
 
     Component {
-        id: variantItem
+        id: todoItem
 
-        VariantItem {
+        TodoItem {
             list: root
         }
+    }
+
+    Connections {
+        function onTextChanged() {
+            root.syncDisplayText();
+        }
+
+        target: root.search
+    }
+
+    Connections {
+        function onLauncherChanged() {
+            root.syncDisplayText();
+        }
+
+        target: root.screenState
     }
 }

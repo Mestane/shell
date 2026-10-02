@@ -1,25 +1,30 @@
 pragma ComponentBehavior: Bound
 
-import "services"
+import QtQuick
+import Caelestia
+import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
-import qs.config
-import Quickshell
-import QtQuick
+import qs.modules.launcher.services
 
 Item {
     id: root
 
-    required property PersistentProperties visibilities
+    required property ScreenState screenState
     required property var panels
     required property real maxHeight
+    // Hanging from the top edge: the search bar goes first and the results list below it
+    property bool flipped
 
-    readonly property int padding: Appearance.padding.large
-    readonly property int rounding: Appearance.rounding.large
+    readonly property int padding: Tokens.padding.large
+    readonly property int rounding: Tokens.rounding.extraLarge
+    // Gap between the search bar and the screen edge it sits next to
+    readonly property real edgeMargin: CUtils.clamp(padding - Config.border.thickness, 0, padding)
 
     implicitWidth: listWrapper.width + padding * 2
-    implicitHeight: searchWrapper.height + listWrapper.height + padding * 2
+    implicitHeight: search.height + listWrapper.height + padding + edgeMargin
 
     Item {
         id: listWrapper
@@ -27,165 +32,117 @@ Item {
         implicitWidth: list.width
         implicitHeight: list.height + root.padding
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: searchWrapper.top
-        anchors.bottomMargin: root.padding
+        // Explicit positions rather than anchors so the launcher can change edge live
+        x: (parent.width - width) / 2
+        y: root.flipped ? search.y + search.height + root.padding : search.y - root.padding - height
 
         ContentList {
             id: list
 
             content: root
-            visibilities: root.visibilities
+            screenState: root.screenState
             panels: root.panels
-            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3
+            maxHeight: root.maxHeight - search.implicitHeight - root.padding * 3
             search: search
             padding: root.padding
             rounding: root.rounding
         }
     }
 
-    StyledRect {
-        id: searchWrapper
+    SearchBar {
+        id: search
 
-        color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
-        radius: Appearance.rounding.full
+        objectName: "launcherSearch"
 
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: root.padding
+        anchors.leftMargin: root.padding
+        anchors.rightMargin: root.padding
+        y: root.flipped ? root.edgeMargin : root.height - height - root.edgeMargin
 
-        implicitHeight: Math.max(searchIcon.implicitHeight, search.implicitHeight, clearIcon.implicitHeight)
+        topPadding: Math.round((Tokens.padding.medium + Tokens.padding.large) / 2)
+        bottomPadding: Math.round((Tokens.padding.medium + Tokens.padding.large) / 2)
 
-        MaterialIcon {
-            id: searchIcon
+        placeholderText: Tr.tr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: root.padding
-
-            text: "search"
-            color: Colours.palette.m3onSurfaceVariant
-        }
-
-        StyledTextField {
-            id: search
-
-            anchors.left: searchIcon.right
-            anchors.right: clearIcon.left
-            anchors.leftMargin: Appearance.spacing.small
-            anchors.rightMargin: Appearance.spacing.small
-
-            topPadding: Appearance.padding.larger
-            bottomPadding: Appearance.padding.larger
-
-            placeholderText: qsTr("Type \"%1\" for commands").arg(Config.launcher.actionPrefix)
-
-            onAccepted: {
-                const currentItem = list.currentList?.currentItem;
-                if (currentItem) {
-                    if (list.showWallpapers) {
-                        if (Colours.scheme === "dynamic" && currentItem.modelData.path !== Wallpapers.actualCurrent)
-                            Wallpapers.previewColourLock = true;
-                        Wallpapers.setWallpaper(currentItem.modelData.path);
-                        root.visibilities.launcher = false;
-                    } else if (text.startsWith(Config.launcher.actionPrefix)) {
-                        if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
-                            currentItem.onClicked();
-                        else
-                            currentItem.modelData.onClicked(list.currentList);
-                    } else {
-                        Apps.launch(currentItem.modelData);
-                        root.visibilities.launcher = false;
-                    }
+        onAccepted: {
+            const currentItem = list.currentList?.currentItem;
+            if (currentItem) {
+                if (list.showWallpapers) {
+                    if (Colours.scheme === "dynamic" && currentItem.modelData.path !== Wallpapers.actualCurrent)
+                        Wallpapers.previewColourLock = true;
+                    Wallpapers.setWallpaper(currentItem.modelData.path);
+                    root.screenState.launcher = false;
+                } else if (text.startsWith(GlobalConfig.launcher.actionPrefix)) {
+                    if (text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `))
+                        currentItem.onClicked();
+                    else
+                        currentItem.modelData.onClicked(list.currentList);
+                } else {
+                    Apps.launch(currentItem.modelData);
+                    root.screenState.launcher = false;
                 }
             }
+        }
 
-            Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
-            Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
+        Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
+        Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
 
-            Keys.onEscapePressed: root.visibilities.launcher = false
+        Keys.onEscapePressed: root.screenState.launcher = false
 
-            Keys.onPressed: event => {
-                if (!Config.launcher.vimKeybinds)
-                    return;
+        Keys.onPressed: event => {
+            // NOTE(fork): the wallpaper list is laid out horizontally, so plain left/right
+            // browse it alongside up/down and the scroll wheel. This is handled through
+            // onPressed rather than onLeftPressed/onRightPressed because the per-key
+            // handlers always accept the event, which would swallow the caret movement the
+            // search field needs whenever the app list is showing instead. Modified arrows
+            // are left alone so shift selection and word-wise movement keep working.
+            const arrowModifiers = Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier;
+            const plainArrow = (event.key === Qt.Key_Left || event.key === Qt.Key_Right) && !(event.modifiers & arrowModifiers);
 
-                if (event.modifiers & Qt.ControlModifier) {
-                    if (event.key === Qt.Key_J) {
-                        list.currentList?.incrementCurrentIndex();
-                        event.accepted = true;
-                    } else if (event.key === Qt.Key_K) {
-                        list.currentList?.decrementCurrentIndex();
-                        event.accepted = true;
-                    }
-                } else if (event.key === Qt.Key_Tab) {
+            if (list.showWallpapers && plainArrow) {
+                if (event.key === Qt.Key_Left)
+                    list.currentList?.decrementCurrentIndex();
+                else
+                    list.currentList?.incrementCurrentIndex();
+                event.accepted = true;
+                return;
+            }
+
+            if (!GlobalConfig.launcher.vimKeybinds)
+                return;
+
+            if (event.modifiers & Qt.ControlModifier) {
+                if (event.key === Qt.Key_J || event.key === Qt.Key_N) {
                     list.currentList?.incrementCurrentIndex();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
+                } else if (event.key === Qt.Key_K || event.key === Qt.Key_P) {
                     list.currentList?.decrementCurrentIndex();
                     event.accepted = true;
                 }
-            }
-
-            Component.onCompleted: forceActiveFocus()
-
-            Connections {
-                target: root.visibilities
-
-                function onLauncherChanged(): void {
-                    if (!root.visibilities.launcher)
-                        search.text = "";
-                }
-
-                function onSessionChanged(): void {
-                    if (!root.visibilities.session)
-                        search.forceActiveFocus();
-                }
+            } else if (event.key === Qt.Key_Tab) {
+                list.currentList?.incrementCurrentIndex();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
+                list.currentList?.decrementCurrentIndex();
+                event.accepted = true;
             }
         }
 
-        MaterialIcon {
-            id: clearIcon
+        Component.onCompleted: forceActiveFocus()
 
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: root.padding
-
-            width: search.text ? implicitWidth : implicitWidth / 2
-            opacity: {
-                if (!search.text)
-                    return 0;
-                if (mouse.pressed)
-                    return 0.7;
-                if (mouse.containsMouse)
-                    return 0.8;
-                return 1;
+        Connections {
+            function onLauncherChanged(): void {
+                if (!root.screenState.launcher)
+                    search.text = "";
             }
 
-            text: "close"
-            color: Colours.palette.m3onSurfaceVariant
-
-            MouseArea {
-                id: mouse
-
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: search.text ? Qt.PointingHandCursor : undefined
-
-                onClicked: search.text = ""
+            function onSessionChanged(): void {
+                if (!root.screenState.session)
+                    search.forceActiveFocus();
             }
 
-            Behavior on width {
-                Anim {
-                    duration: Appearance.anim.durations.small
-                }
-            }
-
-            Behavior on opacity {
-                Anim {
-                    duration: Appearance.anim.durations.small
-                }
-            }
+            target: root.screenState
         }
     }
 }

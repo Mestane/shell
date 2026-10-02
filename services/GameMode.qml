@@ -1,11 +1,12 @@
 pragma Singleton
 
-import qs.services
-import qs.config
-import Caelestia
+import QtQuick
 import Quickshell
 import Quickshell.Io
-import QtQuick
+import Caelestia
+import Caelestia.Config
+import Caelestia.I18n
+import qs.services
 
 Singleton {
     id: root
@@ -21,42 +22,45 @@ Singleton {
             "general:gaps_out": 0,
             "general:border_size": 1,
             "decoration:rounding": 0,
-            "general:allow_tearing": 1
+            "general:allow_tearing": 1,
+            "input:accel_profile": "flat"
         });
     }
 
     onEnabledChanged: {
         if (enabled) {
             setDynamicConfs();
-            if (Config.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode enabled"), qsTr("Disabled Hyprland animations, blur, gaps and shadows"), "gamepad");
+            if (GlobalConfig.utilities.toasts.gameModeChanged)
+                Toaster.toast(Tr.tr("Game mode enabled"), Tr.tr("Disabled Hyprland animations, blur, gaps, shadows and mouse acceleration"), "gamepad");
         } else {
+            // A reload drops every runtime `keyword monitor`; Monitors puts them back
+            Monitors.rememberForReload();
             Hypr.extras.message("reload");
-            if (Config.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode disabled"), qsTr("Hyprland settings restored"), "gamepad");
+            if (GlobalConfig.utilities.toasts.gameModeChanged)
+                Toaster.toast(Tr.tr("Game mode disabled"), Tr.tr("Hyprland settings restored"), "gamepad");
         }
     }
 
     PersistentProperties {
         id: props
 
-        property bool enabled: Hypr.options["animations:enabled"] === 0
+        // NOTE(fork): not derived from Hypr options, since BatteryMonitor may also
+        // disable animations for power saving, which would falsely enable game mode.
+        property bool enabled: false
 
         reloadableId: "gameMode"
     }
 
     Connections {
-        target: Hypr
-
         function onConfigReloaded(): void {
             if (props.enabled)
                 root.setDynamicConfs();
         }
+
+        target: Hypr
     }
 
     IpcHandler {
-        target: "gameMode"
-
         function isEnabled(): bool {
             return props.enabled;
         }
@@ -72,5 +76,7 @@ Singleton {
         function disable(): void {
             props.enabled = false;
         }
+
+        target: "gameMode"
     }
 }

@@ -1,0 +1,308 @@
+pragma Singleton
+
+import QtQuick
+import QtQuick.Layouts
+import Caelestia.Config
+import Caelestia.I18n
+import qs.components
+import qs.services
+import qs.modules.nexus.common
+import qs.modules.nexus.pages
+import qs.modules.nexus.pages.apps
+import qs.modules.nexus.pages.audio
+import qs.modules.nexus.pages.bluetooth
+import qs.modules.nexus.pages.monitors
+import qs.modules.nexus.pages.network
+import qs.modules.nexus.pages.panels
+import qs.modules.nexus.pages.services
+import qs.modules.nexus.pages.wallandstyle
+import qs.modules.nexus.pages.panels.taskbar
+
+QtObject {
+    id: root
+
+    readonly property list<Component> pageComps: [
+        // Look & feel
+        Component {
+            // Wallpaper & style
+            StackPage {
+                Component {
+                    WallpaperAndStyle {}
+                }
+                Component {
+                    WallpaperSelect {}
+                }
+                Component {
+                    WallpaperCategory {}
+                }
+                Component {
+                    ColourSelect {}
+                }
+            }
+        },
+        Component {
+            // NOTE(fork): Shell assets
+            StackPage {
+                Component {
+                    AssetsPage {}
+                }
+            }
+        },
+
+        // The shell itself
+        Component {
+            // Panels
+            StackPage {
+                Component {
+                    PanelsPage {}
+                }
+                Component {
+                    DashboardPanel {}
+                }
+                Component {
+                    TaskbarPanel {}
+                }
+                Component {
+                    LauncherPanel {}
+                }
+                Component {
+                    SidebarPanel {}
+                }
+                Component {
+                    UtilitiesPanel {}
+                }
+
+                // Taskbar component sub-pages
+                Component {
+                    BarWorkspaces {}
+                }
+                Component {
+                    BarActiveWindow {}
+                }
+                Component {
+                    BarTray {}
+                }
+                Component {
+                    BarStatusIcons {}
+                }
+                Component {
+                    BarClock {}
+                }
+
+                // Notch settings sub-page
+                Component {
+                    NotchPanel {}
+                }
+
+                // Overview settings sub-page
+                Component {
+                    OverviewPanel {}
+                }
+
+                // Desktop shortcuts and widgets sub-page
+                Component {
+                    DesktopPanel {}
+                }
+
+                // Lock screen settings sub-page
+                Component {
+                    LockPanel {}
+                }
+
+                // Taskbar layout/entries sub-page
+                Component {
+                    BarLayout {}
+                }
+            }
+        },
+        Component {
+            // Layout editor
+            StackPage {
+                Component {
+                    LayoutPage {}
+                }
+            }
+        },
+        Component {
+            // Apps
+            StackPage {
+                Component {
+                    AppsPage {}
+                }
+                Component {
+                    AllApps {}
+                }
+                Component {
+                    AppInfo {}
+                }
+            }
+        },
+        Component {
+            // Services
+            StackPage {
+                Component {
+                    ServicesPage {}
+                }
+                Component {
+                    NotificationsPage {}
+                }
+                Component {
+                    DiscordPage {}
+                }
+            }
+        },
+
+        // Connections
+        Component {
+            // Network
+            StackPage {
+                Component {
+                    NetworkPage {}
+                }
+                Component {
+                    EthernetDetailPage {}
+                }
+                Component {
+                    AddNetworkPage {}
+                }
+                Component {
+                    NetworkDetailPage {}
+                }
+                Component {
+                    AddVpnPage {}
+                }
+                Component {
+                    AllNetworksPage {}
+                }
+                Component {
+                    SavedNetworksPage {}
+                }
+            }
+        },
+        Component {
+            // Bluetooth
+            StackPage {
+                Component {
+                    BluetoothPage {}
+                }
+                Component {
+                    BtDeviceInfo {}
+                }
+                Component {
+                    BluetoothPairing {}
+                }
+            }
+        },
+
+        // Hardware
+        Component {
+            //Display / Monitors
+            StackPage {
+                Component {
+                    MonitorsPane {}
+                }
+                Component {
+                    MonitorDetail {}
+                }
+            }
+        },
+        Component {
+            // Audio
+            StackPage {
+                Component {
+                    AudioPage {}
+                }
+                Component {
+                    AppVolumes {}
+                }
+            }
+        },
+        Component {
+            // NOTE(fork): mouse and touchpad input configuration
+            StackPage {
+                Component {
+                    InputPage {}
+                }
+            }
+        },
+        Component {
+            // NOTE(fork): Hyprland keybinds
+            StackPage {
+                Component {
+                    KeybindsPage {}
+                }
+            }
+        },
+        Component {
+            // NOTE(fork): Power & battery
+            StackPage {
+                Component {
+                    BatteryPage {}
+                }
+            }
+        },
+
+        // System
+        Component {
+            // Language & region
+            StackPage {
+                Component {
+                    LanguageAndRegion {}
+                }
+            }
+        },
+        Component {
+            StackPage {
+                Component {
+                    UpdatesPage {}
+                }
+            }
+        },
+        Component {
+            PlaceholderComp {}
+        },
+
+        // About
+        Component {
+            StackPage {
+                Component {
+                    AboutPage {}
+                }
+            }
+        }
+    ]
+
+    readonly property Component placeholderComp: Component {
+        PlaceholderComp {}
+    }
+
+    component PlaceholderComp: Item {
+        property NexusState nState // To avoid the warning from non-existent property
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: Tokens.padding.extraSmall
+
+            MaterialIcon {
+                Layout.alignment: Qt.AlignHCenter
+                text: "handyman"
+                color: Colours.palette.m3outlineVariant
+                fontStyle: Tokens.font.icon.extraLarge
+            }
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: Tr.tr("Page under construction")
+                color: Colours.palette.m3outlineVariant
+                font: Tokens.font.title.large
+            }
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: Tr.tr("This page will be available in a future update.")
+                color: Colours.palette.m3outlineVariant
+                font: Tokens.font.body.large
+            }
+        }
+    }
+}

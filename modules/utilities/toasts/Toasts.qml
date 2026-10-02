@@ -1,18 +1,32 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.config
-import Caelestia
-import Quickshell
 import QtQuick
+import Quickshell
+import Caelestia
+import Caelestia.Config
+import qs.components
+import qs.services
+import qs.modules.nexus
 
 Item {
     id: root
 
-    readonly property int spacing: Appearance.spacing.small
+    readonly property int spacing: Tokens.spacing.small
+    // Stack downwards from the top edge instead of upwards from the bottom one
+    property bool fromTop
     property bool flag
 
-    implicitWidth: Config.utilities.sizes.toastWidth - Appearance.padding.normal * 2
+    function shouldShowToast(toast: Toast): bool {
+        if (!Notifs.hasFullscreen())
+            return true;
+        if (GlobalConfig.utilities.toasts.fullscreen === "all")
+            return true;
+        if (GlobalConfig.utilities.toasts.fullscreen === "important")
+            return toast.type === Toast.Warning || toast.type === Toast.Error;
+        return false;
+    }
+
+    implicitWidth: Tokens.sizes.utilities.toastWidth - Tokens.padding.medium * 2
     implicitHeight: {
         let h = -spacing;
         for (let i = 0; i < repeater.count; i++) {
@@ -31,10 +45,12 @@ Item {
                 const toasts = [];
                 let count = 0;
                 for (const toast of Toaster.toasts) {
+                    if (!root.shouldShowToast(toast))
+                        continue;
                     toasts.push(toast);
                     if (!toast.closed) {
                         count++;
-                        if (count > Config.utilities.maxToasts)
+                        if (count > root.Config.utilities.maxToasts)
                             break;
                     }
                 }
@@ -68,7 +84,8 @@ Item {
         opacity: modelData.closed || previewHidden ? 0 : 1
         scale: modelData.closed || previewHidden ? 0.7 : 1
 
-        anchors.bottomMargin: {
+        // Distance from the edge the stack grows from
+        readonly property real stackOffset: {
             root.flag; // Force update
             let y = 0;
             for (let i = 0; i < index; i++) {
@@ -79,13 +96,21 @@ Item {
             return y;
         }
 
+        // A y binding rather than a bottom anchor, so the stack can switch between edges while running
+        y: root.fromTop ? stackOffset : root.height - implicitHeight - stackOffset
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
         implicitHeight: toastInner.implicitHeight
 
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-        onClicked: modelData.close()
+        onClicked: {
+            // The repo update toast opens the Updates page; every toast is dismissed by a click
+            if (modelData.title === UpdateChecker.toastTitle)
+                WindowFactory.create(null, {
+                    startPage: "updates"
+                });
+            modelData.close();
+        }
 
         Component.onCompleted: modelData.lock(this)
 
@@ -98,8 +123,6 @@ Item {
             properties: "opacity,scale"
             from: 0
             to: 1
-            duration: Appearance.anim.durations.expressiveDefaultSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
         }
 
         ParallelAnimation {
@@ -108,6 +131,7 @@ Item {
             onFinished: toast.modelData.unlock(toast)
 
             Anim {
+                type: Anim.DefaultEffects
                 target: toast
                 property: "opacity"
                 to: 0
@@ -126,7 +150,9 @@ Item {
         }
 
         Behavior on opacity {
-            Anim {}
+            Anim {
+                type: Anim.DefaultEffects
+            }
         }
 
         Behavior on scale {
@@ -134,10 +160,7 @@ Item {
         }
 
         Behavior on anchors.bottomMargin {
-            Anim {
-                duration: Appearance.anim.durations.expressiveDefaultSpatial
-                easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
-            }
+            Anim {}
         }
     }
 }

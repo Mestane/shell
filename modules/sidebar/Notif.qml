@@ -1,42 +1,47 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.services
-import qs.config
-import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import Caelestia.Config
+import Caelestia.I18n
+import qs.components
+import qs.services
 
 StyledRect {
     id: root
 
-    required property Notifs.Notif modelData
+    required property NotifData modelData
     required property Props props
     required property bool expanded
-    required property var visibilities
+    required property ScreenState screenState
+    property real cardOpacity: 1
+    property bool showImage
+    readonly property bool hasImage: showImage && (modelData?.image.length ?? 0) > 0
 
-    readonly property StyledText body: expandedContent.item?.body ?? null
-    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Appearance.padding.normal * 2 : summaryHeightMetrics.height
+    readonly property StyledText body: (expandedContent.item as ExpandedBody)?.body ?? null
+    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Tokens.padding.medium * 2 : summaryHeightMetrics.height
 
     implicitHeight: nonAnimHeight
 
-    radius: Appearance.rounding.small
+    radius: Tokens.rounding.medium
     color: {
-        const c = root.modelData.urgency === "critical" ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2);
-        return expanded ? c : Qt.alpha(c, 0);
+        const c = root.modelData?.urgency === "critical" ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2);
+        return expanded ? Qt.alpha(c, c.a * root.cardOpacity) : Qt.alpha(c, 0);
     }
+
+    state: expanded ? "expanded" : ""
 
     states: State {
         name: "expanded"
-        when: root.expanded
 
         PropertyChanges {
-            summary.anchors.margins: Appearance.padding.normal
-            dummySummary.anchors.margins: Appearance.padding.normal
-            compactBody.anchors.margins: Appearance.padding.normal
-            timeStr.anchors.margins: Appearance.padding.normal
-            expandedContent.anchors.margins: Appearance.padding.normal
-            summary.width: root.width - Appearance.padding.normal * 2 - timeStr.implicitWidth - Appearance.spacing.small
+            summary.anchors.margins: root.Tokens.padding.medium
+            avatar.anchors.margins: root.Tokens.padding.medium
+            dummySummary.anchors.margins: root.Tokens.padding.medium
+            compactBody.anchors.margins: root.Tokens.padding.medium
+            timeStr.anchors.margins: root.Tokens.padding.medium
+            expandedContent.anchors.margins: root.Tokens.padding.medium
+            summary.width: root.width - root.Tokens.padding.medium * 2 - timeStr.implicitWidth - root.Tokens.spacing.small - root.avatarSpace
             summary.maximumLineCount: Number.MAX_SAFE_INTEGER
         }
     }
@@ -44,6 +49,30 @@ StyledRect {
     transitions: Transition {
         Anim {
             properties: "margins,width,maximumLineCount"
+        }
+    }
+
+    readonly property real avatarSpace: hasImage ? avatar.width + Tokens.spacing.small : 0
+
+    StyledClippingRect {
+        id: avatar
+
+        anchors.top: parent.top
+        anchors.left: parent.left
+
+        visible: root.hasImage
+        implicitWidth: root.hasImage ? summaryHeightMetrics.height : 0
+        implicitHeight: implicitWidth
+        radius: Tokens.rounding.full
+        color: "transparent"
+
+        Image {
+            anchors.fill: parent
+            source: root.hasImage ? Qt.resolvedUrl(root.modelData.image) : ""
+            fillMode: Image.PreserveAspectCrop
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
+            asynchronous: true
         }
     }
 
@@ -59,10 +88,11 @@ StyledRect {
 
         anchors.top: parent.top
         anchors.left: parent.left
+        anchors.leftMargin: root.avatarSpace + (root.expanded ? Tokens.padding.medium : 0)
 
-        width: parent.width
-        text: root.modelData.summary
-        color: root.modelData.urgency === "critical" ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+        width: parent.width - root.avatarSpace
+        text: root.modelData?.summary ?? ""
+        color: root.modelData?.urgency === "critical" ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
         elide: Text.ElideRight
         wrapMode: Text.WordWrap
         maximumLineCount: 1
@@ -73,9 +103,10 @@ StyledRect {
 
         anchors.top: parent.top
         anchors.left: parent.left
+        anchors.leftMargin: root.avatarSpace + (root.expanded ? Tokens.padding.medium : 0)
 
         visible: false
-        text: root.modelData.summary
+        text: root.modelData?.summary ?? ""
     }
 
     WrappedLoader {
@@ -85,11 +116,11 @@ StyledRect {
         anchors.top: parent.top
         anchors.left: dummySummary.right
         anchors.right: parent.right
-        anchors.leftMargin: Appearance.spacing.small
+        anchors.leftMargin: Tokens.spacing.small
 
         sourceComponent: StyledText {
-            text: root.modelData.body.replace(/\n/g, " ")
-            color: root.modelData.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3outline
+            text: String(root.modelData?.body ?? "").replace(/\n/g, " ")
+            color: root.modelData?.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3outline
             elide: Text.ElideRight
         }
     }
@@ -103,9 +134,9 @@ StyledRect {
 
         sourceComponent: StyledText {
             animate: true
-            text: root.modelData.timeStr
+            text: root.modelData?.timeStr ?? ""
             color: Colours.palette.m3outline
-            font.pointSize: Appearance.font.size.small
+            font: Tokens.font.body.small
         }
     }
 
@@ -116,49 +147,88 @@ StyledRect {
         anchors.top: summary.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.topMargin: Appearance.spacing.small / 2
+        anchors.topMargin: Tokens.spacing.extraSmall
 
-        sourceComponent: ColumnLayout {
-            readonly property alias body: body
-
-            spacing: Appearance.spacing.smaller
-
-            StyledText {
-                id: body
-
-                Layout.fillWidth: true
-                textFormat: Text.MarkdownText
-                text: root.modelData.body.replace(/(.)\n(?!\n)/g, "$1\n\n") || qsTr("No body here! :/")
-                color: root.modelData.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3outline
-                wrapMode: Text.WordWrap
-
-                onLinkActivated: link => {
-                    Quickshell.execDetached(["app2unit", "-O", "--", link]);
-                    root.visibilities.sidebar = false;
-                }
-            }
-
-            NotifActionList {
-                notif: root.modelData
-            }
-        }
+        sourceComponent: ExpandedBody {}
     }
 
     Behavior on implicitHeight {
-        Anim {
-            duration: Appearance.anim.durations.expressiveDefaultSpatial
-            easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
+        Anim {}
+    }
+
+    component ExpandedBody: ColumnLayout {
+        readonly property alias body: bodyText
+
+        spacing: Tokens.spacing.medium
+
+        StyledText {
+            id: bodyText
+
+            Layout.fillWidth: true
+            textFormat: Text.MarkdownText
+            text: String(root.modelData?.body ?? "").replace(/(.)\n(?!\n)/g, "$1\n\n") || Tr.tr("No body here! :/")
+            color: root.modelData?.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3outline
+            wrapMode: Text.WordWrap
+
+            onLinkActivated: link => {
+                Qt.openUrlExternally(link);
+                root.screenState.sidebar = false;
+            }
+        }
+
+        NotifActionList {
+            notif: root.modelData
         }
     }
 
     component WrappedLoader: Loader {
+        id: comp
+
         required property bool shouldBeActive
 
-        opacity: shouldBeActive ? 1 : 0
-        active: opacity > 0
+        active: false
+        opacity: 0
 
-        Behavior on opacity {
-            Anim {}
+        // Makes the loader load on the same frame shouldBeActive becomes true, which ensures size is set
+        states: State {
+            name: "active"
+            when: comp.shouldBeActive
+
+            PropertyChanges {
+                comp.opacity: 1
+                comp.active: true
+            }
         }
+
+        transitions: [
+            Transition {
+                from: ""
+                to: "active"
+
+                SequentialAnimation {
+                    PropertyAction {
+                        property: "active"
+                    }
+                    Anim {
+                        type: Anim.DefaultEffects
+                        property: "opacity"
+                    }
+                }
+            },
+            Transition {
+                from: "active"
+                to: ""
+
+                SequentialAnimation {
+                    Anim {
+                        type: Anim.DefaultEffects
+                        property: "opacity"
+                    }
+                    PropertyAction {
+                        property: "active"
+                    }
+                }
+            }
+        ]
     }
 }

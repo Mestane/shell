@@ -1,13 +1,13 @@
 pragma Singleton
 
-import qs.components.misc
-import qs.config
-import Caelestia
-import Caelestia.Internal
+import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import QtQuick
+import Caelestia.Config
+import Caelestia.I18n
+import Caelestia.Services
+import qs.components.misc
 
 Singleton {
     id: root
@@ -15,8 +15,12 @@ Singleton {
     readonly property var toplevels: Hyprland.toplevels
     readonly property var workspaces: Hyprland.workspaces
     readonly property var monitors: Hyprland.monitors
+    readonly property bool usingLua: Hyprland.usingLua
 
-    readonly property HyprlandToplevel activeToplevel: Hyprland.activeToplevel?.wayland?.activated ? Hyprland.activeToplevel : null
+    readonly property HyprlandToplevel activeToplevel: {
+        const t = Hyprland.activeToplevel;
+        return t?.workspace?.name.startsWith("special:") || Hyprland.focusedWorkspace?.toplevels.values.length > 0 ? t : null;
+    }
     readonly property HyprlandWorkspace focusedWorkspace: Hyprland.focusedWorkspace
     readonly property HyprlandMonitor focusedMonitor: Hyprland.focusedMonitor
     readonly property int activeWsId: focusedWorkspace?.id ?? 1
@@ -25,7 +29,7 @@ Singleton {
     readonly property bool capsLock: keyboard?.capsLock ?? false
     readonly property bool numLock: keyboard?.numLock ?? false
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
-    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
+    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? Tr.trCtx("Unknown", "keyboard layout")
     readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
     readonly property var kbMap: new Map()
 
@@ -33,13 +37,72 @@ Singleton {
     readonly property alias options: extras.options
     readonly property alias devices: extras.devices
 
-    property bool hadKeyboard
     property string lastSpecialWorkspace: ""
 
     signal configReloaded
 
     function dispatch(request: string): void {
         Hyprland.dispatch(request);
+    }
+
+    function focusWorkspace(ws: var): void {
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${ws}" })` : `workspace ${ws}`);
+    }
+
+    function toggleSpecial(name: string): void {
+        dispatch(usingLua ? `hl.dsp.workspace.toggle_special("${name}")` : `togglespecialworkspace ${name}`);
+    }
+
+    // The address as exposed by HyprlandToplevel.address (hex, without the 0x prefix)
+    function focusWindow(address: string): void {
+        if (!address)
+            return;
+
+        dispatch(usingLua ? `hl.dsp.focus({ window = "address:0x${address}" })` : `focuswindow address:0x${address}`);
+    }
+
+    // Moves a window to a workspace without following it there
+    function moveWindowToWorkspace(address: string, ws: int): void {
+        if (!address)
+            return;
+
+        dispatch(usingLua ? `hl.dsp.window.move({ workspace = ${ws}, follow = false, window = "address:0x${address}" })` : `movetoworkspacesilent ${ws},address:0x${address}`);
+    }
+
+    // Moves a window to a workspace, splitting it in on the given side (l/r/u/d) of whatever it
+    // lands next to there, instead of wherever the target workspace's layout heuristic would put
+    // it. The "preselect" layoutmsg that does this splits relative to whatever window is
+    // currently *focused* on the active workspace - not whichever one the pointer happened to be
+    // over, and not even necessarily on the target workspace at all. So this briefly focuses the
+    // target workspace, then the specific target window within it (besideAddress, if one was
+    // dropped near), issues the preselect and the move, then restores whatever was focused
+    // before - all of it invisible as long as something else (the overview, in practice) is
+    // covering the screen while this runs
+    function moveWindowToWorkspaceSplit(address: string, ws: int, dir: string, besideAddress: string): void {
+        if (!address || !dir)
+            return;
+
+        const previous = root.activeWsId;
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${ws}" })` : `workspace ${ws}`);
+        if (besideAddress)
+            root.focusWindow(besideAddress);
+        dispatch(usingLua ? `hl.dsp.layout("preselect ${dir}")` : `layoutmsg preselect ${dir}`);
+        root.moveWindowToWorkspace(address, ws);
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${previous}" })` : `workspace ${previous}`);
+    }
+
+    // Trades the places of two windows in a workspace's layout
+    function swapWindows(address: string, other: string): void {
+        if (!address || !other)
+            return;
+
+        if (usingLua) {
+            dispatch(`hl.dsp.window.swap({ window = "address:0x${address}", target = "address:0x${other}" })`);
+        } else {
+            // The old dispatcher swaps the focused window with the target
+            dispatch(`focuswindow address:0x${address}`);
+            dispatch(`swapwindow address:0x${other}`);
+        }
     }
 
     function cycleSpecialWorkspace(direction: string): void {
@@ -54,11 +117,11 @@ Singleton {
             if (lastSpecialWorkspace) {
                 const workspace = workspaces.values.find(w => w.name === lastSpecialWorkspace);
                 if (workspace && workspace.lastIpcObject.windows > 0) {
-                    dispatch(`workspace ${lastSpecialWorkspace}`);
+                    focusWorkspace(lastSpecialWorkspace);
                     return;
                 }
             }
-            dispatch(`workspace ${openSpecials[0].name}`);
+            focusWorkspace(openSpecials[0].name);
             return;
         }
 
@@ -72,49 +135,71 @@ Singleton {
                 nextIndex = (currentIndex - 1 + openSpecials.length) % openSpecials.length;
         }
 
-        dispatch(`workspace ${openSpecials[nextIndex].name}`);
+        focusWorkspace(openSpecials[nextIndex].name);
+    }
+
+    function monitorNames(): list<string> {
+        return monitors.values.map(e => e.name);
     }
 
     function monitorFor(screen: ShellScreen): HyprlandMonitor {
         return Hyprland.monitorFor(screen);
     }
 
-    function reloadDynamicConfs(): void {
-        extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
+    function trimWsName(name: string): string {
+        return name.startsWith("special:") ? name.slice("special:".length) : name;
     }
 
+    function toplevelsForWs(ws: int, ignoredTags = []): list<HyprlandToplevel> {
+        return toplevels.values.filter(t => t.workspace && t.workspace.id === ws && !isToplevelIgnored(t, ignoredTags));
+    }
+
+    function isToplevelIgnored(toplevel: HyprlandToplevel, ignoredTags = []): bool {
+        const ipc = toplevel?.lastIpcObject;
+        if (!ipc?.class || !ipc.mapped)
+            return true;
+
+        return ipc.tags?.some(tag => ignoredTags.includes(tag.replace(/\*$/, ""))) ?? false;
+    }
+
+    // Trackpad gestures, registered here so they work without anyone editing their
+    // Hyprland config. Lua only: the shell has no known-good keyword form for these
+    function gestureConf(fingers: int, direction: string, shortcut: string): string {
+        return `eval hl.gesture({ fingers = ${fingers}, direction = "${direction}", action = function() hl.dispatch(hl.dsp.global("caelestia:${shortcut}")) end })`;
+    }
+
+    // A reload drops the gestures, and reloadDynamicConfs can run more than once around
+    // one (Hyprland then complains the repeat is shadowed), so register them once per load
+    property bool gesturesRegistered
+
+    function reloadDynamicConfs(): void {
+        if (usingLua) {
+            const confs = ['eval hl.bind("Caps_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })', 'eval hl.bind("Num_Lock", hl.dsp.global("caelestia:refreshDevices"), { locked = true, non_consuming = true, ignore_mods = true, release = true })'];
+            if (!gesturesRegistered) {
+                gesturesRegistered = true;
+
+                if (GlobalConfig.notifPopout.gestures) {
+                    const fingers = GlobalConfig.notifPopout.gestureFingers;
+                    // Left opens the popout, or moves it between its tabs once it is open;
+                    // right closes it whichever tab it is showing
+                    confs.push(gestureConf(fingers, "left", "notifPopoutOpenOrNextTab"), gestureConf(fingers, "right", "notifPopoutClose"));
+                }
+
+                if (GlobalConfig.overview.gestures) {
+                    const fingers = GlobalConfig.overview.gestureFingers;
+                    confs.push(gestureConf(fingers, "up", "overviewOpen"), gestureConf(fingers, "down", "overviewClose"));
+                }
+            }
+            extras.batchMessage(confs);
+        } else {
+            extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
+        }
+    }
+
+    onUsingLuaChanged: reloadDynamicConfs()
     Component.onCompleted: reloadDynamicConfs()
 
-    onCapsLockChanged: {
-        if (!Config.utilities.toasts.capsLockChanged)
-            return;
-
-        if (capsLock)
-            Toaster.toast(qsTr("Caps lock enabled"), qsTr("Caps lock is currently enabled"), "keyboard_capslock_badge");
-        else
-            Toaster.toast(qsTr("Caps lock disabled"), qsTr("Caps lock is currently disabled"), "keyboard_capslock");
-    }
-
-    onNumLockChanged: {
-        if (!Config.utilities.toasts.numLockChanged)
-            return;
-
-        if (numLock)
-            Toaster.toast(qsTr("Num lock enabled"), qsTr("Num lock is currently enabled"), "looks_one");
-        else
-            Toaster.toast(qsTr("Num lock disabled"), qsTr("Num lock is currently disabled"), "timer_1");
-    }
-
-    onKbLayoutFullChanged: {
-        if (hadKeyboard && Config.utilities.toasts.kbLayoutChanged)
-            Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
-
-        hadKeyboard = !!keyboard;
-    }
-
     Connections {
-        target: Hyprland
-
         function onRawEvent(event: HyprlandEvent): void {
             const n = event.name;
             if (n.endsWith("v2"))
@@ -122,6 +207,7 @@ Singleton {
 
             if (n === "configreloaded") {
                 root.configReloaded();
+                root.gesturesRegistered = false;
                 root.reloadDynamicConfs();
             } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
                 Hyprland.refreshWorkspaces();
@@ -137,11 +223,11 @@ Singleton {
                 Hyprland.refreshToplevels();
             }
         }
+
+        target: Hyprland
     }
 
     Connections {
-        target: root.focusedMonitor
-
         function onLastIpcObjectChanged(): void {
             const specialName = root.focusedMonitor.lastIpcObject.specialWorkspace.name;
 
@@ -149,6 +235,8 @@ Singleton {
                 root.lastSpecialWorkspace = specialName;
             }
         }
+
+        target: root.focusedMonitor
     }
 
     FileView {
@@ -185,8 +273,6 @@ Singleton {
     }
 
     IpcHandler {
-        target: "hypr"
-
         function refreshDevices(): void {
             extras.refreshDevices();
         }
@@ -198,9 +284,13 @@ Singleton {
         function listSpecialWorkspaces(): string {
             return root.workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0).map(w => w.name).join("\n");
         }
+
+        target: "hypr"
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "refreshDevices"
         description: "Reload devices"
         onPressed: extras.refreshDevices()
@@ -209,5 +299,7 @@ Singleton {
 
     HyprExtras {
         id: extras
+
+        usingLua: Hyprland.usingLua
     }
 }

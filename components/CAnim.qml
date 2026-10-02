@@ -1,8 +1,8 @@
-import qs.config
 import QtQuick
+import Caelestia.Config
+import qs.services
 
 ColorAnimation {
-    duration: Appearance.anim.durations.normal
-    easing.type: Easing.BezierSpline
-    easing.bezierCurve: Appearance.anim.curves.standard
+    duration: PowerSaving.animations ? Tokens.anim.durations.expressiveSlowEffects : 0
+    easing: Tokens.anim.expressiveSlowEffects
 }

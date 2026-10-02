@@ -1,35 +1,178 @@
 pragma Singleton
 
-import qs.components.misc
-import qs.config
+import QtQml
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
-import QtQml
 import Caelestia
+import Caelestia.Config
+import qs.components.misc
 
 Singleton {
     id: root
 
     readonly property list<MprisPlayer> list: Mpris.players.values
-    readonly property MprisPlayer active: props.manualActive ?? list.find(p => getIdentity(p) === Config.services.defaultPlayer) ?? list[0] ?? null
+    // A player that is actually playing beats the default/first one when nothing was picked by hand
+    readonly property MprisPlayer active: props.manualActive ?? list.find(p => p.isPlaying) ?? list.find(p => getIdentity(p) === GlobalConfig.services.defaultPlayer) ?? list[0] ?? null
     property alias manualActive: props.manualActive
 
+    // Dedup key for progressive metadata (e.g. mpv-mpris/yt-dlp player fills title then artist later).
+    property string lastTrackKey: ""
+
+    // Fired once per unique track (deduped per track below), e.g. the notch
+    // uses this to trigger its own transient display of what's playing.
+    signal trackChanged(title: string, artist: string)
+
+    // Fired when the active player was switched automatically to whatever started playing, so that
+    // views which can also show the in-shell player know to come back to the MPRIS one
+    signal autoSwitched(player: MprisPlayer)
+
+    // Follows the audio: a player that starts playing becomes the active one, and if the active one
+    // stops while another is still playing, that one takes over. Picking a player by hand still works,
+    // it just stays until something else starts playing.
+    // The player picked by hand in the media selector. While it is playing nothing else takes over from it.
+    property MprisPlayer pinned
+
+    // NOTE(fork): the last player that was actually playing, kept for a while after it pauses so
+    // the notch and widgets do not lose what they were showing the moment playback stops - only
+    // while the app behind it is still open. A real playing player always wins over this.
+    property MprisPlayer rememberedPlayer: null
+    readonly property MprisPlayer recentPlayer: list.find(p => p.isPlaying) ?? root.rememberedPlayer ?? root.active
+    // When the remembered player last started playing, so the notch can tell whether this or
+    // the local player (Music.lastPlayedAt) was more recently the one actually making sound
+    property real rememberedAt: 0
+
+    function markPlaying(player: MprisPlayer): void {
+        root.rememberedPlayer = player;
+        root.rememberedAt = Date.now();
+        rememberTimer.stop();
+    }
+
+    function markStopped(player: MprisPlayer): void {
+        if (root.rememberedPlayer === player)
+            rememberTimer.restart();
+    }
+
+    // The remembered player's own app closing (it drops out of Mpris.players) clears it early
+    // rather than waiting out the timer for a player that is no longer there to resume
+    onListChanged: {
+        if (root.rememberedPlayer && !list.includes(root.rememberedPlayer)) {
+            root.rememberedPlayer = null;
+            rememberTimer.stop();
+        }
+    }
+
+    Timer {
+        id: rememberTimer
+
+        interval: 5 * 60 * 1000
+        onTriggered: root.rememberedPlayer = null
+    }
+
+    function pick(player: MprisPlayer): void {
+        pinned = player;
+        props.manualActive = player;
+    }
+
+    function followPlayback(player: MprisPlayer): void {
+        if (!player)
+            return;
+
+        if (pinned && pinned !== player && pinned.isPlaying)
+            return;
+        if (pinned === player && !player.isPlaying)
+            pinned = null;
+
+        if (player.isPlaying) {
+            if (root.active !== player || props.manualActive !== player) {
+                props.manualActive = player;
+                root.autoSwitched(player);
+            }
+        } else if (player === root.active) {
+            const other = list.find(p => p !== player && p.isPlaying);
+            if (other) {
+                props.manualActive = other;
+                root.autoSwitched(other);
+            }
+        }
+    }
+
     function getIdentity(player: MprisPlayer): string {
-        const alias = Config.services.playerAliases.find(a => a.from === player.identity);
+        if (!player)
+            return "";
+        const alias = GlobalConfig.services.playerAliases.values.find(a => a.from === player.identity);
         return alias?.to ?? player.identity;
     }
 
-    Connections {
-        target: active
+    function getArtUrl(player: MprisPlayer): string {
+        if (!player)
+            return "";
+        if (player.trackArtUrl)
+            return player.trackArtUrl;
 
-        function onPostTrackChanged() {
-            if (!Config.utilities.toasts.nowPlaying) {
-                return;
+        const url = player.metadata["xesam:url"] ?? "";
+        if (url.startsWith("https://www.youtube.com/watch")) {
+            // Fallback for youtube
+            const id = url.match(/[?&]v=([\w-]{11})/)?.[1];
+            return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
+        }
+        return "";
+    }
+
+    // Quickshell only emits postTrackChanged when trackid/url/title change, so late
+    // artist updates (common with mpv-mpris + yt-dlp player) never retrigger it. Watch
+    // title/artist too and fire trackChanged once both are usable, deduped per track.
+    function maybeNotifyTrackChanged(): void {
+        const player = root.active;
+        if (!player)
+            return;
+
+        const title = player.trackTitle ?? "";
+        const artist = player.trackArtist ?? "";
+        if (!title || !artist)
+            return;
+
+        const key = `${getIdentity(player)}\0${player.uniqueId}\0${title}\0${artist}`;
+        if (key === lastTrackKey)
+            return;
+
+        lastTrackKey = key;
+        root.trackChanged(title, artist);
+    }
+
+    onActiveChanged: lastTrackKey = ""
+
+    Connections {
+        function onPostTrackChanged(): void {
+            root.maybeNotifyTrackChanged();
+        }
+
+        function onTrackTitleChanged(): void {
+            root.maybeNotifyTrackChanged();
+        }
+
+        function onTrackArtistChanged(): void {
+            root.maybeNotifyTrackChanged();
+        }
+
+        target: root.active
+    }
+
+    Instantiator {
+        model: root.list
+
+        Connections {
+            required property MprisPlayer modelData
+
+            function onIsPlayingChanged(): void {
+                root.followPlayback(target);
+                if (target.isPlaying)
+                    root.markPlaying(target);
+                else
+                    root.markStopped(target);
             }
-            if (active.trackArtist != "" && active.trackTitle != "") {
-                Toaster.toast(qsTr("Now Playing"), qsTr("%1 - %2").arg(active.trackArtist).arg(active.trackTitle), "music_note");
-            }
+
+            target: modelData
         }
     }
 
@@ -41,17 +184,32 @@ Singleton {
         reloadableId: "players"
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "mediaToggle"
         description: "Toggle media playback"
         onPressed: {
+            // Only one thing should be making sound at a time, same rule the notch uses to pick
+            // what it shows: whichever side is actually playing right now wins outright, and if
+            // neither is, whichever paused most recently is what this resumes.
             const active = root.active;
-            if (active && active.canTogglePlaying)
+            if (Music.playing) {
+                Music.togglePlaying();
+            } else if (active?.isPlaying) {
+                if (active.canTogglePlaying)
+                    active.togglePlaying();
+            } else if (Music.recentlyPlaying && (!root.recentPlayer || Music.lastPlayedAt >= root.rememberedAt)) {
+                Music.togglePlaying();
+            } else if (active && active.canTogglePlaying) {
                 active.togglePlaying();
+            }
         }
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "mediaPrev"
         description: "Previous track"
         onPressed: {
@@ -61,7 +219,9 @@ Singleton {
         }
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "mediaNext"
         description: "Next track"
         onPressed: {
@@ -71,15 +231,15 @@ Singleton {
         }
     }
 
+    // qmllint disable unresolved-type
     CustomShortcut {
+        // qmllint enable unresolved-type
         name: "mediaStop"
         description: "Stop media playback"
         onPressed: root.active?.stop()
     }
 
     IpcHandler {
-        target: "mpris"
-
         function getActive(prop: string): string {
             const active = root.active;
             return active ? active[prop] ?? "Invalid property" : "No active player";
@@ -122,5 +282,7 @@ Singleton {
         function stop(): void {
             root.active?.stop();
         }
+
+        target: "mpris"
     }
 }
