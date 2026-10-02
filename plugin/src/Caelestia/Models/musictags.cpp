@@ -5,6 +5,8 @@
 #include <qloggingcategory.h>
 #include <qtconcurrentrun.h>
 
+#include <utility>
+
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
 
@@ -65,7 +67,7 @@ void MusicTags::scan(const QStringList& paths) {
         // yet) keep whatever was already known about them, and drop anything that is no
         // longer in the library
         QVariantMap merged;
-        for (const QString& path : m_requested) {
+        for (const QString& path : std::as_const(m_requested)) {
             const auto existing = m_tags.constFind(path);
             if (existing != m_tags.constEnd()) {
                 merged.insert(path, *existing);

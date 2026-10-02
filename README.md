@@ -4,7 +4,7 @@
 
 A personal fork of [caelestia-dots/shell](https://github.com/caelestia-dots/shell) with the features we wanted on top of it.
 
-https://cykler.dev/caelestia/showcase.mp4
+https://github.com/user-attachments/assets/35d5068b-dca0-414d-b933-bd5a9d548262
 
 [Issues](https://github.com/cykler01/cykler-caelestia/issues)
 
@@ -26,33 +26,33 @@ Every feature below is our own work on top of upstream.
 
 | Feature | What it does | Where | Docs |
 |---|---|---|---|
-| **Battery & power management** | Automatic Hyprland power saving (animations, blur, gaps, shadows, refresh rate) per plug state and power profile, battery level thresholds, critical battery shell shutdown, and a battery pane in Settings | *Nexus → Power & battery* | [▶](https://cykler.dev/caelestia/demos/battery.mp4) |
-| **Keep awake** | One tri-state control for the idle inhibitor: off, prevent sleep, or also prevent lock | *Utilities card* | [▶](https://cykler.dev/caelestia/demos/idle.mp4) |
-| **Input settings** | Mouse sensitivity, scroll speed, touchpad scroll speed and acceleration, applied at runtime and put back after a Hyprland reload | *Nexus → Input* | [▶](https://cykler.dev/caelestia/demos/input.mp4) |
-| **Unified media tab** | One tab that drives whatever is playing, and follows your audio between external MPRIS players and the built-in local player, with a hand-picked player pinned so nothing else takes over | *Dashboard → Media* |  [▶](https://cykler.dev/caelestia/demos/media-player.mp4) |
-| **Local music player & library** | Plays `paths.musicDir` in-shell with a queue, shuffle and repeat, and browses the library by folder, artist, album or search | *Notif popout → Library* | [▶](https://cykler.dev/caelestia/demos/music-library.mp4) |
-| **System-wide equalizer** | Opt-in ten-band PipeWire filter chain with presets, equalizing every stream rather than just the player | *Settings → Audio* | [▶](https://cykler.dev/caelestia/demos/equalizer.mp4) |
-| **Notch** | A pill that drops down on track change with album art, controls and a mirrored spectrum, plus a standing notch that shows the clock and what is playing while the bar's middle is free (the bar then drops its own clock) | *Nexus → Panels → Notch* | [▶](https://cykler.dev/caelestia/demos/notch.mp4) |
-| **Notification popout** | A gesture-driven panel on its own blurrier layer with a notification dock and the music library, plus IPC | 4-finger swipe left | [▶](https://cykler.dev/caelestia/demos/notification-popout.mp4) |
-| **Notification dock improvements** | Chat apps keep every message instead of only the newest, and grouped notifications show each message's own picture | *Sidebar* | [▶](https://cykler.dev/caelestia/demos/notifications.mp4) |
-| **Popups and toasts in any corner** | Notification popups and toasts each go in any of the four corners, and share a column when they pick the same one | *Nexus → Layout* | [▶](https://cykler.dev/caelestia/demos/corners.mp4) |
-| **Window overview** | Every workspace and window in one blurred grid: click to jump, drag windows and whole workspaces, keyboard and page navigation | 4-finger swipe up / hot corner | [▶](https://cykler.dev/caelestia/demos/overview.mp4) |
-| **Configurable hot corners** | Gives each of the four screen corners its own action. | *Nexus → Panels → Hot corners* | [▶](https://cykler.dev/caelestia/demos/hot-corners.mp4) |
-| **Special workspaces switch** | Turning special workspaces off makes the shell close them and move their windows to the current workspace, whatever opened them | *Settings → Workspaces* | [▶](https://cykler.dev/caelestia/demos/special-workspaces.mp4) |
-| **Keybinds page** | Lists every `kb*` bind from the Hyprland Lua config, grouped and searchable, and writes your changes back and reloads | *Nexus → Keybinds* | [▶](https://cykler.dev/caelestia/demos/keybinds.mp4) |
-| **OCR & Google Lens** | Select a screen region to copy the text in it with `tesseract`, or upload it and open it in Google Lens | Launcher `>ocr` / `>lens` | [▶](https://cykler.dev/caelestia/demos/launcher-ocr-lens.mp4) |
-| **To-do list** | A popout with multiple lists, deadlines and reminders, wrapping task text and inline editing; `>todo` in the launcher still quick-adds and completes tasks | Launcher `>todo` / *popout* | [▶](https://cykler.dev/caelestia/demos/launcher-todo.mp4) |
-| **SSH hosts** | Lists the non-wildcard hosts from `~/.ssh/config` and connects to one in your terminal | Launcher `>ssh` | [▶](https://cykler.dev/caelestia/demos/launcher-ssh.mp4) |
-| **GPU modes** | Switches `supergfxctl` graphics modes and offers to restart or log out for them to take effect | Launcher `>gpu` | [▶](https://cykler.dev/caelestia/demos/launcher-gpu.mp4) |
-| **Screenshot preview** | Screenshots go straight to the clipboard and show a framed thumbnail instead of a notification; click it to annotate, save to `~/Desktop`, or let it clear | After a capture | [▶](https://cykler.dev/caelestia/demos/screenshot.mp4) |
-| **Shell assets page** | Changes the images the shell uses - logo, session and media gifs, placeholder images and the profile picture - from Settings | *Nexus → Shell assets* | [▶](https://cykler.dev/caelestia/demos/shell-assets.mp4) |
-| **Colour schemes in Settings** | Scheme, flavour and Material 3 variant pickers moved out of the launcher into the settings app | *Nexus → Wallpaper & style* | [▶](https://cykler.dev/caelestia/demos/settings-app.mp4) |
-| **Displays page** | Arranges monitors by drag and drop, sets resolution, refresh rate, scale and mirroring, identifies a display, and reverts by itself unless you confirm | *Nexus → Displays* | [▶](https://cykler.dev/caelestia/demos/displays.mp4) |
-| **Dashboard performance graph** | CPU, GPU, memory, network and storage combined into a single card with configurable colours, and resources you switch off stay off | *Dashboard → Performance* | [▶](https://cykler.dev/caelestia/demos/dashboard.mp4) |
-| **Layout editor** | A miniature screen where every part of the shell is a tile you drag into place - bar, launcher, dashboard, notch, sidebar, OSD, session menu, popups, toasts and the desktop items - with separate Shell and Desktop layers | *Nexus → Layout*  | [▶](https://cykler.dev/caelestia/demos/layout.mp4) |
-| **Taskbar on any edge** | The bar moves to left, right, top or bottom with its own horizontal components, cuts its middle away on an empty workspace so the wallpaper shows through, and can mirror the right-edge panels when it is on the right | *Nexus → Layout*  | [▶](https://cykler.dev/caelestia/demos/bar.mp4) |
-| **Desktop widgets & app shortcuts** | Widget cards (calendar, weather, focus timer, resources, now playing, battery) in an ordered grid and application shortcuts, both on the wallpaper with their own settings page | *Nexus → Panels → Desktop* | [▶](https://cykler.dev/caelestia/demos/desktop.mp4) |
-| **Updates page** | Checks this fork's repo for new commits and pulls, rebuilds, installs through `pkexec` and restarts the shell from inside the session | *Nexus → Updates* | [▶](https://cykler.dev/caelestia/demos/updates.mp4) |
+| **Battery & power management** | Automatic Hyprland power saving (animations, blur, gaps, shadows, refresh rate) per plug state and power profile, battery level thresholds, critical battery shell shutdown, and a battery pane in Settings | *Nexus → Power & battery* | [▶](https://cykler.dev/caelestia/demos/battery) |
+| **Keep awake** | One tri-state control for the idle inhibitor: off, prevent sleep, or also prevent lock | *Utilities card* | [▶](https://cykler.dev/caelestia/demos/idle) |
+| **Input settings** | Mouse sensitivity, scroll speed, touchpad scroll speed and acceleration, applied at runtime and put back after a Hyprland reload | *Nexus → Input* | [▶](https://cykler.dev/caelestia/demos/input) |
+| **Unified media tab** | One tab that drives whatever is playing, and follows your audio between external MPRIS players and the built-in local player, with a hand-picked player pinned so nothing else takes over | *Dashboard → Media* |  [▶](https://cykler.dev/caelestia/demos/media-player) |
+| **Local music player & library** | Plays `paths.musicDir` in-shell with a queue, shuffle and repeat, and browses the library by folder, artist, album or search | *Notif popout → Library* | [▶](https://cykler.dev/caelestia/demos/music-library) |
+| **System-wide equalizer** | Opt-in ten-band PipeWire filter chain with presets, equalizing every stream rather than just the player | *Settings → Audio* | [▶](https://cykler.dev/caelestia/demos/equalizer) |
+| **Notch** | A pill that drops down on track change with album art, controls and a mirrored spectrum, plus a standing notch that shows the clock and what is playing while the bar's middle is free (the bar then drops its own clock) | *Nexus → Panels → Notch* | [▶](https://cykler.dev/caelestia/demos/notch) |
+| **Notification popout** | A gesture-driven panel on its own blurrier layer with a notification dock and the music library, plus IPC | 4-finger swipe left | [▶](https://cykler.dev/caelestia/demos/notification-popout) |
+| **Notification dock improvements** | Chat apps keep every message instead of only the newest, and grouped notifications show each message's own picture | *Sidebar* | [▶](https://cykler.dev/caelestia/demos/notifications) |
+| **Popups and toasts in any corner** | Notification popups and toasts each go in any of the four corners, and share a column when they pick the same one | *Nexus → Layout* | [▶](https://cykler.dev/caelestia/demos/corners) |
+| **Window overview** | Every workspace and window in one blurred grid: click to jump, drag windows and whole workspaces, keyboard and page navigation | 4-finger swipe up / hot corner | [▶](https://cykler.dev/caelestia/demos/overview) |
+| **Configurable hot corners** | Gives each of the four screen corners its own action. | *Nexus → Panels → Hot corners* | [▶](https://cykler.dev/caelestia/demos/hot-corners) |
+| **Special workspaces switch** | Turning special workspaces off makes the shell close them and move their windows to the current workspace, whatever opened them | *Settings → Workspaces* | [▶](https://cykler.dev/caelestia/demos/special-workspaces) |
+| **Keybinds page** | Lists every `kb*` bind from the Hyprland Lua config, grouped and searchable, and writes your changes back and reloads | *Nexus → Keybinds* | [▶](https://cykler.dev/caelestia/demos/keybinds) |
+| **OCR & Google Lens** | Select a screen region to copy the text in it with `tesseract`, or upload it and open it in Google Lens | Launcher `>ocr` / `>lens` | [▶](https://cykler.dev/caelestia/demos/launcher-ocr-lens) |
+| **To-do list** | A popout with multiple lists, deadlines and reminders, wrapping task text and inline editing; `>todo` in the launcher still quick-adds and completes tasks | Launcher `>todo` / *popout* | [▶](https://cykler.dev/caelestia/demos/launcher-todo) |
+| **SSH hosts** | Lists the non-wildcard hosts from `~/.ssh/config` and connects to one in your terminal | Launcher `>ssh` | [▶](https://cykler.dev/caelestia/demos/launcher-ssh) |
+| **GPU modes** | Switches `supergfxctl` graphics modes and offers to restart or log out for them to take effect | Launcher `>gpu` | [▶](https://cykler.dev/caelestia/demos/launcher-gpu) |
+| **Screenshot preview** | Screenshots go straight to the clipboard and show a framed thumbnail instead of a notification; click it to annotate, save to `~/Desktop`, or let it clear | After a capture | [▶](https://cykler.dev/caelestia/demos/screenshot) |
+| **Shell assets page** | Changes the images the shell uses - logo, session and media gifs, placeholder images and the profile picture - from Settings | *Nexus → Shell assets* | [▶](https://cykler.dev/caelestia/demos/shell-assets) |
+| **Colour schemes in Settings** | Scheme, flavour and Material 3 variant pickers moved out of the launcher into the settings app | *Nexus → Wallpaper & style* | [▶](https://cykler.dev/caelestia/demos/settings-app) |
+| **Displays page** | Arranges monitors by drag and drop, sets resolution, refresh rate, scale and mirroring, identifies a display, and reverts by itself unless you confirm | *Nexus → Displays* | [▶](https://cykler.dev/caelestia/demos/displays) |
+| **Dashboard performance graph** | CPU, GPU, memory, network and storage combined into a single card with configurable colours, and resources you switch off stay off | *Dashboard → Performance* | [▶](https://cykler.dev/caelestia/demos/dashboard) |
+| **Layout editor** | A miniature screen where every part of the shell is a tile you drag into place - bar, launcher, dashboard, notch, sidebar, OSD, session menu, popups, toasts and the desktop items - with separate Shell and Desktop layers | *Nexus → Layout*  | [▶](https://cykler.dev/caelestia/demos/layout) |
+| **Taskbar on any edge** | The bar moves to left, right, top or bottom with its own horizontal components, cuts its middle away on an empty workspace so the wallpaper shows through, and can mirror the right-edge panels when it is on the right | *Nexus → Layout*  | [▶](https://cykler.dev/caelestia/demos/bar) |
+| **Desktop widgets & app shortcuts** | Widget cards (calendar, weather, focus timer, resources, now playing, battery) in an ordered grid and application shortcuts, both on the wallpaper with their own settings page | *Nexus → Panels → Desktop* | [▶](https://cykler.dev/caelestia/demos/desktop) |
+| **Updates page** | Checks this fork's repo for new commits and pulls, rebuilds, installs through `pkexec` and restarts the shell from inside the session | *Nexus → Updates* | [▶](https://cykler.dev/caelestia/demos/updates) |
 
 Smaller fixes: Fhe dropdown menu that flips to whichever side has
 room, the update notification that opens the Updates page, and the settings sidebar rework - the pages
