@@ -135,12 +135,27 @@ StyledClippingRect {
         id: view
 
         captureSource: root.captureSource
-        // No anchors.fill here, same as the other ScreencopyViews in this codebase
-        // (ActiveWindow.qml, windowinfo/Preview.qml) - the view sizes itself from
-        // constraintSize, and forcing width/height via an anchor on top of that is what
-        // left the capture drawn at its own native size inside a bigger, unfilled item
+        // constraintSize is a bounding box for a letterboxed fit, not a stretch target -
+        // confirmed live by logging view.width/height, they come out equal to
+        // min(constraintSize.width, constraintSize.height), preserving the capture's own
+        // aspect ratio rather than independently matching each axis. A window's real aspect
+        // ratio generally doesn't match the (possibly differently-shaped) half, third etc. of
+        // a split workspace it needs to fill here, so that letterboxing is exactly the padding
+        // that kept showing up. The transform below stretches the result to fill the tile.
         constraintSize.width: root.width
         constraintSize.height: root.height
+
+        // Before a capture has actually loaded, width/height pass through wild transient
+        // values while bindings settle (observed live: negative, near-zero fractions, zero) -
+        // scaling against those produced an absurd, tiled-looking stretch. Only stretching
+        // once there's real, sanely-sized content to stretch avoids that entirely.
+        readonly property bool ready: view.hasContent && view.width > 1 && view.height > 1
+
+        transform: Scale {
+            xScale: view.ready ? root.width / view.width : 1
+            yScale: view.ready ? root.height / view.height : 1
+        }
+
         // A still frame per window: a live stream of every window on screen would
         // capture at full resolution on every frame
         live: false
