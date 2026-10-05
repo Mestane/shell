@@ -6,8 +6,6 @@ A personal fork of [caelestia-dots/shell](https://github.com/caelestia-dots/shel
 
 https://github.com/user-attachments/assets/35d5068b-dca0-414d-b933-bd5a9d548262
 
-[Issues](https://github.com/cykler01/cykler-caelestia/issues)
-
 ![GitHub last commit](https://img.shields.io/github/last-commit/cykler01/cykler-caelestia?style=flat-square&labelColor=101418&color=9ccbfb)
 ![GitHub issues](https://img.shields.io/github/issues/cykler01/cykler-caelestia?style=flat-square&labelColor=101418&color=9ccbfb)
 ![GitHub license](https://img.shields.io/github/license/cykler01/cykler-caelestia?style=flat-square&labelColor=101418&color=9ccbfb)
@@ -54,9 +52,9 @@ Every feature below is our own work on top of upstream.
 | **Desktop widgets & app shortcuts** | Widget cards (calendar, weather, focus timer, resources, now playing, battery) in an ordered grid and application shortcuts, both on the wallpaper with their own settings page | *Nexus → Panels → Desktop* | [▶](https://cykler.dev/caelestia/demos/desktop) |
 | **Updates page** | Checks this fork's repo for new commits and pulls, rebuilds, installs through `pkexec` and restarts the shell from inside the session | *Nexus → Updates* | [▶](https://cykler.dev/caelestia/demos/updates) |
 
-Smaller fixes: Fhe dropdown menu that flips to whichever side has
+Smaller fixes: The dropdown menu that flips to whichever side has
 room, the update notification that opens the Updates page, and the settings sidebar rework - the pages
-are grouped into categories and have stable keys, so anything can open one by name.
+are grouped into categories and have stable keys, so anything can open one by name, mouses acceleration during game mode.
 
 ## Installation
 
@@ -85,7 +83,7 @@ cd cykler-caelestia
 `install.sh` takes `--install-deps false` if you already have the dependencies, `--repo-only` to
 skip AUR packages, or `-y` to skip the prompts. Then start it with `caelestia shell -d`.
 
-Nix users can try the upstream flake that this fork keeps:
+Nix users can try the upstream flake that this fork keeps (although we havent tested it ourselves):
 
 ```sh
 nix run github:cykler01/cykler-caelestia#with-cli
@@ -111,18 +109,8 @@ This fork is only worth anything because of the people below.
 - **[Caelestia](https://github.com/caelestia-dots/shell)** - the shell itself, by
   [@soramanew](https://github.com/soramanew) and the upstream contributors. Everything here is their
   work with our additions on top.
-- **[caelestia-dots/caelestia](https://github.com/caelestia-dots/caelestia)** - the Hyprland config,
-  themes and keybind variables our features integrate with, including the `hypr-vars.lua` the
-  Keybinds page reads and writes.
-- **This fork** - [@CYKLER01](https://github.com/CYKLER01): battery and power management,
-  game mode, input settings, OCR, Google Lens, SSH and GPU launcher actions, to-do list, screenshots,
-  shell assets, wallpaper arrows, the displays page, and the local music player, library, queue and
-  equalizer.
-  [@imnuclr](https://github.com/imnuclr): install, dependency and update scripts, the
-  window overview, the notification popout and notification dock work, the notch, the power and
-  battery settings page, the performance graph, and the idle, keybinds and menu behaviour.
 - **Battery power management** - based on the `feat/battery-power-management` branch contributed by
-  [@PixelKhaos](https://github.com/PixelKhaos) (Robin Seger).
+  [@PixelKhaos](https://github.com/PixelKhaos).
 - **Displays page** - based on [PR #1629](https://github.com/caelestia-dots/shell/pull/1629) by
   [@devalentineomonya](https://github.com/devalentineomonya).
 
