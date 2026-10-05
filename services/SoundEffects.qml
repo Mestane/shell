@@ -23,8 +23,12 @@ Singleton {
     readonly property var notificationEvents: ["lowBattery", "chargingStarted"]
 
     function enabledFor(event: string): bool {
-        const cfg = GlobalConfig.services.soundEffects;
-        if (!cfg.enabled)
+        // The config node lives in the C++ plugin, so it is absent when the loaded plugin
+        // is older than this config (a stale dev build). A sound effect is cosmetic and
+        // must never be able to break the flow that triggered it, so a missing node just
+        // reads as disabled rather than throwing on the next line.
+        const cfg = GlobalConfig.services?.soundEffects;
+        if (!cfg || !cfg.enabled)
             return false;
         return cfg[event] ?? true;
     }
