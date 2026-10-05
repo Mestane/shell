@@ -61,7 +61,7 @@ Item {
         options.push({
             kind: "local",
             player: null,
-            label: Tr.tr("Local player")
+            label: Tr.tr("Caelestia player")
         });
         return options;
     }

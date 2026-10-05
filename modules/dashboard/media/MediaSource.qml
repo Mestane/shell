@@ -47,7 +47,7 @@ QtObject {
     readonly property bool volumeSupported: root.local
     readonly property real volume: Music.volume
 
-    readonly property string identity: root.local ? Tr.tr("Local player") : Players.getIdentity(root.mpris)
+    readonly property string identity: root.local ? Tr.tr("Caelestia player") : Players.getIdentity(root.mpris)
 
     // MPRIS positions only refresh when asked, so the position timer pokes this
     function refresh(): void {
