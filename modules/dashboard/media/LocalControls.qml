@@ -9,13 +9,15 @@ import qs.components.controls
 import qs.services
 
 // NOTE(fork): controls for the in-shell player alone, for the places that only ever play local
-// files - the popout's library tab. A seek bar over transport buttons: the position is read
-// straight off the player, so it follows the song as it plays, and dragging it seeks (the
-// elapsed time follows the drag and the seek happens on release, like the media tab's).
-// Deliberately not the media tab's controls, which follow whichever source is active, MPRIS
-// included: these keep driving the local queue even while a browser is the thing playing.
-// Everything is disabled rather than hidden with nothing queued, so the bar doesn't jump
-// around as a queue appears.
+// files - the popout's library tab. A seek bar over transport buttons, then a volume slider:
+// the position is read straight off the player, so it follows the song as it plays, and
+// dragging it seeks (the elapsed time follows the drag and the seek happens on release, like
+// the media tab's). Deliberately not the media tab's controls, which follow whichever source
+// is active, MPRIS included: these keep driving the local queue even while a browser is the
+// thing playing. The volume slider moves the player's own output volume (Music.volume), which
+// is separate from the system sink's, so the music can be turned down without touching
+// everything else. Everything is disabled rather than hidden with nothing queued, so the bar
+// doesn't jump around as a queue appears.
 ColumnLayout {
     id: root
 
@@ -158,6 +160,30 @@ ColumnLayout {
             font: Tokens.font.icon.builders.medium.weight(Font.Medium).build()
             onClicked: Music.cycleRepeat()
             implicitWidth: Math.round(implicitHeight * 0.9)
+        }
+    }
+
+    // The player's own volume, not the system sink's: turning this down leaves everything
+    // else at the level it was, and it persists on Music across tracks.
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.small
+
+        IconButton {
+            type: IconButton.Tonal
+            icon: Music.volume === 0 ? "volume_off" : "volume_up"
+            isRound: true
+            shapeMorph: true
+            font: Tokens.font.icon.small
+            disabled: !Music.hasTrack
+            onClicked: Music.setVolume(Music.volume > 0 ? 0 : 1)
+        }
+
+        StyledSlider {
+            Layout.fillWidth: true
+            value: Music.volume
+            enabled: Music.hasTrack
+            onInteraction: value => Music.setVolume(value)
         }
     }
 }
